@@ -69,33 +69,40 @@ export async function saveAuditAnswers(
 export async function getDashboardStats() {
   const supabase = await createClient()
 
-  const { data, error } = await supabase
-    .from('audit_answers')
-    .select(`
-      score,
-      template_questions(weight, max_score)
-    `) as { data: any[] | null, error: any }
+  const { data: plans, error: plansError } = await supabase
+    .from('audit_plans')
+    .select('id, status, score')
 
-  if (error || !data) return { averageScore: "0", totalAudits: 0, highRiskCount: 0 }
+  if (plansError) {
+    return {
+      averageScore: '0',
+      totalAudits: 0,
+      highRiskCount: 0,
+    }
+  }
 
-  let totalWeightedScore = 0
-  let totalMaxWeight = 0
+  const completedPlans = (plans || []).filter(
+    (plan: any) => plan.status === 'tamamlandi' || plan.status === 'needs_attention'
+  )
 
-  data.forEach((a: any) => {
-    const weight = a.template_questions?.weight ?? 1
-    const maxScore = a.template_questions?.max_score ?? 10
-    const score = a.score ?? 0
-    
-    totalWeightedScore += (score * weight)
-    totalMaxWeight += (maxScore * weight)
-  })
+  const totalAudits = completedPlans.length
 
-  const averageScore = totalMaxWeight > 0 ? (totalWeightedScore / totalMaxWeight) * 100 : 0
+  const highRiskCount = (plans || []).filter(
+    (plan: any) => plan.status === 'needs_attention' || Number(plan.score || 0) < 50
+  ).length
+
+  const totalScore = completedPlans.reduce(
+    (sum: number, plan: any) => sum + Number(plan.score || 0),
+    0
+  )
+
+  const averageScore =
+    totalAudits > 0 ? (totalScore / totalAudits).toFixed(1) : '0'
 
   return {
-    averageScore: averageScore.toFixed(1),
-    totalAudits: 0, 
-    highRiskCount: 0
+    averageScore,
+    totalAudits,
+    highRiskCount,
   }
 }
 
