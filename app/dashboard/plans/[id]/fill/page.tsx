@@ -50,11 +50,11 @@ export default async function FillAuditPage({ params }: PageProps) {
     .eq('template_sections.template_id', plan.audit_templates.id)
     .order('sort_order', { ascending: true })
 
-  // 5. Əvvəlki cavabları çək
-  const { data: existingAnswers } = await supabase
-    .from('audit_answers')
-    .select('question_id, answer')
-    .eq('plan_id', id)
+// 5. Əvvəlki cavabları çək
+const { data: existingAnswers } = await supabase
+  .from('audit_answers')
+  .select('question_id, response, comment, score')
+  .eq('plan_id', id)
 
   return (
     <div className="max-w-3xl mx-auto p-8">

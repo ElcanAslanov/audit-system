@@ -111,34 +111,190 @@ export async function addFinding(prevState: ActionState | null, formData: FormDa
 }
 
 // --- 3. Audit Cavablarını Yadda Saxlama ---
-export async function saveAuditAnswers(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
+// --- 3. Audit Cavablarını Yadda Saxlama ---
+export async function saveAuditAnswers(
+  prevState: ActionState | null,
+  formData: FormData
+): Promise<ActionState> {
   const supabase = await createClient()
   const plan_id = formData.get('plan_id') as string
 
-  if (!plan_id) return { error: "Plan ID tapılmadı.", success: false }
+  if (!plan_id) {
+    return { error: 'Plan ID tapılmadı.', success: false }
+  }
 
-  const answers: any[] = []
-  
-  for (const [key, value] of formData.entries()) {
-    if (key.startsWith('question_')) {
-      const question_id = key.replace('question_', '')
-      answers.push({
-        plan_id,
-        question_id,
-        response: value as string, 
-        created_at: new Date().toISOString()
-      })
+  const questionIds = new Set<string>()
+
+  for (const [key] of formData.entries()) {
+    if (key.startsWith('answer_')) {
+      questionIds.add(key.replace('answer_', ''))
+    }
+
+    if (key.startsWith('comment_')) {
+      questionIds.add(key.replace('comment_', ''))
     }
   }
 
+  if (questionIds.size === 0) {
+    return { error: 'Heç bir cavab tapılmadı.', success: false }
+  }
+
+  const ids = Array.from(questionIds)
+
+const { data: questions, error: questionsError } = await supabase
+  .from('template_questions')
+  .select('id, max_score')
+  .in('id', ids)
+
+  if (questionsError) {
+    return {
+      error: 'Sualları oxuyarkən xəta: ' + questionsError.message,
+      success: false,
+    }
+  }
+
+const questionMap = new Map(
+  (questions || []).map((q: any) => [
+    q.id,
+    {
+      max_score: Number(q.max_score || 0),
+    },
+  ])
+)
+
+  const answers = ids.map((question_id) => {
+    const answer = String(formData.get(`answer_${question_id}`) || '')
+    const comment = String(formData.get(`comment_${question_id}`) || '')
+    const qInfo = questionMap.get(question_id)
+
+    const maxScore = qInfo?.max_score || 0
+    const normalizedAnswer = answer.toLowerCase()
+
+    let score = 0
+
+    if (normalizedAnswer === 'yes') {
+      score = maxScore
+    } else if (normalizedAnswer === 'na') {
+      score = 0
+    } else {
+      score = 0
+    }
+
+return {
+  plan_id,
+  question_id,
+  response: answer,
+  comment,
+  score,
+}
+  })
+
   const { error } = await supabase
     .from('audit_answers')
-    .upsert(answers, { onConflict: 'plan_id,question_id' }) 
+    .upsert(answers, { onConflict: 'plan_id,question_id' })
 
   if (error) {
-    return { error: "Cavabları saxlayarkən xəta: " + error.message, success: false }
+    return {
+      error: 'Cavabları saxlayarkən xəta: ' + error.message,
+      success: false,
+    }
   }
 
   revalidatePath(`/dashboard/plans/${plan_id}/fill`)
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/plans')
+
+  return { error: null, success: true }
+}
+
+// --- 4. Auditi Tamamla ---
+export async function completeAudit(planId: string): Promise<ActionState> {
+  const supabase = await createClient()
+
+  if (!planId) {
+    return { error: 'Plan ID tapılmadı.', success: false }
+  }
+
+  const { data: answers, error: answersError } = await supabase
+    .from('audit_answers')
+    .select('score')
+    .eq('plan_id', planId)
+
+  if (answersError) {
+    return {
+      error: 'Audit cavabları yoxlanarkən xəta: ' + answersError.message,
+      success: false,
+    }
+  }
+
+  if (!answers || answers.length === 0) {
+    return {
+      error: 'Auditi tamamlamaq üçün əvvəlcə cavabları yadda saxlayın.',
+      success: false,
+    }
+  }
+
+  const totalScore = answers.reduce(
+    (sum: number, item: any) => sum + Number(item.score || 0),
+    0
+  )
+
+  const averageScore = Math.round(totalScore / answers.length)
+  const status = averageScore < 50 ? 'needs_attention' : 'tamamlandi'
+
+  const { error } = await supabase
+    .from('audit_plans')
+    .update({
+      status,
+      score: averageScore,
+    })
+    .eq('id', planId)
+
+  if (error) {
+    return {
+      error: 'Auditi tamamlamaq mümkün olmadı: ' + error.message,
+      success: false,
+    }
+  }
+
+  revalidatePath(`/dashboard/plans/${planId}/fill`)
+  revalidatePath('/dashboard/plans')
+  revalidatePath('/dashboard')
+
+  return { error: null, success: true }
+}
+
+// --- 5. Finding status yenilə ---
+export async function updateFindingStatus(
+  findingId: string,
+  status: string,
+  planId: string
+): Promise<ActionState> {
+  const supabase = await createClient()
+
+  if (!findingId) {
+    return { error: 'Finding ID tapılmadı.', success: false }
+  }
+
+  if (!status) {
+    return { error: 'Status seçilməyib.', success: false }
+  }
+
+  const { error } = await supabase
+    .from('findings')
+    .update({ status })
+    .eq('id', findingId)
+
+  if (error) {
+    return {
+      error: 'Tapıntı statusu yenilənmədi: ' + error.message,
+      success: false,
+    }
+  }
+
+  revalidatePath(`/dashboard/plans/${planId}`)
+  revalidatePath('/dashboard/plans')
+  revalidatePath('/dashboard')
+
   return { error: null, success: true }
 }
