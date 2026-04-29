@@ -46,15 +46,15 @@ export default function CreatePlanForm({
   }, [templates, templateSearch])
 
   return (
-    <form ref={formRef} action={action} className="space-y-6">
+    <form ref={formRef} action={action} className="space-y-5">
       {state?.error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
           {state.error}
         </div>
       )}
 
       {state?.success && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
           Audit planı uğurla yaradıldı.
         </div>
       )}
@@ -63,48 +63,48 @@ export default function CreatePlanForm({
         <div className="space-y-4 lg:col-span-7">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
+              <label className="mb-1 block text-sm font-bold text-slate-700">
                 Planın başlığı
               </label>
               <input
                 name="title"
                 required
                 placeholder="Məs: 2026 İllik İT Auditi"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
+              <label className="mb-1 block text-sm font-bold text-slate-700">
                 Departament
               </label>
               <input
                 name="department"
                 required
                 placeholder="Məs: İT Departamenti"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
+              <label className="mb-1 block text-sm font-bold text-slate-700">
                 Son tarix
               </label>
               <input
                 type="date"
                 name="due_date"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
+              <label className="mb-1 block text-sm font-bold text-slate-700">
                 Şirkət
               </label>
               <select
                 name="company_id"
                 required
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
               >
                 <option value="">Şirkət seçin...</option>
                 {companies.map((c) => (
@@ -116,12 +116,12 @@ export default function CreatePlanForm({
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
+              <label className="mb-1 block text-sm font-bold text-slate-700">
                 Şablon axtar
               </label>
               <div className="relative">
                 <Search
-                  className="absolute left-3 top-2.5 text-slate-400"
+                  className="absolute left-3 top-3.5 text-slate-400"
                   size={16}
                 />
                 <input
@@ -129,17 +129,17 @@ export default function CreatePlanForm({
                   value={templateSearch}
                   placeholder="Şablon adı ilə axtar..."
                   onChange={(e) => setTemplateSearch(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-9 pr-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                 />
               </div>
             </div>
 
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
+              <label className="mb-1 block text-sm font-bold text-slate-700">
                 Audit şablonları
               </label>
 
-              <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
+              <div className="max-h-52 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-2">
                 {filteredTemplates.length === 0 && (
                   <p className="p-2 text-sm text-slate-500">
                     Şablon tapılmadı.
@@ -149,7 +149,7 @@ export default function CreatePlanForm({
                 {filteredTemplates.map((t) => (
                   <label
                     key={t.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg p-2 text-sm transition hover:bg-white"
+                    className="flex cursor-pointer items-center gap-3 rounded-xl p-2 text-sm transition hover:bg-white"
                   >
                     <input
                       type="checkbox"
@@ -157,76 +157,58 @@ export default function CreatePlanForm({
                       value={t.id}
                       className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="font-medium text-slate-700">
+                    <span className="font-semibold text-slate-700">
                       {t.title}
                     </span>
                   </label>
                 ))}
               </div>
 
-              <p className="mt-1 text-xs text-slate-500">
-                Bir və ya bir neçə şablon seçə bilərsiniz. Seçilmiş şablonların
-                bütün sualları eyni audit checklist-də görünəcək.
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Bir və ya bir neçə şablon seçə bilərsiniz.
               </p>
             </div>
 
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
+              <label className="mb-1 block text-sm font-bold text-slate-700">
                 Qeydlər
               </label>
               <textarea
                 name="notes"
-                rows={4}
+                rows={3}
                 placeholder="Audit haqqında əlavə məlumat..."
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
               />
             </div>
           </div>
-
-          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
-            <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <UploadCloud size={18} />
-              Fayl əlavə et
-            </label>
-
-            <input
-              type="file"
-              name="file"
-              className="w-full cursor-pointer rounded-lg border border-slate-200 bg-white text-sm text-slate-500 file:mr-4 file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800"
-            />
-
-            <p className="mt-2 text-xs text-slate-500">
-              PDF, Word, Excel və ya digər sübut faylları əlavə edə bilərsiniz.
-            </p>
-          </div>
         </div>
 
-        <div className="space-y-3 lg:col-span-5">
+        <div className="space-y-4 lg:col-span-5">
           <div>
-            <label className="mb-1 block text-sm font-semibold text-slate-700">
+            <label className="mb-1 block text-sm font-bold text-slate-700">
               Auditorları təyin et
             </label>
 
             <div className="relative">
               <Search
-                className="absolute left-3 top-2.5 text-slate-400"
+                className="absolute left-3 top-3.5 text-slate-400"
                 size={16}
               />
               <input
                 type="text"
                 placeholder="Auditor axtar..."
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-9 pr-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
 
-          <div className="h-64 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
+          <div className="h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-2">
             {filteredAuditors.length > 0 ? (
               filteredAuditors.map((a) => (
                 <label
                   key={a.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg p-2 transition hover:bg-white"
+                  className="flex cursor-pointer items-center gap-3 rounded-xl p-2 transition hover:bg-white"
                 >
                   <input
                     type="checkbox"
@@ -235,7 +217,7 @@ export default function CreatePlanForm({
                     className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-700">
+                    <p className="truncate text-sm font-semibold text-slate-700">
                       {a.full_name}
                     </p>
                     <p className="text-xs uppercase text-slate-400">
@@ -253,30 +235,36 @@ export default function CreatePlanForm({
             )}
           </div>
 
-          <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
-            <p className="text-sm font-semibold text-blue-800">
-              Qısa məlumat
-            </p>
-            <p className="mt-1 text-sm leading-6 text-blue-700">
-              Plan yaradıldıqdan sonra auditorlar checklist səhifəsindən
-              seçilmiş bütün şablonların suallarını doldura və tapıntı əlavə edə
-              biləcəklər.
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+            <label className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-700">
+              <UploadCloud size={18} />
+              Fayl əlavə et
+            </label>
+
+            <input
+              type="file"
+              name="file"
+              className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-white text-sm text-slate-500 file:mr-4 file:border-0 file:bg-slate-900 file:px-4 file:py-2.5 file:text-sm file:font-bold file:text-white hover:file:bg-slate-800"
+            />
+
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              PDF, Word, Excel və ya digər audit faylı əlavə edə bilərsiniz.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-end">
+      <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col gap-3 border-t border-slate-100 bg-white/95 p-4 backdrop-blur sm:-mx-5 sm:-mb-5 sm:flex-row sm:items-center sm:justify-end">
         <button
           disabled={pending}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 sm:w-auto"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 sm:w-auto"
         >
           {pending ? (
             <Loader2 className="animate-spin" size={18} />
           ) : (
             <Plus size={18} />
           )}
-          {pending ? 'Yaradılır...' : 'Planı Yarat'}
+          {pending ? 'Yaradılır...' : 'Planı yarat'}
         </button>
       </div>
     </form>

@@ -7,10 +7,12 @@ export default function CreatePlanPanel({
   companies,
   auditors,
   templates,
+  onSuccess,
 }: {
   companies: any[]
   auditors: any[]
   templates: any[]
+  onSuccess?: () => void
 }) {
   const [open, setOpen] = useState(false)
 
@@ -41,7 +43,7 @@ export default function CreatePlanPanel({
             companies={companies}
             auditors={auditors}
             templates={templates}
-            onSuccess={() => setOpen(false)}
+            onSuccess={onSuccess}
           />
         </div>
       )}

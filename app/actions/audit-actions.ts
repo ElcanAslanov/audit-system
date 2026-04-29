@@ -291,3 +291,115 @@ export async function getRiskSummary() {
     resolved: findings.filter((f: any) => isResolved(f.status)).length,
   }
 }
+
+export async function getAuditChartData() {
+  const supabase = await createClient()
+
+  const { data: plans, error } = await supabase
+    .from('audit_plans')
+    .select('id, status, score, created_at')
+    .order('created_at', { ascending: true })
+
+  if (error || !plans) {
+    return {
+      yearly: [],
+      monthly: [],
+      monthlyScore: [],
+      status: [],
+    }
+  }
+
+  const monthNames = [
+    'Yanvar',
+    'Fevral',
+    'Mart',
+    'Aprel',
+    'May',
+    'İyun',
+    'İyul',
+    'Avqust',
+    'Sentyabr',
+    'Oktyabr',
+    'Noyabr',
+    'Dekabr',
+  ]
+
+  const yearlyMap = new Map<string, number>()
+  const monthlyMap = new Map<string, number>()
+  const monthlyScoreMap = new Map<string, { total: number; count: number }>()
+  const statusMap = new Map<string, number>()
+
+  for (const plan of plans as any[]) {
+    if (!plan.created_at) continue
+
+    const date = new Date(plan.created_at)
+    const year = String(date.getFullYear())
+    const month = date.getMonth()
+    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`
+    const monthLabel = `${monthNames[month]} ${year}`
+
+    yearlyMap.set(year, (yearlyMap.get(year) || 0) + 1)
+
+    monthlyMap.set(monthKey, (monthlyMap.get(monthKey) || 0) + 1)
+
+    const score = Number(plan.score || 0)
+    if (plan.status === 'tamamlandi' || plan.status === 'needs_attention') {
+      const current = monthlyScoreMap.get(monthKey) || { total: 0, count: 0 }
+      current.total += score
+      current.count += 1
+      monthlyScoreMap.set(monthKey, current)
+    }
+
+    const status = plan.status || 'planlanan'
+    statusMap.set(status, (statusMap.get(status) || 0) + 1)
+  }
+
+  const yearly = Array.from(yearlyMap.entries()).map(([year, count]) => ({
+    year,
+    count,
+  }))
+
+  const monthly = Array.from(monthlyMap.entries()).map(([key, count]) => {
+    const [year, monthRaw] = key.split('-')
+    const monthIndex = Number(monthRaw) - 1
+
+    return {
+      key,
+      month: `${monthNames[monthIndex]} ${year}`,
+      count,
+    }
+  })
+
+  const monthlyScore = Array.from(monthlyScoreMap.entries()).map(
+    ([key, value]) => {
+      const [year, monthRaw] = key.split('-')
+      const monthIndex = Number(monthRaw) - 1
+
+      return {
+        key,
+        month: `${monthNames[monthIndex]} ${year}`,
+        score:
+          value.count > 0 ? Math.round(value.total / value.count) : 0,
+      }
+    }
+  )
+
+  const statusLabel = (value: string) => {
+    if (value === 'tamamlandi') return 'Tamamlandı'
+    if (value === 'needs_attention') return 'Diqqət tələb edir'
+    if (value === 'planlanan') return 'Planlanan'
+    return value || '-'
+  }
+
+  const status = Array.from(statusMap.entries()).map(([name, value]) => ({
+    name: statusLabel(name),
+    value,
+  }))
+
+  return {
+    yearly,
+    monthly,
+    monthlyScore,
+    status,
+  }
+}
