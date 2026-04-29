@@ -202,3 +202,61 @@ async function checkCriticalAlerts(planId: string) {
     console.log("Kritik audit aşkarlandı!");
   }
 }
+
+export async function getRecentAudits() {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('audit_plans')
+    .select(`
+      id,
+      title,
+      department,
+      status,
+      score,
+      due_date,
+      created_at,
+      companies(name)
+    `)
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  if (error) {
+    return []
+  }
+
+  return (data || []).map((item: any) => ({
+    ...item,
+    companies: Array.isArray(item.companies)
+      ? item.companies[0] || null
+      : item.companies || null,
+  }))
+}
+
+export async function getRiskSummary() {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('findings')
+    .select('severity, status')
+
+  if (error) {
+    return {
+      high: 0,
+      medium: 0,
+      low: 0,
+      open: 0,
+      resolved: 0,
+    }
+  }
+
+  const findings = data || []
+
+  return {
+    high: findings.filter((f: any) => f.severity === 'high').length,
+    medium: findings.filter((f: any) => f.severity === 'medium').length,
+    low: findings.filter((f: any) => f.severity === 'low').length,
+    open: findings.filter((f: any) => f.status === 'aciq').length,
+    resolved: findings.filter((f: any) => f.status === 'hell_olundu').length,
+  }
+}

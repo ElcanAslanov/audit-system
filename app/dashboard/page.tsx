@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import DashboardStats from '../../components/DashboardStats';
 import TrendAnalysis from '../../components/TrendAnalysis';
 import CriticalAlerts from '../../components/CriticalAlerts';
+import RecentAudits from '../../components/RecentAudits';
+import RiskSummary from '../../components/RiskSummary';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -15,38 +17,45 @@ export default async function DashboardPage() {
     .select('*')
     .eq('status', 'needs_attention');
 
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">İdarə Paneli</h1>
+ return (
+  <div className="p-4 sm:p-6 lg:p-8">
+    <div className="mb-6">
+      <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+        İdarə Paneli
+      </h1>
+      <p className="mt-2 text-sm text-slate-500">
+        Audit performansı, risklər və son fəaliyyətlər üzrə ümumi görünüş.
+      </p>
+    </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* SOL TƏRƏF (Profil və Kritik Xəbərdarlıqlar) */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white p-6 shadow rounded-lg border">
-            <h2 className="text-lg font-bold">Profil</h2>
-            <p className="mt-2 text-gray-600">{profile?.full_name}</p>
-            <p className="text-blue-600 font-semibold uppercase text-sm">{profile?.role}</p>
-          </div>
-
-          {/* Kritik alertlər burada görünəcək */}
-          <CriticalAlerts alerts={criticalAudits || []} />
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+      <div className="space-y-6 xl:col-span-4">
+        <div className="rounded-xl border bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-900">Profil</h2>
+          <p className="mt-2 text-slate-600">{profile?.full_name}</p>
+          <p className="text-sm font-semibold uppercase text-blue-600">
+            {profile?.role}
+          </p>
         </div>
 
-        {/* SAĞ TƏRƏF (Analitika və Trendlər) */}
-        <div className="lg:col-span-8 space-y-8">
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Ümumi Analitika</h2>
-            <DashboardStats />
-          </section>
+        <CriticalAlerts alerts={criticalAudits || []} />
 
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Aylıq Performans Trendi</h2>
-            <TrendAnalysis />
-          </section>
-        </div>
+        <RiskSummary />
+      </div>
 
+      <div className="space-y-6 xl:col-span-8">
+        <section>
+          <h2 className="mb-4 text-xl font-semibold text-slate-900">
+            Ümumi Analitika
+          </h2>
+          <DashboardStats />
+        </section>
+
+        <TrendAnalysis />
+
+        <RecentAudits />
       </div>
     </div>
-  );
+  </div>
+)
 }

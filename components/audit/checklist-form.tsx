@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useActionState } from 'react';
 import { saveAuditAnswers } from '@/app/dashboard/plans/actions';
 import AddFindingForm from '@/components/add-finding-form';
@@ -9,12 +9,19 @@ import CompleteAuditButton from '@/components/audit/complete-audit-button';
 interface Question {
   id: string;
   question_text: string;
+  max_score?: number | null;
+  template_sections?: {
+    id?: string;
+    title?: string;
+    sort_order?: number | null;
+  } | null;
 }
 
 interface Answer {
   question_id: string;
   response?: string | null;
   comment?: string | null;
+  score?: number | null;
 }
 
 interface User {
@@ -29,6 +36,20 @@ interface ChecklistFormProps {
   users: User[];
 }
 
+function answerLabel(value?: string | null) {
+  if (value === 'yes') return 'Bəli';
+  if (value === 'no') return 'Xeyr';
+  if (value === 'na') return 'N/A';
+  return 'Seçilməyib';
+}
+
+function answerClass(value?: string | null) {
+  if (value === 'yes') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (value === 'no') return 'border-red-200 bg-red-50 text-red-700';
+  if (value === 'na') return 'border-slate-200 bg-slate-50 text-slate-600';
+  return 'border-slate-200 bg-white text-slate-500';
+}
+
 export default function ChecklistForm({
   questions,
   planId,
@@ -38,107 +59,160 @@ export default function ChecklistForm({
   const [state, action, pending] = useActionState(saveAuditAnswers, null);
   const [activeFinding, setActiveFinding] = useState<string | null>(null);
 
+  const answerMap = useMemo(() => {
+    return new Map(initialAnswers.map((answer) => [answer.question_id, answer]));
+  }, [initialAnswers]);
+
   return (
     <>
-      <form action={action} className="space-y-6">
+      <form action={action} className="space-y-5">
         <input type="hidden" name="plan_id" value={planId} />
 
         {state?.error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {state.error}
           </div>
         )}
 
         {state?.success && (
-          <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
             Cavablar uğurla yadda saxlanıldı.
           </div>
         )}
 
-        <div className="space-y-6">
-          {questions.map((q: Question) => {
-            const savedAnswer = initialAnswers.find(
-              (a: Answer) => a.question_id === q.id
-            );
+        {questions.length === 0 && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-500">
+            Bu şablonda hələ sual yoxdur.
+          </div>
+        )}
 
+        <div className="space-y-4">
+          {questions.map((q: Question, index: number) => {
+            const savedAnswer = answerMap.get(q.id);
             const savedValue = savedAnswer?.response || '';
             const savedComment = savedAnswer?.comment || '';
 
             return (
-              <div key={q.id} className="p-4 border rounded-lg bg-white shadow-sm">
-                <label className="block font-semibold mb-3">
-                  {q.question_text}
-                </label>
+              <article
+                key={q.id}
+                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-200 sm:p-5"
+              >
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase text-slate-400">
+                      Sual #{index + 1}
+                    </p>
 
-                <div className="flex flex-wrap gap-4 mb-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                    <h3 className="mt-1 text-base font-bold leading-6 text-slate-900 sm:text-lg">
+                      {q.question_text}
+                    </h3>
+
+                    <p className="mt-2 text-xs text-slate-500">
+                      Max score: {q.max_score ?? 10}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${answerClass(
+                      savedValue
+                    )}`}
+                  >
+                    {answerLabel(savedValue)}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">
                     <input
                       type="radio"
                       name={`answer_${q.id}`}
                       value="yes"
                       defaultChecked={savedValue.toLowerCase() === 'yes'}
+                      className="h-4 w-4"
                     />
                     Bəli
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-semibold text-red-700 transition hover:bg-red-100">
                     <input
                       type="radio"
                       name={`answer_${q.id}`}
                       value="no"
                       defaultChecked={savedValue.toLowerCase() === 'no'}
                       onChange={() => setActiveFinding(q.id)}
+                      className="h-4 w-4"
                     />
-                    Xeyr (Problem)
+                    Xeyr / Problem
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
                     <input
                       type="radio"
                       name={`answer_${q.id}`}
                       value="na"
                       defaultChecked={savedValue.toLowerCase() === 'na'}
+                      className="h-4 w-4"
                     />
                     N/A
                   </label>
                 </div>
 
-                <textarea
-                  name={`comment_${q.id}`}
-                  defaultValue={savedComment}
-                  className="w-full p-2 border rounded"
-                  rows={2}
-                  placeholder="Şərhinizi əlavə edin..."
-                />
+                <div className="mt-4">
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">
+                    Şərh
+                  </label>
 
-                <button
-                  type="button"
-                  onClick={() => setActiveFinding(q.id)}
-                  className="mt-3 text-sm text-red-600 hover:underline"
-                >
-                  + Tapıntı əlavə et
-                </button>
-              </div>
+                  <textarea
+                    name={`comment_${q.id}`}
+                    defaultValue={savedComment}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    placeholder="Şərhinizi əlavə edin..."
+                  />
+                </div>
+
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setActiveFinding(q.id)}
+                    className="inline-flex w-full justify-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 sm:w-auto"
+                  >
+                    + Tapıntı əlavə et
+                  </button>
+
+                  {savedAnswer?.score !== undefined && (
+                    <p className="text-sm font-semibold text-blue-700">
+                      Yadda saxlanmış bal: {savedAnswer.score}
+                    </p>
+                  )}
+                </div>
+              </article>
             );
           })}
         </div>
 
-        <div className="flex flex-wrap gap-3 items-start">
-          <button
-            type="submit"
-            disabled={pending}
-            className="bg-blue-600 disabled:bg-blue-300 text-white px-6 py-2 rounded"
-          >
-            {pending ? 'Saxlanılır...' : 'Cavabları Yadda Saxla'}
-          </button>
+        <div className="sticky bottom-0 z-20 -mx-4 border-t border-slate-200 bg-white/95 p-4 backdrop-blur sm:-mx-6 sm:flex sm:items-center sm:justify-between sm:gap-3">
+          <p className="mb-3 text-sm text-slate-500 sm:mb-0">
+            Dəyişiklikləri itirməmək üçün əvvəlcə cavabları yadda saxlayın.
+          </p>
 
-          <CompleteAuditButton planId={planId} />
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="submit"
+              disabled={pending}
+              className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300 sm:w-auto"
+            >
+              {pending ? 'Saxlanılır...' : 'Cavabları Yadda Saxla'}
+            </button>
+
+            <CompleteAuditButton planId={planId} />
+          </div>
         </div>
       </form>
 
       {activeFinding && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6">
             <AddFindingForm
               planId={planId}
               questionId={activeFinding}

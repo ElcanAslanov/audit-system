@@ -1,18 +1,52 @@
-'use client'
+'use client';
+
+import Link from 'next/link';
 
 export default function CriticalAlerts({ alerts }: { alerts: any[] }) {
-  if (alerts.length === 0) return null;
+  if (!alerts || alerts.length === 0) {
+    return (
+      <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
+        <h3 className="font-bold text-emerald-800">Kritik xəbərdarlıq yoxdur</h3>
+        <p className="mt-1 text-sm text-emerald-700">
+          Hazırda diqqət tələb edən audit görünmür.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded shadow mb-6">
-      <h3 className="text-red-700 font-bold">⚠️ Təcili Diqqət!</h3>
-      <ul className="mt-2 text-sm text-red-600">
+    <div className="rounded-xl border border-red-200 bg-red-50 p-5 shadow-sm">
+      <div className="border-b border-red-100 pb-3">
+        <h3 className="font-bold text-red-800">Təcili Diqqət!</h3>
+        <p className="mt-1 text-sm text-red-700">
+          Aşağıdakı auditlər kritik statusdadır.
+        </p>
+      </div>
+
+      <div className="mt-4 space-y-3">
         {alerts.map((audit) => (
-          <li key={audit.id}>
-            {audit.title} - Bal: {audit.score}%
-          </li>
+          <Link
+            key={audit.id}
+            href={`/dashboard/plans/${audit.id}`}
+            className="block rounded-lg border border-red-100 bg-white/70 p-3 transition hover:bg-white"
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-semibold text-red-900">
+                  {audit.title || 'Adsız audit'}
+                </p>
+                <p className="text-sm text-red-700">
+                  Status: {audit.status || 'needs_attention'}
+                </p>
+              </div>
+
+              <span className="w-fit rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700">
+                {audit.score ?? 0}%
+              </span>
+            </div>
+          </Link>
         ))}
-      </ul>
+      </div>
     </div>
-  )
+  );
 }
