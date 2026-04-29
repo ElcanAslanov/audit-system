@@ -60,7 +60,7 @@ const managementItems: MenuItem[] = [
     icon: ListChecks,
   },
   {
-    label: 'İdarəetmə Paneli',
+    label: 'İdarəetmə',
     href: '/dashboard/admin',
     roles: ['admin'],
     icon: LayoutDashboard,
@@ -128,10 +128,17 @@ function SidebarLink({
 }) {
   const Icon = item.icon
 
-  const isDashboardRoot = item.href === '/dashboard'
-  const active = isDashboardRoot
-    ? pathname === '/dashboard'
-    : pathname === item.href || pathname.startsWith(`${item.href}/`)
+const isDashboardRoot = item.href === '/dashboard'
+
+let active = false
+
+if (isDashboardRoot) {
+  active = pathname === '/dashboard'
+} else if (item.href === '/dashboard/admin') {
+  active = pathname === '/dashboard/admin'
+} else {
+  active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+}
 
   return (
     <Link
@@ -330,24 +337,8 @@ export default function Sidebar({ role }: SidebarProps) {
               collapsed ? 'justify-center' : 'gap-3'
             }`}
           >
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-slate-800 text-sm font-black text-slate-200">
-              {roleLabel(role).slice(0, 1)}
-            </div>
-
-            <div
-              className={`min-w-0 transition-all duration-500 ${
-                collapsed
-                  ? 'w-0 translate-x-2 overflow-hidden opacity-0'
-                  : 'w-auto translate-x-0 opacity-100'
-              }`}
-            >
-              <p className="truncate text-sm font-bold text-white">
-                Sistem istifadəçisi
-              </p>
-              <p className="truncate text-xs text-slate-400">
-                {roleLabel(role)}
-              </p>
-            </div>
+          
+            
           </div>
 
          {!collapsed ? (

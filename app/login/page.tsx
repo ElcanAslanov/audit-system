@@ -1,7 +1,6 @@
 // app/login/page.tsx
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import Image from 'next/image'
+import { signIn } from './actions'
 import {
   ArrowRight,
   LockKeyhole,
@@ -28,25 +27,6 @@ function errorMessage(message?: string) {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams
   const message = errorMessage(params?.message)
-
-  async function signIn(formData: FormData) {
-    'use server'
-
-    const email = String(formData.get('email') || '').trim()
-    const password = String(formData.get('password') || '')
-    const supabase = await createClient()
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (error) {
-      return redirect('/login?message=could-not-authenticate-user')
-    }
-
-    return redirect('/dashboard')
-  }
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#f6f0e8]">
@@ -109,10 +89,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <div className="mt-8 animate-[fadeUp_800ms_ease-out_600ms_both]">
               <div className="inline-flex items-center gap-2 rounded-full border border-red-100 bg-white/80 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#b91c1c] shadow-sm">
                 <Sparkles size={14} />
-                Cahan Audit Sistem
+                Cahan Audİt Sİstem
               </div>
-
-             
             </div>
           </div>
         </section>
@@ -154,10 +132,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   />
                 </div>
 
-                <div className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-3 py-1 text-xs font-black uppercase tracking-wide text-white">
-                  <ShieldCheck size={14} />
-                  Təhlükəsiz giriş
-                </div>
+                
 
                 <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950">
                   Xoş gəlmisiniz
@@ -228,9 +203,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 />
               </button>
 
-              <p className="relative mt-5 animate-[fadeUp_650ms_ease-out_950ms_both] text-center text-xs leading-5 text-slate-400">
-                Bu sistem yalnız icazəli Cahan istifadəçiləri üçündür.
-              </p>
+           
             </form>
           </div>
         </section>
