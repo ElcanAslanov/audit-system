@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import CreatePlanForm from '@/components/create-plan-form'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import PlanDeleteButton from '@/components/audit/plan-delete-button'
 
 export default async function PlansPage() {
   const supabase = await createClient()
@@ -115,27 +116,31 @@ export default async function PlansPage() {
                   <p className="font-medium text-slate-700">
                     {plan.plan_assignments?.length > 0
                       ? plan.plan_assignments
-                          .map((a: any) => a.profiles?.full_name)
-                          .filter(Boolean)
-                          .join(', ')
+                        .map((a: any) => a.profiles?.full_name)
+                        .filter(Boolean)
+                        .join(', ')
                       : 'Təyin olunmayıb'}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-start sm:justify-end">
                   <Link
                     href={`/dashboard/plans/${plan.id}`}
-                    className="border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-md text-sm font-medium transition"
+                    className="w-full sm:w-auto text-center border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-md text-sm font-medium transition"
                   >
                     Bax
                   </Link>
 
                   <Link
                     href={`/dashboard/plans/${plan.id}/fill`}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition"
+                    className="w-full sm:w-auto text-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition"
                   >
                     Auditi Doldur
                   </Link>
+
+                  {(role === 'admin' || role === 'rehber' || role === 'audit_muavini') && (
+                    <PlanDeleteButton planId={plan.id} />
+                  )}
                 </div>
               </div>
             </div>

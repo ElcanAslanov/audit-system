@@ -112,12 +112,21 @@ if (!plan) {
             {plan.score ?? 0}%
           </div>
 
-          <Link
-            href={`/dashboard/plans/${id}/fill`}
-            className="inline-flex bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
-          >
-            Auditi redaktə et
-          </Link>
+        <div className="flex flex-col sm:flex-row gap-2">
+  <Link
+    href={`/dashboard/plans/${id}/fill`}
+    className="inline-flex justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+  >
+    Auditi redaktə et
+  </Link>
+
+  <Link
+    href={`/dashboard/plans/${id}/report`}
+    className="inline-flex justify-center bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded text-sm"
+  >
+    PDF Hesabat
+  </Link>
+</div>
         </div>
       </div>
 

@@ -298,3 +298,56 @@ export async function updateFindingStatus(
 
   return { error: null, success: true }
 }
+
+// --- 6. Audit Planı Sil ---
+export async function deleteAuditPlan(planId: string): Promise<ActionState> {
+  const supabase = await createClient()
+
+  if (!planId) {
+    return { error: 'Plan ID tapılmadı.', success: false }
+  }
+
+  try {
+    // Əvvəl bu plana aid findings-ləri silirik
+    const { error: findingsError } = await supabase
+      .from('findings')
+      .delete()
+      .eq('plan_id', planId)
+
+    if (findingsError) throw findingsError
+
+    // Sonra audit cavablarını silirik
+    const { error: answersError } = await supabase
+      .from('audit_answers')
+      .delete()
+      .eq('plan_id', planId)
+
+    if (answersError) throw answersError
+
+    // Sonra təyinatları silirik
+    const { error: assignmentsError } = await supabase
+      .from('plan_assignments')
+      .delete()
+      .eq('plan_id', planId)
+
+    if (assignmentsError) throw assignmentsError
+
+    // Axırda audit planını silirik
+    const { error: planError } = await supabase
+      .from('audit_plans')
+      .delete()
+      .eq('id', planId)
+
+    if (planError) throw planError
+
+    revalidatePath('/dashboard/plans')
+    revalidatePath('/dashboard')
+
+    return { error: null, success: true }
+  } catch (err: any) {
+    return {
+      error: err.message || 'Audit planı silinərkən xəta baş verdi.',
+      success: false,
+    }
+  }
+}
