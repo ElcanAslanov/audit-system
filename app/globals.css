@@ -8,14 +8,15 @@
   body {
     @apply bg-gray-50 text-slate-900 font-sans antialiased;
   }
-  
-  /* Başlıqların daha oxunaqlı olması üçün */
-  h1, h2, h3 {
+
+  h1,
+  h2,
+  h3 {
     @apply text-slate-950 font-bold tracking-tight;
   }
 }
 
-
+/* PDF / Print */
 @media print {
   * {
     -webkit-print-color-adjust: exact !important;
@@ -31,7 +32,15 @@
   body {
     margin: 0 !important;
     padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
     background: white !important;
+  }
+
+  body {
+    display: block !important;
   }
 
   body * {
@@ -44,34 +53,95 @@
   }
 
   #audit-report-print-area {
-    position: absolute !important;
-    inset: 0 auto auto 0 !important;
+    position: static !important;
+    display: block !important;
     width: 100% !important;
     max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
     background: white !important;
   }
 
   .print-report {
+    position: static !important;
+    display: block !important;
     width: 100% !important;
     max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
     margin: 0 !important;
+    padding: 0 !important;
     border: none !important;
-    box-shadow: none !important;
     border-radius: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+
+  .print-section {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
     overflow: visible !important;
   }
 
-  .print-section,
-  .print-card,
+  .print-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-row,
   .print-table-row {
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
+  .report-page-break-before {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .shadow-sm,
+  .shadow,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-xl,
+  .shadow-2xl {
+    box-shadow: none !important;
+  }
+
+  .rounded-2xl,
+  .rounded-xl,
+  .rounded-lg,
+  .rounded-md {
+    border-radius: 10px !important;
+  }
+
   a {
     color: inherit !important;
     text-decoration: none !important;
+  }
+
+  table,
+  thead,
+  tbody,
+  tr,
+  td,
+  th {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  img,
+  svg {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }

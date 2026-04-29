@@ -7,6 +7,10 @@ type PageProps = {
   params: Promise<{ id: string }>
 }
 
+function normalizeOne(value: any) {
+  return Array.isArray(value) ? value[0] || null : value || null
+}
+
 function answerLabel(value?: string | null) {
   if (value === 'yes') return 'Bəli'
   if (value === 'no') return 'Xeyr'
@@ -31,7 +35,22 @@ function statusLabel(value?: string | null) {
   if (value === 'tamamlandi') return 'Tamamlandı'
   if (value === 'needs_attention') return 'Diqqət tələb edir'
   if (value === 'planlanan') return 'Planlanan'
+  if (value === 'aciq') return 'Açıq'
+  if (value === 'icrada') return 'İcrada'
+  if (value === 'hell_olundu') return 'Həll olundu'
   return value || '-'
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return '-'
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleDateString('az-AZ')
 }
 
 export default async function AuditReportPage({ params }: PageProps) {
@@ -70,6 +89,27 @@ export default async function AuditReportPage({ params }: PageProps) {
     )
   }
 
+  const legacyTemplate = normalizeOne(plan.audit_templates)
+
+  const { data: planTemplates } = await supabase
+    .from('audit_plan_templates')
+    .select(`
+      template_id,
+      audit_templates(id, title)
+    `)
+    .eq('plan_id', id)
+
+  const selectedTemplateNames =
+    planTemplates && planTemplates.length > 0
+      ? planTemplates
+          .map((item: any) => {
+            const template = normalizeOne(item.audit_templates)
+            return template?.title
+          })
+          .filter(Boolean)
+          .join(', ')
+      : legacyTemplate?.title || '-'
+
   const { data: answers } = await supabase
     .from('audit_answers')
     .select(`
@@ -77,39 +117,49 @@ export default async function AuditReportPage({ params }: PageProps) {
       response,
       comment,
       score,
-      template_questions(question_text, max_score)
+      question_id,
+      template_questions(
+        question_text,
+        max_score,
+        sort_order,
+        template_sections(
+          title,
+          sort_order,
+          audit_templates(title)
+        )
+      )
     `)
     .eq('plan_id', id)
 
-if (!answers || answers.length === 0) {
-  return (
-    <div className="min-h-screen bg-slate-100 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-3xl rounded-2xl border border-yellow-200 bg-yellow-50 p-6 text-yellow-800 shadow-sm">
-        <h1 className="text-xl font-bold">Hesabat hazır deyil</h1>
-        <p className="mt-2 text-sm leading-6">
-          Bu audit üçün hələ cavab yazılmayıb. PDF hesabat yaratmaq üçün əvvəlcə
-          auditi doldurun və cavabları yadda saxlayın.
-        </p>
+  if (!answers || answers.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-100 p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-yellow-200 bg-yellow-50 p-6 text-yellow-800 shadow-sm">
+          <h1 className="text-xl font-bold">Hesabat hazır deyil</h1>
+          <p className="mt-2 text-sm leading-6">
+            Bu audit üçün hələ cavab yazılmayıb. PDF hesabat yaratmaq üçün
+            əvvəlcə auditi doldurun və cavabları yadda saxlayın.
+          </p>
 
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-          <Link
-            href={`/dashboard/plans/${id}/fill`}
-            className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
-          >
-            Auditi doldur
-          </Link>
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+            <Link
+              href={`/dashboard/plans/${id}/fill`}
+              className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
+            >
+              Auditi doldur
+            </Link>
 
-          <Link
-            href={`/dashboard/plans/${id}`}
-            className="inline-flex w-full justify-center rounded-lg border border-yellow-200 bg-white px-4 py-2.5 text-sm font-semibold text-yellow-800 transition hover:bg-yellow-100 sm:w-auto"
-          >
-            Detail səhifəyə qayıt
-          </Link>
+            <Link
+              href={`/dashboard/plans/${id}`}
+              className="inline-flex w-full justify-center rounded-lg border border-yellow-200 bg-white px-4 py-2.5 text-sm font-semibold text-yellow-800 transition hover:bg-yellow-100 sm:w-auto"
+            >
+              Detail səhifəyə qayıt
+            </Link>
+          </div>
         </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
 
   const { data: findings } = await supabase
     .from('findings')
@@ -119,9 +169,51 @@ if (!answers || answers.length === 0) {
       severity,
       description,
       deadline,
-      status
+      status,
+      profiles(full_name)
     `)
     .eq('plan_id', id)
+    .order('deadline', { ascending: true, nullsFirst: false })
+
+  const normalizedCompany = normalizeOne(plan.companies)
+
+  const normalizedAnswers = (answers || [])
+    .map((answer: any) => {
+      const question = normalizeOne(answer.template_questions)
+      const section = normalizeOne(question?.template_sections)
+      const template = normalizeOne(section?.audit_templates)
+
+      return {
+        ...answer,
+        template_questions: question
+          ? {
+              ...question,
+              template_sections: section
+                ? {
+                    ...section,
+                    audit_templates: template,
+                  }
+                : null,
+            }
+          : null,
+      }
+    })
+    .sort((a: any, b: any) => {
+      const qa = a.template_questions
+      const qb = b.template_questions
+
+      const templateA = qa?.template_sections?.audit_templates?.title || ''
+      const templateB = qb?.template_sections?.audit_templates?.title || ''
+
+      if (templateA !== templateB) return templateA.localeCompare(templateB, 'az')
+
+      const sectionA = Number(qa?.template_sections?.sort_order || 0)
+      const sectionB = Number(qb?.template_sections?.sort_order || 0)
+
+      if (sectionA !== sectionB) return sectionA - sectionB
+
+      return Number(qa?.sort_order || 0) - Number(qb?.sort_order || 0)
+    })
 
   const highFindings =
     findings?.filter((f: any) => f.severity === 'high').length || 0
@@ -132,15 +224,24 @@ if (!answers || answers.length === 0) {
   const lowFindings =
     findings?.filter((f: any) => f.severity === 'low').length || 0
 
-  const totalQuestions = answers?.length || 0
+  const totalQuestions = normalizedAnswers.length
   const negativeAnswers =
-    answers?.filter((a: any) => a.response === 'no').length || 0
+    normalizedAnswers.filter((a: any) => a.response === 'no').length || 0
+
+  const earnedScore = normalizedAnswers
+    .filter((answer: any) => answer.response !== 'na')
+    .reduce((sum: number, answer: any) => sum + Number(answer.score || 0), 0)
+
+  const possibleScore = normalizedAnswers
+    .filter((answer: any) => answer.response !== 'na')
+    .reduce((sum: number, answer: any) => {
+      return sum + Number(answer.template_questions?.max_score || 10)
+    }, 0)
 
   const score = Number(plan.score || 0)
 
   return (
     <div className="min-h-screen bg-slate-100 p-3 sm:p-6 lg:p-8 print:min-h-0 print:bg-white print:p-0">
-      {/* Bu hissə print/PDF-ə düşməyəcək */}
       <div className="mx-auto mb-4 flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <Link
           href={`/dashboard/plans/${id}`}
@@ -158,11 +259,12 @@ if (!answers || answers.length === 0) {
         </div>
       </div>
 
-      {/* Yalnız bu report-area print/PDF-ə düşəcək */}
-      <main id="audit-report-print-area" className="mx-auto max-w-5xl print:m-0 print:max-w-none">
+      <main
+        id="audit-report-print-area"
+        className="mx-auto max-w-5xl bg-white print:m-0 print:max-w-none"
+      >
         <article className="print-report overflow-visible rounded-2xl border border-slate-200 bg-white shadow-sm print:w-full print:rounded-none print:border-0 print:shadow-none">
-          {/* Cover / Header */}
-          <section className="print-section relative overflow-hidden bg-slate-950 px-5 py-8 text-white sm:px-8 lg:px-10 print:px-8 print:py-7">
+          <section className="relative overflow-hidden bg-slate-950 px-5 py-8 text-white sm:px-8 lg:px-10 print:px-8 print:py-7">
             <div className="absolute right-0 top-0 h-32 w-32 rounded-bl-full bg-blue-600/30" />
             <div className="absolute bottom-0 right-16 h-20 w-20 rounded-t-full bg-emerald-500/20" />
 
@@ -177,8 +279,9 @@ if (!answers || answers.length === 0) {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                  Bu hesabat audit nəticələrinin, checklist cavablarının və
-                  tapıntıların ümumi xülasəsini təqdim edir.
+                  Bu hesabat audit nəticələrinin, checklist cavablarının,
+                  tapıntıların və təsdiq imzalarının ümumi xülasəsini təqdim
+                  edir.
                 </p>
               </div>
 
@@ -187,9 +290,7 @@ if (!answers || answers.length === 0) {
                   Ümumi Score
                 </p>
 
-                <p className="mt-1 text-4xl font-black text-white">
-                  {score}%
-                </p>
+                <p className="mt-1 text-4xl font-black text-white">{score}%</p>
 
                 <p className="mt-1 text-xs text-slate-300">
                   {statusLabel(plan.status)}
@@ -199,14 +300,13 @@ if (!answers || answers.length === 0) {
           </section>
 
           <div className="space-y-8 p-5 sm:p-8 lg:p-10 print:p-8">
-            {/* Meta info */}
-            <section className="print-section grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4">
+            <section className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4">
               <div>
                 <p className="text-xs font-medium uppercase text-slate-500">
                   Şirkət
                 </p>
                 <p className="mt-1 font-bold text-slate-900">
-                  {plan.companies?.name || '-'}
+                  {normalizedCompany?.name || '-'}
                 </p>
               </div>
 
@@ -221,10 +321,10 @@ if (!answers || answers.length === 0) {
 
               <div>
                 <p className="text-xs font-medium uppercase text-slate-500">
-                  Şablon
+                  Şablonlar
                 </p>
                 <p className="mt-1 font-bold text-slate-900">
-                  {plan.audit_templates?.title || '-'}
+                  {selectedTemplateNames}
                 </p>
               </div>
 
@@ -233,13 +333,12 @@ if (!answers || answers.length === 0) {
                   Son tarix
                 </p>
                 <p className="mt-1 font-bold text-slate-900">
-                  {plan.due_date || '-'}
+                  {formatDate(plan.due_date)}
                 </p>
               </div>
             </section>
 
-            {/* KPI cards */}
-            <section className="print-section">
+            <section>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-extrabold text-slate-900">
@@ -287,7 +386,7 @@ if (!answers || answers.length === 0) {
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 print:grid-cols-2">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 print:grid-cols-3">
                 <div className="print-card rounded-2xl border border-slate-200 p-4">
                   <p className="text-sm text-slate-500">Checklist sual sayı</p>
                   <p className="mt-1 text-2xl font-bold text-slate-900">
@@ -301,12 +400,18 @@ if (!answers || answers.length === 0) {
                     {negativeAnswers}
                   </p>
                 </div>
+
+                <div className="print-card rounded-2xl border border-slate-200 p-4">
+                  <p className="text-sm text-slate-500">Bal</p>
+                  <p className="mt-1 text-2xl font-bold text-slate-900">
+                    {earnedScore} / {possibleScore}
+                  </p>
+                </div>
               </div>
             </section>
 
-            {/* Notes */}
             {plan.notes && (
-              <section className="print-card break-inside-avoid rounded-2xl border border-slate-200 p-5">
+              <section className="print-card rounded-2xl border border-slate-200 p-5">
                 <h2 className="text-lg font-extrabold text-slate-900">
                   Ümumi qeydlər
                 </h2>
@@ -316,42 +421,43 @@ if (!answers || answers.length === 0) {
               </section>
             )}
 
-            {/* Checklist */}
-            <section className="print-section">
+            <section className="report-page-break-before">
               <div className="mb-4">
                 <h2 className="text-xl font-extrabold text-slate-900">
                   Checklist cavabları
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Suallar üzrə cavab və bal bölgüsü
+                  Suallar üzrə cavab, verilən bal və şərh bölgüsü
                 </p>
               </div>
 
-              {(answers || []).length === 0 ? (
-                <p className="rounded-xl border border-slate-200 p-4 text-slate-500">
-                  Cavab yoxdur.
-                </p>
-              ) : (
-                <div className="overflow-visible rounded-2xl border border-slate-200">
-                  <div className="hidden bg-slate-50 px-4 py-3 text-xs font-bold uppercase text-slate-500 sm:grid sm:grid-cols-12 print:grid">
-                    <div className="col-span-6">Sual</div>
-                    <div className="col-span-2">Cavab</div>
-                    <div className="col-span-2">Bal</div>
-                    <div className="col-span-2">Şərh</div>
-                  </div>
+              <div className="overflow-visible rounded-2xl border border-slate-200">
+                <div className="hidden bg-slate-50 px-4 py-3 text-xs font-bold uppercase text-slate-500 sm:grid sm:grid-cols-12 print:grid">
+                  <div className="col-span-5">Sual</div>
+                  <div className="col-span-2">Cavab</div>
+                  <div className="col-span-2">Bal</div>
+                  <div className="col-span-3">Şərh</div>
+                </div>
 
-                  <div className="divide-y divide-slate-200">
-                    {(answers || []).map((answer: any, index: number) => (
+                <div className="divide-y divide-slate-200">
+                  {normalizedAnswers.map((answer: any, index: number) => {
+                    const question = answer.template_questions
+                    const section = question?.template_sections
+                    const template = section?.audit_templates
+
+                    return (
                       <div
                         key={answer.id}
-                        className="print-table-row grid grid-cols-1 gap-3 break-inside-avoid p-4 sm:grid-cols-12 print:grid-cols-12"
+                        className="print-row grid grid-cols-1 gap-3 p-4 sm:grid-cols-12 print:grid-cols-12"
                       >
-                        <div className="sm:col-span-6 print:col-span-6">
+                        <div className="sm:col-span-5 print:col-span-5">
                           <p className="text-xs font-bold text-slate-400">
                             #{index + 1}
+                            {template?.title ? ` • ${template.title}` : ''}
+                            {section?.title ? ` • ${section.title}` : ''}
                           </p>
                           <p className="mt-1 font-semibold text-slate-900">
-                            {answer.template_questions?.question_text || 'Sual'}
+                            {question?.question_text || 'Sual'}
                           </p>
                         </div>
 
@@ -367,29 +473,27 @@ if (!answers || answers.length === 0) {
 
                         <div className="sm:col-span-2 print:col-span-2">
                           <p className="font-bold text-blue-700">
-                            {answer.score ?? 0} /{' '}
-                            {answer.template_questions?.max_score ?? '-'}
+                            {answer.score ?? 0} / {question?.max_score ?? '-'}
                           </p>
                         </div>
 
-                        <div className="sm:col-span-2 print:col-span-2">
-                          <p className="text-sm leading-5 text-slate-600">
+                        <div className="sm:col-span-3 print:col-span-3">
+                          <p className="whitespace-pre-wrap text-sm leading-5 text-slate-600">
                             {answer.comment || '-'}
                           </p>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    )
+                  })}
                 </div>
-              )}
+              </div>
             </section>
 
-            {/* Findings */}
-            <section className="print-section">
-              <div className="mb-4">
-                <h2 className="text-xl font-extrabold text-slate-900">
-                  Tapıntılar
-                </h2>
+          <section className={(findings || []).length > 0 ? 'report-page-break-before' : ''}>
+  <div className="mb-4">
+    <h2 className="text-xl font-extrabold text-slate-900">
+      Tapıntılar
+    </h2>
                 <p className="text-sm text-slate-500">
                   Risklər, izahlar və icra statusları
                 </p>
@@ -404,7 +508,7 @@ if (!answers || answers.length === 0) {
                   {(findings || []).map((finding: any, index: number) => (
                     <div
                       key={finding.id}
-                      className="print-card break-inside-avoid rounded-2xl border border-slate-200 p-5"
+                      className="print-card rounded-2xl border border-slate-200 p-5"
                     >
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between print:flex-row">
                         <div>
@@ -425,17 +529,17 @@ if (!answers || answers.length === 0) {
                         </span>
                       </div>
 
-                      <p className="mt-3 text-sm leading-6 text-slate-700">
+                      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">
                         {finding.description || '-'}
                       </p>
 
-                      <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl bg-slate-50 p-3 text-sm sm:grid-cols-3 print:grid-cols-3">
+                      <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl bg-slate-50 p-3 text-sm sm:grid-cols-4 print:grid-cols-4">
                         <div>
                           <p className="text-xs uppercase text-slate-500">
                             Status
                           </p>
                           <p className="font-bold text-slate-900">
-                            {finding.status || '-'}
+                            {statusLabel(finding.status)}
                           </p>
                         </div>
 
@@ -444,7 +548,7 @@ if (!answers || answers.length === 0) {
                             Deadline
                           </p>
                           <p className="font-bold text-slate-900">
-                            {finding.deadline || '-'}
+                            {formatDate(finding.deadline)}
                           </p>
                         </div>
 
@@ -456,6 +560,15 @@ if (!answers || answers.length === 0) {
                             {finding.severity || '-'}
                           </p>
                         </div>
+
+                        <div>
+                          <p className="text-xs uppercase text-slate-500">
+                            Cavabdeh
+                          </p>
+                          <p className="font-bold text-slate-900">
+                            {finding.profiles?.full_name || '-'}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -463,13 +576,16 @@ if (!answers || answers.length === 0) {
               )}
             </section>
 
-            {/* Signature */}
-            <section className="print-section grid grid-cols-1 gap-6 border-t border-slate-200 pt-8 sm:grid-cols-2 print:grid-cols-2">
+            <section
+  className={`grid grid-cols-1 gap-6 border-t border-slate-200 pt-8 sm:grid-cols-2 print:grid-cols-2 ${
+    (findings || []).length > 0 ? 'report-page-break-before' : ''
+  }`}
+>
               <div>
                 <p className="text-sm font-semibold text-slate-900">
                   Auditor imzası
                 </p>
-                <div className="mt-10 border-t border-slate-300 pt-2 text-xs text-slate-500">
+                <div className="mt-16 border-t border-slate-300 pt-2 text-xs text-slate-500">
                   Ad, soyad və imza
                 </div>
               </div>
@@ -478,7 +594,7 @@ if (!answers || answers.length === 0) {
                 <p className="text-sm font-semibold text-slate-900">
                   Rəhbər təsdiqi
                 </p>
-                <div className="mt-10 border-t border-slate-300 pt-2 text-xs text-slate-500">
+                <div className="mt-16 border-t border-slate-300 pt-2 text-xs text-slate-500">
                   Ad, soyad və imza
                 </div>
               </div>

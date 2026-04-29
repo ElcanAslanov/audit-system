@@ -5,107 +5,168 @@ import { revalidatePath } from 'next/cache'
 
 export async function createTemplate(prevState: any, formData: FormData) {
   const supabase = await createClient()
-  const title = formData.get('title') as string
-  const sections = JSON.parse(formData.get('sections') as string)
 
-  if (!title) return { error: "Şablon adı daxil edilməlidir.", success: false }
+  const title = formData.get('title') as string
+  const sectionsRaw = formData.get('sections') as string
+
+  if (!title?.trim()) {
+    return { success: false, error: 'Şablon adı daxil edilməlidir.' }
+  }
+
+  let sections: any[] = []
 
   try {
-    // 1. Əvvəlcə şablonu (template) yaradırıq
-    const { data: template, error: tError } = await supabase
+    sections = JSON.parse(sectionsRaw || '[]')
+  } catch {
+    return { success: false, error: 'Bölmə məlumatları düzgün deyil.' }
+  }
+
+  if (sections.length === 0) {
+    return { success: false, error: 'Ən azı 1 bölmə əlavə edin.' }
+  }
+
+  try {
+    const { data: template, error: templateError } = await supabase
       .from('audit_templates')
-      .insert({ title })
-      .select()
+      .insert({
+        title,
+      })
+      .select('id')
       .single()
 
-    if (tError) throw tError
+    if (templateError) throw templateError
 
-    // 2. Bölmələri (sections) və sualları (questions) dövrə salıb yazırıq
-    for (let sIdx = 0; sIdx < sections.length; sIdx++) {
-      const section = sections[sIdx]
+    for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
+      const section = sections[sectionIndex]
 
-      // Bölməni əlavə et
-      const { data: newSection, error: sError } = await supabase
+      if (!section.title?.trim()) {
+        throw new Error('Bölmə adı boş ola bilməz.')
+      }
+
+      const { data: createdSection, error: sectionError } = await supabase
         .from('template_sections')
-        .insert({ 
-            template_id: template.id, 
-            title: section.title,
-            sort_order: sIdx 
+        .insert({
+          template_id: template.id,
+          title: section.title,
+          sort_order: sectionIndex,
         })
-        .select()
+        .select('id')
         .single()
 
-      if (sError) throw sError
+      if (sectionError) throw sectionError
 
-     // Həmin hissəni bu şəkildə dəyiş:
-// Həmin hissəni bu şəkildə dəyiş:
-if (section.questions && section.questions.length > 0) {
-  const questionsToInsert = section.questions.map((q: any, qIdx: number) => ({
-    section_id: newSection.id,
-    question_text: q.text,
-    input_type: q.type || 'yes_no',
-    sort_order: qIdx,
-    // Yeni sahələri əlavə edirik:
-    weight: q.weight || 1,        // Əgər frontend-dən gəlmirsə, default 1 qoyuruq
-    max_score: q.max_score || 10  // Default 10 bal
-  }))
+      const questions = section.questions || []
 
-  const { error: qError } = await supabase
-    .from('template_questions')
-    .insert(questionsToInsert)
+      if (questions.length === 0) {
+        throw new Error('Hər bölmədə ən azı 1 sual olmalıdır.')
+      }
 
-  if (qError) throw qError
-}
+      const questionRows = questions.map((question: any, questionIndex: number) => {
+        if (!question.text?.trim()) {
+          throw new Error('Sual mətni boş ola bilməz.')
+        }
+
+        return {
+          section_id: createdSection.id,
+          question_text: question.text,
+          input_type: question.type || 'yes_no',
+          sort_order: questionIndex,
+          max_score: Number(question.max_score || 10),
+        }
+      })
+
+      const { error: questionsError } = await supabase
+        .from('template_questions')
+        .insert(questionRows)
+
+      if (questionsError) throw questionsError
     }
 
     revalidatePath('/dashboard/admin/templates')
-    return { success: true }
+    revalidatePath('/dashboard/plans')
+
+    return { success: true, error: null }
   } catch (err: any) {
-    console.error("Şablon yaradılarkən xəta:", err)
-    return { success: false, error: err.message }
+    return {
+      success: false,
+      error: err.message || 'Şablon yaradılarkən xəta baş verdi.',
+    }
   }
 }
 
-// --- 2. Template sil ---
 export async function deleteTemplate(templateId: string) {
   const supabase = await createClient()
 
   if (!templateId) {
-    return { success: false, error: 'Template ID tapılmadı.' }
+    return {
+      success: false,
+      error: 'Template ID tapılmadı.',
+    }
   }
 
   try {
-    // Əvvəl yoxlayırıq: bu template hansı audit planlarında istifadə olunub?
-    const { data: usedPlans, error: usageError } = await supabase
+    const { data: usedPlansLegacy, error: usedPlansLegacyError } = await supabase
       .from('audit_plans')
-      .select('id, title, department, status, due_date')
+      .select('id, title, status, created_at')
       .eq('template_id', templateId)
       .order('created_at', { ascending: false })
 
-    if (usageError) throw usageError
+    if (usedPlansLegacyError) throw usedPlansLegacyError
 
-    if (usedPlans && usedPlans.length > 0) {
+    let linkedPlansFromRelation: any[] = []
+
+    const { data: usedPlanLinks, error: usedPlanLinksError } = await supabase
+      .from('audit_plan_templates')
+      .select(`
+        plan_id,
+        audit_plans(id, title, status, created_at)
+      `)
+      .eq('template_id', templateId)
+
+    if (!usedPlanLinksError) {
+      linkedPlansFromRelation = (usedPlanLinks || [])
+        .map((item: any) => {
+          const plan = Array.isArray(item.audit_plans)
+            ? item.audit_plans[0] || null
+            : item.audit_plans || null
+
+          return plan
+        })
+        .filter(Boolean)
+    }
+
+    const planMap = new Map<string, any>()
+
+    ;[...(usedPlansLegacy || []), ...linkedPlansFromRelation].forEach(
+      (plan: any) => {
+        if (plan?.id) planMap.set(plan.id, plan)
+      }
+    )
+
+    const usedPlans = Array.from(planMap.values())
+
+    if (usedPlans.length > 0) {
       const planList = usedPlans
         .map((plan: any, index: number) => {
-          const title = plan.title || 'Adsız plan'
-          const department = plan.department ? ` — ${plan.department}` : ''
-          const status = plan.status ? ` — status: ${plan.status}` : ''
-          const dueDate = plan.due_date ? ` — son tarix: ${plan.due_date}` : ''
-
-          return `${index + 1}. ${title}${department}${status}${dueDate}`
+          return `${index + 1}. ${plan.title || 'Adsız plan'} — status: ${
+            plan.status || '-'
+          } — id: ${plan.id}`
         })
         .join('\n')
 
       return {
         success: false,
         error:
-          `Bu şablon ${usedPlans.length} audit planında istifadə olunub.\n\n` +
-          `Əvvəl bu audit planlarını silmək lazımdır:\n\n${planList}\n\n` +
-          `Bu planları sildikdən sonra şablonu silə bilərsiniz.`,
+          'Bu şablon audit planlarında istifadə olunub. Əvvəl aşağıdakı planları silin və sonra şablonu silin:\n\n' +
+          planList,
       }
     }
 
-    // Əvvəl template_sections içindən həmin template-ə aid section-ları çəkirik
+    await supabase
+      .from('audit_plan_templates')
+      .delete()
+      .eq('template_id', templateId)
+
     const { data: sections, error: sectionsError } = await supabase
       .from('template_sections')
       .select('id')
@@ -113,9 +174,8 @@ export async function deleteTemplate(templateId: string) {
 
     if (sectionsError) throw sectionsError
 
-    const sectionIds = (sections || []).map((s: any) => s.id)
+    const sectionIds = (sections || []).map((section: any) => section.id)
 
-    // Əvvəl sualları sil
     if (sectionIds.length > 0) {
       const { error: questionsError } = await supabase
         .from('template_questions')
@@ -125,29 +185,45 @@ export async function deleteTemplate(templateId: string) {
       if (questionsError) throw questionsError
     }
 
-    // Sonra section-ları sil
-    const { error: deleteSectionsError } = await supabase
+    const { error: sectionsDeleteError } = await supabase
       .from('template_sections')
       .delete()
       .eq('template_id', templateId)
 
-    if (deleteSectionsError) throw deleteSectionsError
+    if (sectionsDeleteError) throw sectionsDeleteError
 
-    // Axırda template-i sil
-    const { error: templateError } = await supabase
+    const { error: templateDeleteError } = await supabase
       .from('audit_templates')
       .delete()
       .eq('id', templateId)
 
-    if (templateError) throw templateError
+    if (templateDeleteError) {
+      if (
+        templateDeleteError.message?.includes(
+          'audit_plans_template_id_fkey'
+        )
+      ) {
+        return {
+          success: false,
+          error:
+            'Bu şablon hələ audit planlarında istifadə olunur. Audit Planları səhifəsində bu şablonla yaradılmış planları silin, sonra şablonu yenidən silin.',
+        }
+      }
+
+      throw templateDeleteError
+    }
 
     revalidatePath('/dashboard/admin/templates')
+    revalidatePath('/dashboard/plans')
 
-    return { success: true, error: null }
+    return {
+      success: true,
+      error: null,
+    }
   } catch (err: any) {
     return {
       success: false,
-      error: err.message || 'Template silinərkən xəta baş verdi.',
+      error: 'Şablon silinə bilmədi\n\n' + (err.message || 'Naməlum xəta'),
     }
   }
 }

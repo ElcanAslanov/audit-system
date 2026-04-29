@@ -16,26 +16,34 @@ export default function CreatePlanForm({
   templates: any[]
   onSuccess?: () => void
 }) {
-const router = useRouter()
-const formRef = useRef<HTMLFormElement | null>(null)
+  const router = useRouter()
+  const formRef = useRef<HTMLFormElement | null>(null)
 
-const [state, action, pending] = useActionState(createAuditPlan, null)
-const [searchTerm, setSearchTerm] = useState('')
+  const [state, action, pending] = useActionState(createAuditPlan, null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [templateSearch, setTemplateSearch] = useState('')
 
-useEffect(() => {
-  if (!state?.success) return
+  useEffect(() => {
+    if (!state?.success) return
 
-  formRef.current?.reset()
-  setSearchTerm('')
-  router.refresh()
-  onSuccess?.()
-}, [state?.success, router, onSuccess])
+    formRef.current?.reset()
+    setSearchTerm('')
+    setTemplateSearch('')
+    router.refresh()
+    onSuccess?.()
+  }, [state?.success, router, onSuccess])
 
-const filteredAuditors = useMemo(() => {
+  const filteredAuditors = useMemo(() => {
     return auditors.filter((a) =>
       (a.full_name || '').toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [auditors, searchTerm])
+
+  const filteredTemplates = useMemo(() => {
+    return templates.filter((t) =>
+      (t.title || '').toLowerCase().includes(templateSearch.toLowerCase())
+    )
+  }, [templates, templateSearch])
 
   return (
     <form ref={formRef} action={action} className="space-y-6">
@@ -109,20 +117,57 @@ const filteredAuditors = useMemo(() => {
 
             <div>
               <label className="mb-1 block text-sm font-semibold text-slate-700">
-                Audit şablonu
+                Şablon axtar
               </label>
-              <select
-                name="template_id"
-                required
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Şablon seçin...</option>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.title}
-                  </option>
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-2.5 text-slate-400"
+                  size={16}
+                />
+                <input
+                  type="text"
+                  value={templateSearch}
+                  placeholder="Şablon adı ilə axtar..."
+                  onChange={(e) => setTemplateSearch(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-semibold text-slate-700">
+                Audit şablonları
+              </label>
+
+              <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
+                {filteredTemplates.length === 0 && (
+                  <p className="p-2 text-sm text-slate-500">
+                    Şablon tapılmadı.
+                  </p>
+                )}
+
+                {filteredTemplates.map((t) => (
+                  <label
+                    key={t.id}
+                    className="flex cursor-pointer items-center gap-3 rounded-lg p-2 text-sm transition hover:bg-white"
+                  >
+                    <input
+                      type="checkbox"
+                      name="template_ids"
+                      value={t.id}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="font-medium text-slate-700">
+                      {t.title}
+                    </span>
+                  </label>
                 ))}
-              </select>
+              </div>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Bir və ya bir neçə şablon seçə bilərsiniz. Seçilmiş şablonların
+                bütün sualları eyni audit checklist-də görünəcək.
+              </p>
             </div>
 
             <div className="sm:col-span-2">
@@ -214,7 +259,8 @@ const filteredAuditors = useMemo(() => {
             </p>
             <p className="mt-1 text-sm leading-6 text-blue-700">
               Plan yaradıldıqdan sonra auditorlar checklist səhifəsindən
-              cavabları doldura və tapıntı əlavə edə biləcəklər.
+              seçilmiş bütün şablonların suallarını doldura və tapıntı əlavə edə
+              biləcəklər.
             </p>
           </div>
         </div>
@@ -225,7 +271,11 @@ const filteredAuditors = useMemo(() => {
           disabled={pending}
           className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 sm:w-auto"
         >
-          {pending ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
+          {pending ? (
+            <Loader2 className="animate-spin" size={18} />
+          ) : (
+            <Plus size={18} />
+          )}
           {pending ? 'Yaradılır...' : 'Planı Yarat'}
         </button>
       </div>

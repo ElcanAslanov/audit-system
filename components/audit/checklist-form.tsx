@@ -97,20 +97,20 @@ export default function ChecklistForm({
   };
 
   const setAllAnswers = (value: 'yes' | 'na') => {
-  const next: Record<string, string> = {};
+    const next: Record<string, string> = {};
 
-  questions.forEach((question) => {
-    next[question.id] = value;
-  });
+    questions.forEach((question) => {
+      next[question.id] = value;
+    });
 
-  setSelectedAnswers(next);
-  setHasUnsavedChanges(true);
-};
+    setSelectedAnswers(next);
+    setHasUnsavedChanges(true);
+  };
 
-const clearAllAnswers = () => {
-  setSelectedAnswers({});
-  setHasUnsavedChanges(true);
-};
+  const clearAllAnswers = () => {
+    setSelectedAnswers({});
+    setHasUnsavedChanges(true);
+  };
 
   useEffect(() => {
     if (!state?.success) return;
@@ -118,19 +118,19 @@ const clearAllAnswers = () => {
   }, [state?.success]);
 
   useEffect(() => {
-  if (!hasUnsavedChanges) return;
+    if (!hasUnsavedChanges) return;
 
-  const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-    event.preventDefault();
-    event.returnValue = '';
-  };
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
 
-  window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
-  return () => {
-    window.removeEventListener('beforeunload', handleBeforeUnload);
-  };
-}, [hasUnsavedChanges]);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
 
   return (
     <>
@@ -171,30 +171,30 @@ const clearAllAnswers = () => {
             />
           </div>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-  <button
-    type="button"
-    onClick={() => setAllAnswers('yes')}
-    className="inline-flex w-full justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 sm:w-auto"
-  >
-    Hamısını Bəli et
-  </button>
+            <button
+              type="button"
+              onClick={() => setAllAnswers('yes')}
+              className="inline-flex w-full justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 sm:w-auto"
+            >
+              Hamısını Bəli et
+            </button>
 
-  <button
-    type="button"
-    onClick={() => setAllAnswers('na')}
-    className="inline-flex w-full justify-center rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
-  >
-    Hamısını N/A et
-  </button>
+            <button
+              type="button"
+              onClick={() => setAllAnswers('na')}
+              className="inline-flex w-full justify-center rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
+            >
+              Hamısını N/A et
+            </button>
 
-  <button
-    type="button"
-    onClick={clearAllAnswers}
-    className="inline-flex w-full justify-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 sm:w-auto"
-  >
-    Seçimləri təmizlə
-  </button>
-</div>
+            <button
+              type="button"
+              onClick={clearAllAnswers}
+              className="inline-flex w-full justify-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 sm:w-auto"
+            >
+              Seçimləri təmizlə
+            </button>
+          </div>
         </div>
 
         {state?.error && (
@@ -223,6 +223,12 @@ const clearAllAnswers = () => {
 
             const currentValue = selectedAnswers[q.id] || '';
 
+            const maxScore = Number(q.max_score || 10);
+            const savedScore =
+              savedAnswer?.score !== undefined && savedAnswer?.score !== null
+                ? Number(savedAnswer.score)
+                : '';
+
             return (
               <article
                 key={q.id}
@@ -243,55 +249,88 @@ const clearAllAnswers = () => {
                     </p>
                   </div>
 
-                 <span
-  className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${answerClass(
-    currentValue
-  )}`}
->
-  {answerLabel(currentValue)}
-</span>
+                  <span
+                    className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${answerClass(
+                      currentValue
+                    )}`}
+                  >
+                    {answerLabel(currentValue)}
+                  </span>
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">
                     <input
-  type="radio"
-  name={`answer_${q.id}`}
-  value="yes"
-  checked={currentValue === 'yes'}
-  onChange={() => handleAnswerChange(q.id, 'yes')}
-  className="h-4 w-4"
-/>
+                      type="radio"
+                      name={`answer_${q.id}`}
+                      value="yes"
+                      checked={currentValue === 'yes'}
+                      onChange={() => handleAnswerChange(q.id, 'yes')}
+                      className="h-4 w-4"
+                    />
                     Bəli
                   </label>
 
                   <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-semibold text-red-700 transition hover:bg-red-100">
                     <input
-  type="radio"
-  name={`answer_${q.id}`}
-  value="no"
-  defaultChecked={savedValue.toLowerCase() === 'no'}
-  onChange={() => {
-    handleAnswerChange(q.id, 'no');
-    setActiveFinding(q.id);
-  }}
-  className="h-4 w-4"
-/>
+                      type="radio"
+                      name={`answer_${q.id}`}
+                      value="no"
+                      defaultChecked={savedValue.toLowerCase() === 'no'}
+                      onChange={() => {
+                        handleAnswerChange(q.id, 'no');
+                        setActiveFinding(q.id);
+                      }}
+                      className="h-4 w-4"
+                    />
                     Xeyr / Problem
                   </label>
 
                   <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
                     <input
-  type="radio"
-  name={`answer_${q.id}`}
-  value="na"
-  checked={currentValue === 'na'}
-  onChange={() => handleAnswerChange(q.id, 'na')}
-  className="h-4 w-4"
-/>
+                      type="radio"
+                      name={`answer_${q.id}`}
+                      value="na"
+                      checked={currentValue === 'na'}
+                      onChange={() => handleAnswerChange(q.id, 'na')}
+                      className="h-4 w-4"
+                    />
                     N/A
                   </label>
                 </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+  <div>
+    <label className="mb-1 block text-sm font-semibold text-slate-700">
+      Verilən bal
+    </label>
+
+    <input
+      type="number"
+      name={`score_${q.id}`}
+      min={0}
+      max={maxScore}
+      step="0.5"
+      defaultValue={savedScore}
+      onChange={() => setHasUnsavedChanges(true)}
+      placeholder={`0 - ${maxScore}`}
+      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+    />
+
+    <p className="mt-1 text-xs text-slate-500">
+      Maksimum bal: {maxScore}
+    </p>
+  </div>
+
+  <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
+    <p className="text-xs font-semibold uppercase text-blue-700">
+      Qiymətləndirmə
+    </p>
+    <p className="mt-1 text-sm text-blue-700">
+      Bu sual üçün 0 ilə {maxScore} arasında bal verə bilərsiniz.
+    </p>
+  </div>
+</div>
 
                 <div className="mt-4">
                   <label className="mb-1 block text-sm font-semibold text-slate-700">

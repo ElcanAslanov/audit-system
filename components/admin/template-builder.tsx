@@ -7,7 +7,6 @@ import { Loader2, Plus, Save, Trash2 } from 'lucide-react'
 type QuestionItem = {
   text: string
   type: string
-  weight: number
   max_score: number
 }
 
@@ -20,7 +19,7 @@ export default function TemplateBuilder() {
   const [sections, setSections] = useState<SectionItem[]>([
     {
       title: '',
-      questions: [{ text: '', type: 'yes_no', weight: 1, max_score: 10 }],
+      questions: [{ text: '', type: 'yes_no', max_score: 10 }],
     },
   ])
 
@@ -33,7 +32,7 @@ export default function TemplateBuilder() {
       ...sections,
       {
         title: '',
-        questions: [{ text: '', type: 'yes_no', weight: 1, max_score: 10 }],
+        questions: [{ text: '', type: 'yes_no', max_score: 10 }],
       },
     ])
   }
@@ -58,7 +57,6 @@ export default function TemplateBuilder() {
     next[sectionIndex].questions.push({
       text: '',
       type: 'yes_no',
-      weight: 1,
       max_score: 10,
     })
     setSections(next)
@@ -96,7 +94,7 @@ export default function TemplateBuilder() {
     setSections([
       {
         title: '',
-        questions: [{ text: '', type: 'yes_no', weight: 1, max_score: 10 }],
+        questions: [{ text: '', type: 'yes_no', max_score: 10 }],
       },
     ])
   }
@@ -215,7 +213,7 @@ export default function TemplateBuilder() {
                   className="rounded-xl border border-slate-200 bg-slate-50 p-3"
                 >
                   <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-                    <div className="lg:col-span-5">
+                    <div className="lg:col-span-6">
                       <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">
                         Sual #{questionIndex + 1}
                       </label>
@@ -257,46 +255,24 @@ export default function TemplateBuilder() {
                       </select>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 lg:col-span-3">
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">
-                          Weight
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          value={question.weight}
-                          onChange={(e) =>
-                            updateQuestion(
-                              sectionIndex,
-                              questionIndex,
-                              'weight',
-                              Number(e.target.value)
-                            )
-                          }
-                          className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">
-                          Max
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          value={question.max_score}
-                          onChange={(e) =>
-                            updateQuestion(
-                              sectionIndex,
-                              questionIndex,
-                              'max_score',
-                              Number(e.target.value)
-                            )
-                          }
-                          className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
+                    <div className="lg:col-span-2">
+                      <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">
+                        Max
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={question.max_score}
+                        onChange={(e) =>
+                          updateQuestion(
+                            sectionIndex,
+                            questionIndex,
+                            'max_score',
+                            Number(e.target.value)
+                          )
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+                      />
                     </div>
 
                     <div className="flex items-end lg:col-span-1">
@@ -343,7 +319,11 @@ export default function TemplateBuilder() {
           disabled={pending}
           className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-green-300 sm:w-auto"
         >
-          {pending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+          {pending ? (
+            <Loader2 className="animate-spin" size={18} />
+          ) : (
+            <Save size={18} />
+          )}
           {pending ? 'Yadda saxlanılır...' : 'Şablonu Yadda Saxla'}
         </button>
       </div>

@@ -22,69 +22,126 @@ function sanitizeFilename(filename: string): string {
 }
 
 // --- 1. Audit Planı Yaratma ---
-export async function createAuditPlan(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
+export async function createAuditPlan(
+  prevState: ActionState | null,
+  formData: FormData
+): Promise<ActionState> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) return { error: "İstifadəçi tapılmadı", success: false }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { error: 'İstifadəçi tapılmadı', success: false }
 
   const title = formData.get('title') as string
   const companyId = formData.get('company_id') as string
-  const templateId = formData.get('template_id') as string
+  const templateIds = formData.getAll('template_ids') as string[]
+  const templateId = templateIds[0] || ''
   const dueDate = formData.get('due_date') as string
   const notes = formData.get('notes') as string
   const department = formData.get('department') as string
 
-  if (!templateId) return { error: "Audit şablonu seçilməlidir.", success: false }
-  if (!companyId) return { error: "Şirkət seçilməlidir.", success: false }
+  if (!title?.trim()) {
+    return { error: 'Plan başlığı daxil edilməlidir.', success: false }
+  }
 
-  // Fayl yükləmə prosesi
-  let fileUrl = null
+  if (!companyId) {
+    return { error: 'Şirkət seçilməlidir.', success: false }
+  }
+
+  if (templateIds.length === 0) {
+    return { error: 'Ən azı 1 audit şablonu seçilməlidir.', success: false }
+  }
+
+  let fileUrl: string | null = null
   const file = formData.get('file') as File | null
 
-  if (file && file.size > 0) {
-    // Adı təmizləyirik: "Azərbaycan.pdf" -> "azerbaycan.pdf"
-    const safeName = sanitizeFilename(file.name)
-    const fileName = `${Date.now()}_${safeName}`
-    const filePath = `plans/${fileName}`
-    
-    const { error: uploadError } = await supabase.storage
-      .from('audit-docs') // Bucket adının düzgün olduğundan əmin ol
-      .upload(filePath, file)
-      
-    if (uploadError) return { error: "Fayl yüklənərkən xəta: " + uploadError.message, success: false }
-    fileUrl = filePath
+  try {
+    if (file && file.size > 0) {
+      const safeName = sanitizeFilename(file.name)
+      const fileName = `${Date.now()}_${safeName}`
+      const filePath = `plans/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('audit-docs')
+        .upload(filePath, file)
+
+      if (uploadError) {
+        return {
+          error: 'Fayl yüklənərkən xəta: ' + uploadError.message,
+          success: false,
+        }
+      }
+
+      fileUrl = filePath
+    }
+
+    const { data: plan, error: planError } = await supabase
+      .from('audit_plans')
+      .insert([
+        {
+          title,
+          department,
+          company_id: companyId,
+          template_id: templateId, // legacy uyğunluq üçün ilk seçilən şablon
+          due_date: dueDate || null,
+          notes,
+          file_url: fileUrl,
+          created_by: user.id,
+          status: 'planlanan',
+          score: 0,
+        },
+      ])
+      .select()
+      .single()
+
+    if (planError) throw planError
+
+    const uniqueTemplateIds = Array.from(new Set(templateIds.filter(Boolean)))
+
+    const planTemplates = uniqueTemplateIds.map((id) => ({
+      plan_id: plan.id,
+      template_id: id,
+    }))
+
+    const { error: planTemplatesError } = await supabase
+      .from('audit_plan_templates')
+      .insert(planTemplates)
+
+    if (planTemplatesError) {
+      throw planTemplatesError
+    }
+
+    const assignedIds = formData.getAll('assigned_to') as string[]
+
+    if (assignedIds.length > 0) {
+      const assignments = assignedIds.map((id) => ({
+        plan_id: plan.id,
+        user_id: id,
+      }))
+
+      const { error: assignmentsError } = await supabase
+        .from('plan_assignments')
+        .insert(assignments)
+
+      if (assignmentsError) throw assignmentsError
+    }
+
+    revalidatePath('/dashboard/plans')
+    revalidatePath('/dashboard')
+
+    return { error: null, success: true }
+  } catch (err: any) {
+    if (fileUrl) {
+      await supabase.storage.from('audit-docs').remove([fileUrl])
+    }
+
+    return {
+      error: err.message || 'Audit planı yaradılarkən xəta baş verdi.',
+      success: false,
+    }
   }
-console.log("DEBUG: Gələn Şirkət ID:", companyId);
-  console.log("DEBUG: İstifadəçi ID:", user.id);
-  // Audit planı yaratma
-  const { data: plan, error: planError } = await supabase
-    .from('audit_plans')
-    .insert([{ 
-      title, 
-      department, 
-      company_id: companyId, 
-      template_id: templateId, 
-      due_date: dueDate || null, 
-      notes, 
-      file_url: fileUrl, 
-      created_by: user.id, 
-      status: 'planlanan' 
-    }])
-    .select()
-    .single()
-
-  if (planError) return { error: planError.message, success: false }
-
-  // Təyinatları (Assignments) əlavə etmə
-  const assignedIds = formData.getAll('assigned_to') as string[]
-  if (assignedIds.length > 0) {
-    const assignments = assignedIds.map(id => ({ plan_id: plan.id, user_id: id }))
-    await supabase.from('plan_assignments').insert(assignments)
-  }
-
-  revalidatePath('/dashboard/plans')
-  return { error: null, success: true }
 }
 
 // --- 2. Tapıntı (Finding) Əlavə Etmə ---
@@ -131,6 +188,7 @@ export async function saveAuditAnswers(
         const question_id = key.replace('answer_', '')
         const response = String(value || '')
         const comment = String(formData.get(`comment_${question_id}`) || '')
+        const rawScore = formData.get(`score_${question_id}`)
 
         incomingQuestionIds.push(question_id)
 
@@ -139,6 +197,7 @@ export async function saveAuditAnswers(
           question_id,
           response,
           comment,
+          rawScore,
           updated_at: new Date().toISOString(),
         })
       }
@@ -169,14 +228,18 @@ export async function saveAuditAnswers(
     const answersWithScore = answers.map((answer) => {
       const maxScore = incomingMaxScoreMap.get(answer.question_id) || 10
 
-      let score = 0
+      let score = Number(answer.rawScore || 0)
 
-      if (answer.response === 'yes') {
-        score = maxScore
+      if (Number.isNaN(score)) {
+        score = 0
       }
 
-      if (answer.response === 'no') {
+      if (score < 0) {
         score = 0
+      }
+
+      if (score > maxScore) {
+        score = maxScore
       }
 
       if (answer.response === 'na') {
@@ -184,8 +247,12 @@ export async function saveAuditAnswers(
       }
 
       return {
-        ...answer,
+        plan_id: answer.plan_id,
+        question_id: answer.question_id,
+        response: answer.response,
+        comment: answer.comment,
         score,
+        updated_at: answer.updated_at,
       }
     })
 
@@ -202,7 +269,6 @@ export async function saveAuditAnswers(
       }
     }
 
-    // Upsert-dən sonra bu plan üzrə bütün cavabları yenidən çəkirik
     const { data: allAnswers, error: allAnswersError } = await supabase
       .from('audit_answers')
       .select(`
@@ -401,6 +467,14 @@ export async function deleteAuditPlan(planId: string): Promise<ActionState> {
       .eq('plan_id', planId)
 
     if (answersError) throw answersError
+
+    // Sonra plan-şablon əlaqələrini silirik
+    const { error: planTemplatesError } = await supabase
+      .from('audit_plan_templates')
+      .delete()
+      .eq('plan_id', planId)
+
+    if (planTemplatesError) throw planTemplatesError
 
     // Sonra təyinatları silirik
     const { error: assignmentsError } = await supabase
