@@ -218,7 +218,7 @@ export default function UserTable({
                           >
                             <option value="auditor">Auditor</option>
                             <option value="audit_muavini">Audit müavini</option>
-                            <option value="muavin">Müavin</option>
+                            {/* <option value="muavin">Müavin</option> */}
                             <option value="rehber">Rəhbər</option>
                             <option value="admin">Admin</option>
                           </select>
@@ -319,7 +319,7 @@ export default function UserTable({
                       >
                         <option value="auditor">Auditor</option>
                         <option value="audit_muavini">Audit müavini</option>
-                        <option value="muavin">Müavin</option>
+                        {/* <option value="muavin">Müavin</option> */}
                         <option value="rehber">Rəhbər</option>
                         <option value="admin">Admin</option>
                       </select>

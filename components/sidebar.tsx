@@ -69,7 +69,7 @@ const managementItems: MenuItem[] = [
   {
     label: 'Şirkətlər',
     href: '/dashboard/companies',
-    roles: ['admin', 'rehber'],
+    roles: ['admin'],
     icon: Building2,
   },
 ]
