@@ -111,7 +111,6 @@ export async function addFinding(prevState: ActionState | null, formData: FormDa
 }
 
 // --- 3. Audit Cavablarını Yadda Saxlama ---
-// --- 3. Audit Cavablarını Yadda Saxlama ---
 export async function saveAuditAnswers(
   prevState: ActionState | null,
   formData: FormData
@@ -123,88 +122,151 @@ export async function saveAuditAnswers(
     return { error: 'Plan ID tapılmadı.', success: false }
   }
 
-  const questionIds = new Set<string>()
+  try {
+    const answers: any[] = []
+    const incomingQuestionIds: string[] = []
 
-  for (const [key] of formData.entries()) {
-    if (key.startsWith('answer_')) {
-      questionIds.add(key.replace('answer_', ''))
+    for (const [key, value] of formData.entries()) {
+      if (key.startsWith('answer_')) {
+        const question_id = key.replace('answer_', '')
+        const response = String(value || '')
+        const comment = String(formData.get(`comment_${question_id}`) || '')
+
+        incomingQuestionIds.push(question_id)
+
+        answers.push({
+          plan_id,
+          question_id,
+          response,
+          comment,
+          updated_at: new Date().toISOString(),
+        })
+      }
     }
 
-    if (key.startsWith('comment_')) {
-      questionIds.add(key.replace('comment_', ''))
+    if (answers.length === 0) {
+      return {
+        error: 'Yadda saxlamaq üçün cavab seçilməyib.',
+        success: false,
+      }
     }
-  }
 
-  if (questionIds.size === 0) {
-    return { error: 'Heç bir cavab tapılmadı.', success: false }
-  }
+    const { data: incomingQuestions, error: incomingQuestionsError } =
+      await supabase
+        .from('template_questions')
+        .select('id, max_score')
+        .in('id', incomingQuestionIds)
 
-  const ids = Array.from(questionIds)
+    if (incomingQuestionsError) throw incomingQuestionsError
 
-const { data: questions, error: questionsError } = await supabase
-  .from('template_questions')
-  .select('id, max_score')
-  .in('id', ids)
+    const incomingMaxScoreMap = new Map(
+      (incomingQuestions || []).map((q: any) => [
+        q.id,
+        Number(q.max_score || 10),
+      ])
+    )
 
-  if (questionsError) {
+    const answersWithScore = answers.map((answer) => {
+      const maxScore = incomingMaxScoreMap.get(answer.question_id) || 10
+
+      let score = 0
+
+      if (answer.response === 'yes') {
+        score = maxScore
+      }
+
+      if (answer.response === 'no') {
+        score = 0
+      }
+
+      if (answer.response === 'na') {
+        score = 0
+      }
+
+      return {
+        ...answer,
+        score,
+      }
+    })
+
+    const { error: upsertError } = await supabase
+      .from('audit_answers')
+      .upsert(answersWithScore, {
+        onConflict: 'plan_id,question_id',
+      })
+
+    if (upsertError) {
+      return {
+        error: 'Cavabları saxlayarkən xəta: ' + upsertError.message,
+        success: false,
+      }
+    }
+
+    // Upsert-dən sonra bu plan üzrə bütün cavabları yenidən çəkirik
+    const { data: allAnswers, error: allAnswersError } = await supabase
+      .from('audit_answers')
+      .select(`
+        question_id,
+        response,
+        score,
+        template_questions(max_score)
+      `)
+      .eq('plan_id', plan_id)
+
+    if (allAnswersError) throw allAnswersError
+
+    const scoredAnswers = (allAnswers || []).filter(
+      (answer: any) => answer.response !== 'na'
+    )
+
+    const earnedScore = scoredAnswers.reduce((sum: number, answer: any) => {
+      return sum + Number(answer.score || 0)
+    }, 0)
+
+    const possibleScore = scoredAnswers.reduce((sum: number, answer: any) => {
+      const question = Array.isArray(answer.template_questions)
+        ? answer.template_questions[0] || null
+        : answer.template_questions || null
+
+      return sum + Number(question?.max_score || 10)
+    }, 0)
+
+    const finalScore =
+      possibleScore > 0 ? Math.round((earnedScore / possibleScore) * 100) : 0
+
+    const nextStatus = finalScore >= 50 ? 'tamamlandi' : 'needs_attention'
+
+    const { error: planUpdateError } = await supabase
+      .from('audit_plans')
+      .update({
+        score: finalScore,
+        status: nextStatus,
+      })
+      .eq('id', plan_id)
+
+    if (planUpdateError) {
+      return {
+        error:
+          'Cavablar saxlandı, amma plan nəticəsi yenilənmədi: ' +
+          planUpdateError.message,
+        success: false,
+      }
+    }
+
+    revalidatePath(`/dashboard/plans/${plan_id}/fill`)
+    revalidatePath(`/dashboard/plans/${plan_id}`)
+    revalidatePath(`/dashboard/plans/${plan_id}/report`)
+    revalidatePath('/dashboard/plans')
+    revalidatePath('/dashboard/findings')
+    revalidatePath('/dashboard')
+
+    return { error: null, success: true }
+  } catch (err: any) {
     return {
-      error: 'Sualları oxuyarkən xəta: ' + questionsError.message,
+      error: err.message || 'Cavabları saxlayarkən xəta baş verdi.',
       success: false,
     }
   }
-
-const questionMap = new Map(
-  (questions || []).map((q: any) => [
-    q.id,
-    {
-      max_score: Number(q.max_score || 0),
-    },
-  ])
-)
-
-  const answers = ids.map((question_id) => {
-    const answer = String(formData.get(`answer_${question_id}`) || '')
-    const comment = String(formData.get(`comment_${question_id}`) || '')
-    const qInfo = questionMap.get(question_id)
-
-    const maxScore = qInfo?.max_score || 0
-    const normalizedAnswer = answer.toLowerCase()
-
-    let score = 0
-
-    if (normalizedAnswer === 'yes') {
-      score = maxScore
-    } else if (normalizedAnswer === 'na') {
-      score = 0
-    } else {
-      score = 0
-    }
-
-return {
-  plan_id,
-  question_id,
-  response: answer,
-  comment,
-  score,
-}
-  })
-
-  const { error } = await supabase
-    .from('audit_answers')
-    .upsert(answers, { onConflict: 'plan_id,question_id' })
-
-  if (error) {
-    return {
-      error: 'Cavabları saxlayarkən xəta: ' + error.message,
-      success: false,
-    }
-  }
-
-  revalidatePath(`/dashboard/plans/${plan_id}/fill`)
-  revalidatePath('/dashboard')
-  revalidatePath('/dashboard/plans')
-
-  return { error: null, success: true }
 }
 
 // --- 4. Auditi Tamamla ---
@@ -379,4 +441,42 @@ export async function deleteAuditPlan(planId: string): Promise<ActionState> {
       success: false,
     }
   }
+}
+
+
+// --- 7. Audit tamamlanma yoxlaması ---
+export async function checkAuditReady(planId: string): Promise<ActionState> {
+  const supabase = await createClient()
+
+  if (!planId) {
+    return { error: 'Plan ID tapılmadı.', success: false }
+  }
+
+  const { data: answers, error } = await supabase
+    .from('audit_answers')
+    .select('id')
+    .eq('plan_id', planId)
+    .limit(1)
+
+  if (error) {
+    return {
+      error: 'Audit cavabları yoxlanılarkən xəta: ' + error.message,
+      success: false,
+    }
+  }
+
+  if (!answers || answers.length === 0) {
+    return {
+      error:
+        'Audit tamamlanması üçün əvvəlcə cavabları seçib “Cavabları Yadda Saxla” düyməsinə basın.',
+      success: false,
+    }
+  }
+
+  revalidatePath(`/dashboard/plans/${planId}`)
+  revalidatePath(`/dashboard/plans/${planId}/fill`)
+  revalidatePath('/dashboard/plans')
+  revalidatePath('/dashboard')
+
+  return { error: null, success: true }
 }

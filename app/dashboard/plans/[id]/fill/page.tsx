@@ -109,8 +109,12 @@ export default async function FillAuditPage({ params }: PageProps) {
     ? plan.companies[0] || null
     : plan.companies || null
 
-  const answeredCount = existingAnswers?.length || 0
-  const totalQuestions = questions?.length || 0
+const answeredCount = existingAnswers?.length || 0
+const totalQuestions = normalizedQuestions.length
+
+const hasAnswers = answeredCount > 0
+const isCompletedOrAttention =
+  plan.status === 'tamamlandi' || plan.status === 'needs_attention'
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6 lg:p-8">
@@ -156,6 +160,26 @@ export default async function FillAuditPage({ params }: PageProps) {
           </Link>
         </div>
       </div>
+
+      {hasAnswers && (
+  <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-blue-800 shadow-sm sm:p-5">
+    <h2 className="font-bold">Bu audit redaktə olunur</h2>
+    <p className="mt-2 text-sm leading-6">
+      Bu audit üçün artıq {answeredCount} cavab yadda saxlanılıb. Yeni dəyişiklik
+      etdikdə cavablar və hesablanmış nəticələr yenilənə bilər.
+    </p>
+  </section>
+)}
+
+{isCompletedOrAttention && (
+  <section className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-yellow-800 shadow-sm sm:p-5">
+    <h2 className="font-bold">Diqqət</h2>
+    <p className="mt-2 text-sm leading-6">
+      Bu auditin statusu “{statusLabel(plan.status)}” olaraq görünür. Cavabları
+      dəyişsəniz, score və hesabat məlumatları yenidən hesablana bilər.
+    </p>
+  </section>
+)}
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

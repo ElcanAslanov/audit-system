@@ -9,10 +9,12 @@ export default function CreatePlanForm({
   companies,
   auditors,
   templates,
+  onSuccess,
 }: {
   companies: any[]
   auditors: any[]
   templates: any[]
+  onSuccess?: () => void
 }) {
 const router = useRouter()
 const formRef = useRef<HTMLFormElement | null>(null)
@@ -26,7 +28,8 @@ useEffect(() => {
   formRef.current?.reset()
   setSearchTerm('')
   router.refresh()
-}, [state?.success, router])
+  onSuccess?.()
+}, [state?.success, router, onSuccess])
 
 const filteredAuditors = useMemo(() => {
     return auditors.filter((a) =>

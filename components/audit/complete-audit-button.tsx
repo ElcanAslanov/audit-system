@@ -1,57 +1,60 @@
-'use client';
+'use client'
 
-import { useState, useTransition } from 'react';
-import { completeAudit } from '@/app/dashboard/plans/actions';
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { checkAuditReady } from '@/app/dashboard/plans/actions'
 
-export default function CompleteAuditButton({ planId }: { planId: string }) {
-  const [isPending, startTransition] = useTransition();
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export default function CompleteAuditButton({
+  planId,
+  hasUnsavedChanges = false,
+}: {
+  planId: string
+  hasUnsavedChanges?: boolean
+}) {
+  const router = useRouter()
+
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
 
   const handleComplete = () => {
-    setMessage(null);
-    setError(null);
+    setError(null)
 
-    const confirmed = window.confirm(
-      'Auditi tamamlamaq istədiyinizə əminsiniz? Tamamlandıqdan sonra nəticə dashboard-da görünəcək.'
-    );
-
-    if (!confirmed) return;
+    if (hasUnsavedChanges) {
+      setError(
+        'Dəyişikliklər yadda saxlanılmayıb. Əvvəlcə “Cavabları Yadda Saxla” düyməsinə basın.'
+      )
+      return
+    }
 
     startTransition(async () => {
-      const result = await completeAudit(planId);
+      const result = await checkAuditReady(planId)
 
       if (result.error) {
-        setError(result.error);
-        return;
+        setError(result.error)
+        return
       }
 
-      setMessage('Audit uğurla tamamlandı.');
-    });
-  };
+      router.refresh()
+      router.push(`/dashboard/plans/${planId}`)
+    })
+  }
 
   return (
-    <div className="space-y-2">
+    <div className="w-full space-y-2 sm:w-auto">
       <button
         type="button"
         disabled={isPending}
         onClick={handleComplete}
-        className="bg-green-600 disabled:bg-green-300 text-white px-6 py-2 rounded"
+        className="inline-flex w-full justify-center rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 sm:w-auto"
       >
-        {isPending ? 'Tamamlanır...' : 'Auditi Tamamla'}
+        {isPending ? 'Yoxlanılır...' : 'Audit detail səhifəsinə keç'}
       </button>
 
-      {message && (
-        <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded p-2">
-          {message}
-        </p>
-      )}
-
       {error && (
-        <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">
+        <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs leading-5 text-red-700">
           {error}
         </p>
       )}
     </div>
-  );
+  )
 }

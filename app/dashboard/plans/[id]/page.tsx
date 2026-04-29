@@ -117,6 +117,8 @@ export default async function AuditDetailPage({ params }: PageProps) {
     `)
     .eq('plan_id', id)
 
+  const hasAnswers = (answers?.length || 0) > 0
+
   const normalizedCompany = Array.isArray(plan.companies)
     ? plan.companies[0] || null
     : plan.companies || null
@@ -174,12 +176,18 @@ export default async function AuditDetailPage({ params }: PageProps) {
               Auditi redaktə et
             </Link>
 
-            <Link
-              href={`/dashboard/plans/${id}/report`}
-              className="inline-flex w-full justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto"
-            >
-              PDF Hesabat
-            </Link>
+           {hasAnswers ? (
+  <Link
+    href={`/dashboard/plans/${id}/report`}
+    className="inline-flex w-full justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto"
+  >
+    PDF Hesabat
+  </Link>
+) : (
+  <span className="inline-flex w-full justify-center rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-400 sm:w-auto">
+    PDF üçün əvvəl auditi doldurun
+  </span>
+)}
           </div>
         </div>
       </div>

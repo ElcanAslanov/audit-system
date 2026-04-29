@@ -81,6 +81,36 @@ export default async function AuditReportPage({ params }: PageProps) {
     `)
     .eq('plan_id', id)
 
+if (!answers || answers.length === 0) {
+  return (
+    <div className="min-h-screen bg-slate-100 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-yellow-200 bg-yellow-50 p-6 text-yellow-800 shadow-sm">
+        <h1 className="text-xl font-bold">Hesabat hazır deyil</h1>
+        <p className="mt-2 text-sm leading-6">
+          Bu audit üçün hələ cavab yazılmayıb. PDF hesabat yaratmaq üçün əvvəlcə
+          auditi doldurun və cavabları yadda saxlayın.
+        </p>
+
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <Link
+            href={`/dashboard/plans/${id}/fill`}
+            className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
+          >
+            Auditi doldur
+          </Link>
+
+          <Link
+            href={`/dashboard/plans/${id}`}
+            className="inline-flex w-full justify-center rounded-lg border border-yellow-200 bg-white px-4 py-2.5 text-sm font-semibold text-yellow-800 transition hover:bg-yellow-100 sm:w-auto"
+          >
+            Detail səhifəyə qayıt
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
   const { data: findings } = await supabase
     .from('findings')
     .select(`
