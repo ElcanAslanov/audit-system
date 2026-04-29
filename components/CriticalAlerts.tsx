@@ -2,11 +2,31 @@
 
 import Link from 'next/link';
 
+function alertReason(audit: any) {
+  const score = Number(audit.score || 0);
+
+  if (audit.status === 'needs_attention' && score < 50) {
+    return 'Status kritikdir və score 50%-dən aşağıdır';
+  }
+
+  if (audit.status === 'needs_attention') {
+    return 'Status diqqət tələb edir';
+  }
+
+  if (score < 50) {
+    return 'Score 50%-dən aşağıdır';
+  }
+
+  return 'Diqqət tələb edir';
+}
+
 export default function CriticalAlerts({ alerts }: { alerts: any[] }) {
   if (!alerts || alerts.length === 0) {
     return (
       <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
-        <h3 className="font-bold text-emerald-800">Kritik xəbərdarlıq yoxdur</h3>
+        <h3 className="font-bold text-emerald-800">
+          Kritik xəbərdarlıq yoxdur
+        </h3>
         <p className="mt-1 text-sm text-emerald-700">
           Hazırda diqqət tələb edən audit görünmür.
         </p>
@@ -19,7 +39,7 @@ export default function CriticalAlerts({ alerts }: { alerts: any[] }) {
       <div className="border-b border-red-100 pb-3">
         <h3 className="font-bold text-red-800">Təcili Diqqət!</h3>
         <p className="mt-1 text-sm text-red-700">
-          Aşağıdakı auditlər kritik statusdadır.
+          Aşağıdakı auditlər kritik göstəriciyə malikdir.
         </p>
       </div>
 
@@ -28,15 +48,20 @@ export default function CriticalAlerts({ alerts }: { alerts: any[] }) {
           <Link
             key={audit.id}
             href={`/dashboard/plans/${audit.id}`}
-            className="block rounded-lg border border-red-100 bg-white/70 p-3 transition hover:bg-white"
+            className="block rounded-lg border border-red-100 bg-white/80 p-3 transition hover:bg-white"
           >
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="font-semibold text-red-900">
                   {audit.title || 'Adsız audit'}
                 </p>
-                <p className="text-sm text-red-700">
-                  Status: {audit.status || 'needs_attention'}
+
+                <p className="mt-1 text-sm text-red-700">
+                  {alertReason(audit)}
+                </p>
+
+                <p className="mt-1 text-xs text-red-600">
+                  {audit.department || '-'} • Son tarix: {audit.due_date || '-'}
                 </p>
               </div>
 

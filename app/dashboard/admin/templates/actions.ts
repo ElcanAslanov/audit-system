@@ -151,3 +151,165 @@ export async function deleteTemplate(templateId: string) {
     }
   }
 }
+
+// --- 4. Template yenilə ---
+export async function updateTemplate(prevState: any, formData: FormData) {
+  const supabase = await createClient()
+
+  const templateId = formData.get('template_id') as string
+  const title = formData.get('title') as string
+  const sectionsRaw = formData.get('sections') as string
+  const deletedSectionIdsRaw = formData.get('deleted_section_ids') as string
+  const deletedQuestionIdsRaw = formData.get('deleted_question_ids') as string
+
+  if (!templateId) {
+    return { success: false, error: 'Template ID tapılmadı.' }
+  }
+
+  if (!title) {
+    return { success: false, error: 'Şablon adı daxil edilməlidir.' }
+  }
+
+  let sections: any[] = []
+  let deletedSectionIds: string[] = []
+  let deletedQuestionIds: string[] = []
+
+  try {
+    sections = JSON.parse(sectionsRaw || '[]')
+    deletedSectionIds = JSON.parse(deletedSectionIdsRaw || '[]')
+    deletedQuestionIds = JSON.parse(deletedQuestionIdsRaw || '[]')
+  } catch {
+    return { success: false, error: 'Bölmə məlumatları düzgün deyil.' }
+  }
+
+  try {
+    const { error: templateError } = await supabase
+      .from('audit_templates')
+      .update({ title })
+      .eq('id', templateId)
+
+    if (templateError) throw templateError
+
+    const realDeletedQuestionIds = deletedQuestionIds.filter(
+      (id) => id && !String(id).startsWith('new_')
+    )
+
+    if (realDeletedQuestionIds.length > 0) {
+      const { error: deleteQuestionsError } = await supabase
+        .from('template_questions')
+        .delete()
+        .in('id', realDeletedQuestionIds)
+
+      if (deleteQuestionsError) throw deleteQuestionsError
+    }
+
+    const realDeletedSectionIds = deletedSectionIds.filter(
+      (id) => id && !String(id).startsWith('new_')
+    )
+
+    if (realDeletedSectionIds.length > 0) {
+      const { data: sectionQuestions, error: sectionQuestionsError } =
+        await supabase
+          .from('template_questions')
+          .select('id')
+          .in('section_id', realDeletedSectionIds)
+
+      if (sectionQuestionsError) throw sectionQuestionsError
+
+      const sectionQuestionIds = (sectionQuestions || []).map((q: any) => q.id)
+
+      if (sectionQuestionIds.length > 0) {
+        const { error: deleteSectionQuestionsError } = await supabase
+          .from('template_questions')
+          .delete()
+          .in('id', sectionQuestionIds)
+
+        if (deleteSectionQuestionsError) throw deleteSectionQuestionsError
+      }
+
+      const { error: deleteSectionsError } = await supabase
+        .from('template_sections')
+        .delete()
+        .in('id', realDeletedSectionIds)
+
+      if (deleteSectionsError) throw deleteSectionsError
+    }
+
+    for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
+      const section = sections[sectionIndex]
+
+      let sectionId = section.id
+
+      if (sectionId && !String(sectionId).startsWith('new_')) {
+        const { error: sectionError } = await supabase
+          .from('template_sections')
+          .update({
+            title: section.title,
+            sort_order: section.sort_order ?? sectionIndex,
+          })
+          .eq('id', sectionId)
+
+        if (sectionError) throw sectionError
+      } else {
+        const { data: newSection, error: insertSectionError } = await supabase
+          .from('template_sections')
+          .insert({
+            template_id: templateId,
+            title: section.title,
+            sort_order: section.sort_order ?? sectionIndex,
+          })
+          .select('id')
+          .single()
+
+        if (insertSectionError) throw insertSectionError
+
+        sectionId = newSection.id
+      }
+
+      for (
+        let questionIndex = 0;
+        questionIndex < (section.questions || []).length;
+        questionIndex++
+      ) {
+        const question = section.questions[questionIndex]
+
+        if (question.id && !String(question.id).startsWith('new_')) {
+          const { error: questionError } = await supabase
+            .from('template_questions')
+            .update({
+              question_text: question.question_text,
+              input_type: question.input_type || 'yes_no',
+              sort_order: question.sort_order ?? questionIndex,
+              max_score: Number(question.max_score || 10),
+            })
+            .eq('id', question.id)
+
+          if (questionError) throw questionError
+        } else {
+          const { error: insertQuestionError } = await supabase
+            .from('template_questions')
+            .insert({
+              section_id: sectionId,
+              question_text: question.question_text,
+              input_type: question.input_type || 'yes_no',
+              sort_order: question.sort_order ?? questionIndex,
+              max_score: Number(question.max_score || 10),
+            })
+
+          if (insertQuestionError) throw insertQuestionError
+        }
+      }
+    }
+
+    revalidatePath('/dashboard/admin/templates')
+    revalidatePath(`/dashboard/admin/templates/${templateId}`)
+    revalidatePath(`/dashboard/admin/templates/${templateId}/edit`)
+
+    return { success: true, error: null }
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || 'Şablon yenilənərkən xəta baş verdi.',
+    }
+  }
+}

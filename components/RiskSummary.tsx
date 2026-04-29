@@ -1,34 +1,16 @@
-'use client';
+type RiskSummaryData = {
+  high: number
+  medium: number
+  low: number
+  open: number
+  resolved: number
+}
 
-import { useEffect, useState } from 'react';
-import { getRiskSummary } from '@/app/actions/audit-actions';
-
-export default function RiskSummary() {
-  const [summary, setSummary] = useState({
-    high: 0,
-    medium: 0,
-    low: 0,
-    open: 0,
-    resolved: 0,
-  });
-
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getRiskSummary().then((data) => {
-      setSummary(data);
-      setLoading(false);
-    });
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="rounded-xl border bg-white p-5 shadow-sm">
-        <p className="text-sm text-slate-500">Risk xülasəsi yüklənir...</p>
-      </div>
-    );
-  }
-
+export default function RiskSummary({
+  summary,
+}: {
+  summary: RiskSummaryData
+}) {
   return (
     <div className="rounded-xl border bg-white p-5 shadow-sm">
       <div className="border-b pb-4">
@@ -77,5 +59,5 @@ export default function RiskSummary() {
         </div>
       </div>
     </div>
-  );
+  )
 }

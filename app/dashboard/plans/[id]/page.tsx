@@ -2,9 +2,57 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import FindingStatusSelect from '@/components/audit/finding-status-select'
+import AuditFileLink from '@/components/audit/audit-file-link'
 
 type PageProps = {
   params: Promise<{ id: string }>
+}
+
+function statusLabel(value?: string | null) {
+  if (value === 'tamamlandi') return 'Tamamlandı'
+  if (value === 'needs_attention') return 'Diqqət tələb edir'
+  if (value === 'planlanan') return 'Planlanan'
+  return value || '-'
+}
+
+function statusClass(value?: string | null) {
+  if (value === 'tamamlandi') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+  }
+
+  if (value === 'needs_attention') {
+    return 'border-red-200 bg-red-50 text-red-700'
+  }
+
+  return 'border-slate-200 bg-slate-50 text-slate-700'
+}
+
+function scoreClass(score?: number | null) {
+  const value = Number(score || 0)
+
+  if (value >= 80) return 'text-emerald-700'
+  if (value >= 50) return 'text-yellow-700'
+  return 'text-red-700'
+}
+
+function answerLabel(value?: string | null) {
+  if (value === 'yes') return 'Bəli'
+  if (value === 'no') return 'Xeyr'
+  if (value === 'na') return 'N/A'
+  return '-'
+}
+
+function answerBadgeClass(value?: string | null) {
+  if (value === 'yes') return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+  if (value === 'no') return 'border-red-200 bg-red-50 text-red-700'
+  if (value === 'na') return 'border-slate-200 bg-slate-50 text-slate-600'
+  return 'border-slate-200 bg-slate-50 text-slate-600'
+}
+
+function severityClass(value?: string | null) {
+  if (value === 'high') return 'border-red-200 bg-red-50 text-red-700'
+  if (value === 'medium') return 'border-yellow-200 bg-yellow-50 text-yellow-700'
+  return 'border-emerald-200 bg-emerald-50 text-emerald-700'
 }
 
 export default async function AuditDetailPage({ params }: PageProps) {
@@ -17,31 +65,31 @@ export default async function AuditDetailPage({ params }: PageProps) {
 
   if (!user) redirect('/login')
 
-const { data: plan, error: planError } = await supabase
-  .from('audit_plans')
-  .select(`
-    *,
-    companies(name),
-    audit_templates(id, title)
-  `)
-  .eq('id', id)
-  .maybeSingle()
+  const { data: plan, error: planError } = await supabase
+    .from('audit_plans')
+    .select(`
+      *,
+      companies(name),
+      audit_templates(id, title)
+    `)
+    .eq('id', id)
+    .maybeSingle()
 
- if (planError) {
-  return (
-    <div className="p-8 text-red-600">
-      Audit yüklənərkən xəta: {planError.message}
-    </div>
-  )
-}
+  if (planError) {
+    return (
+      <div className="p-4 text-red-600 sm:p-6 lg:p-8">
+        Audit yüklənərkən xəta: {planError.message}
+      </div>
+    )
+  }
 
-if (!plan) {
-  return (
-    <div className="p-8 text-red-600">
-      Audit tapılmadı və ya bu rolda baxış icazəsi yoxdur.
-    </div>
-  )
-}
+  if (!plan) {
+    return (
+      <div className="p-4 text-red-600 sm:p-6 lg:p-8">
+        Audit tapılmadı və ya bu rolda baxış icazəsi yoxdur.
+      </div>
+    )
+  }
 
   const { data: answers } = await supabase
     .from('audit_answers')
@@ -69,213 +117,347 @@ if (!plan) {
     `)
     .eq('plan_id', id)
 
-  const statusLabel =
-    plan.status === 'tamamlandi'
-      ? 'Tamamlandı'
-      : plan.status === 'needs_attention'
-        ? 'Diqqət tələb edir'
-        : plan.status || 'Planlanan'
+  const normalizedCompany = Array.isArray(plan.companies)
+    ? plan.companies[0] || null
+    : plan.companies || null
 
-  const severityClass = (severity?: string | null) => {
-    if (severity === 'high') return 'bg-red-50 text-red-700 border-red-200'
-    if (severity === 'medium') return 'bg-yellow-50 text-yellow-700 border-yellow-200'
-    return 'bg-green-50 text-green-700 border-green-200'
-  }
+  const totalAnswers = answers?.length || 0
+  const problemAnswers =
+    answers?.filter((answer: any) => answer.response === 'no').length || 0
+
+  const highFindings =
+    findings?.filter((finding: any) => finding.severity === 'high').length || 0
+
+  const score = Number(plan.score || 0)
 
   return (
-    <div className="max-w-6xl mx-auto p-8 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 border-b pb-6">
-        <div>
+    <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col gap-4 border-b pb-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
           <Link
             href="/dashboard/plans"
-            className="text-sm text-blue-600 hover:underline"
+            className="text-sm font-medium text-blue-600 hover:underline"
           >
             ← Audit planlarına qayıt
           </Link>
 
-          <h1 className="text-3xl font-bold text-slate-900 mt-3">
+          <h1 className="mt-3 text-2xl font-extrabold text-slate-900 sm:text-3xl">
             {plan.title}
           </h1>
 
-          <p className="text-slate-500 mt-2">
-            Şablon: {plan.audit_templates?.title || '-'} • Şirkət:{' '}
-            {plan.companies?.name || '-'}
+          <p className="mt-2 text-sm text-slate-500">
+            Şablon:{' '}
+            <span className="font-semibold text-slate-700">
+              {plan.audit_templates?.title || '-'}
+            </span>{' '}
+            • Şirkət:{' '}
+            <span className="font-semibold text-slate-700">
+              {normalizedCompany?.name || '-'}
+            </span>
           </p>
         </div>
 
-        <div className="text-left md:text-right space-y-2">
-          <div className="inline-flex rounded-full border px-3 py-1 text-sm font-medium bg-slate-50 text-slate-700">
-            {statusLabel}
+        <div className="flex flex-col gap-2 sm:flex-row lg:flex-col lg:items-end">
+          <span
+            className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${statusClass(
+              plan.status
+            )}`}
+          >
+            {statusLabel(plan.status)}
+          </span>
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link
+              href={`/dashboard/plans/${id}/fill`}
+              className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
+            >
+              Auditi redaktə et
+            </Link>
+
+            <Link
+              href={`/dashboard/plans/${id}/report`}
+              className="inline-flex w-full justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto"
+            >
+              PDF Hesabat
+            </Link>
           </div>
-
-          <div className="text-3xl font-bold text-blue-700">
-            {plan.score ?? 0}%
-          </div>
-
-        <div className="flex flex-col sm:flex-row gap-2">
-  <Link
-    href={`/dashboard/plans/${id}/fill`}
-    className="inline-flex justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
-  >
-    Auditi redaktə et
-  </Link>
-
-  <Link
-    href={`/dashboard/plans/${id}/report`}
-    className="inline-flex justify-center bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded text-sm"
-  >
-    PDF Hesabat
-  </Link>
-</div>
         </div>
       </div>
 
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white border rounded-xl p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Status</p>
-          <p className="font-bold mt-1">{statusLabel}</p>
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-semibold text-slate-500">Status</p>
+          <p className="mt-2 font-bold text-slate-900">
+            {statusLabel(plan.status)}
+          </p>
         </div>
 
-        <div className="bg-white border rounded-xl p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Score</p>
-          <p className="font-bold mt-1">{plan.score ?? 0}%</p>
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 shadow-sm">
+          <p className="text-sm font-semibold text-blue-700">Score</p>
+          <p className={`mt-2 text-3xl font-black ${scoreClass(score)}`}>
+            {score}%
+          </p>
         </div>
 
-        <div className="bg-white border rounded-xl p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Deadline</p>
-          <p className="font-bold mt-1">{plan.due_date || '-'}</p>
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-5 shadow-sm">
+          <p className="text-sm font-semibold text-red-700">High Risk</p>
+          <p className="mt-2 text-3xl font-black text-red-700">
+            {highFindings}
+          </p>
         </div>
 
-        <div className="bg-white border rounded-xl p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Tapıntı sayı</p>
-          <p className="font-bold mt-1">{findings?.length || 0}</p>
-        </div>
-      </section>
-
-      <section className="bg-white border rounded-xl p-6 shadow-sm">
-        <h2 className="text-xl font-bold mb-4">Overview</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-slate-500">Departament</p>
-            <p className="font-medium">{plan.department || '-'}</p>
-          </div>
-
-          <div>
-            <p className="text-slate-500">Yaradan</p>
-            <p className="font-medium">{plan.created_by || '-'}</p>
-          </div>
-
-          <div className="md:col-span-2">
-            <p className="text-slate-500">Qeydlər</p>
-            <p className="font-medium whitespace-pre-wrap">
-              {plan.notes || '-'}
-            </p>
-          </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-semibold text-slate-500">Deadline</p>
+          <p className="mt-2 font-bold text-slate-900">
+            {plan.due_date || '-'}
+          </p>
         </div>
       </section>
 
-      <section className="bg-white border rounded-xl p-6 shadow-sm">
-        <h2 className="text-xl font-bold mb-4">Checklist</h2>
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <div className="space-y-6 xl:col-span-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900">Overview</h2>
 
-        <div className="space-y-3">
-          {(answers || []).length === 0 && (
-            <p className="text-slate-500">Hələ cavab yoxdur.</p>
-          )}
-
-          {(answers || []).map((answer: any) => (
-            <div key={answer.id} className="border rounded-lg p-4">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <p className="font-semibold">
-                  {answer.template_questions?.question_text || 'Sual'}
+            <div className="mt-4 space-y-4 text-sm">
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500">
+                  Departament
                 </p>
-
-                <div className="text-sm font-bold text-blue-700">
-                  {answer.score ?? 0} / {answer.template_questions?.max_score ?? '-'}
-                </div>
+                <p className="mt-1 font-semibold text-slate-900">
+                  {plan.department || '-'}
+                </p>
               </div>
 
-              <p className="text-sm mt-2">
-                Cavab:{' '}
-                <span className="font-medium uppercase">
-                  {answer.response || '-'}
-                </span>
-              </p>
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500">
+                  Şirkət
+                </p>
+                <p className="mt-1 font-semibold text-slate-900">
+                  {normalizedCompany?.name || '-'}
+                </p>
+              </div>
 
-              {answer.comment && (
-                <p className="text-sm text-slate-600 mt-2">
-                  Şərh: {answer.comment}
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500">
+                  Şablon
+                </p>
+                <p className="mt-1 font-semibold text-slate-900">
+                  {plan.audit_templates?.title || '-'}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500">
+                  Yaradan
+                </p>
+                <p className="mt-1 font-semibold text-slate-900">
+                  {plan.created_by || '-'}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500">
+                  Qeydlər
+                </p>
+                <p className="mt-1 whitespace-pre-wrap leading-6 text-slate-700">
+                  {plan.notes || '-'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900">Files</h2>
+
+            <div className="mt-4">
+            {plan.file_url ? (
+  <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+    <div>
+      <p className="text-xs font-semibold uppercase text-slate-500">
+        Əlavə olunmuş fayl
+      </p>
+      <p className="mt-1 break-all font-mono text-xs text-slate-700">
+        {plan.file_url}
+      </p>
+    </div>
+
+    <AuditFileLink filePath={plan.file_url} />
+  </div>
+) : (
+  <p className="text-sm text-slate-500">
+    Fayl əlavə olunmayıb.
+  </p>
+)}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900">Qısa xülasə</h2>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">Cavablar</p>
+                <p className="mt-1 text-2xl font-black text-slate-900">
+                  {totalAnswers}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-red-50 p-3">
+                <p className="text-xs text-red-700">Problem</p>
+                <p className="mt-1 text-2xl font-black text-red-700">
+                  {problemAnswers}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6 xl:col-span-8">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Checklist</h2>
+                <p className="text-sm text-slate-500">
+                  Suallar üzrə cavablar və hesablanmış ballar
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {(answers || []).length === 0 && (
+                <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                  Hələ cavab yoxdur.
                 </p>
               )}
-            </div>
-          ))}
-        </div>
-      </section>
 
-      <section className="bg-white border rounded-xl p-6 shadow-sm">
-        <h2 className="text-xl font-bold mb-4">Findings</h2>
-
-        <div className="space-y-3">
-          {(findings || []).length === 0 && (
-            <p className="text-slate-500">Tapıntı yoxdur.</p>
-          )}
-
-          {(findings || []).map((finding: any) => (
-            <div key={finding.id} className="border rounded-lg p-4">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <h3 className="font-bold">{finding.title}</h3>
-
-                <span
-                  className={`inline-flex border rounded-full px-3 py-1 text-xs font-semibold ${severityClass(
-                    finding.severity
-                  )}`}
+              {(answers || []).map((answer: any, index: number) => (
+                <article
+                  key={answer.id}
+                  className="rounded-xl border border-slate-200 p-4"
                 >
-                  {finding.severity || 'low'}
-                </span>
-              </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs font-bold uppercase text-slate-400">
+                        Sual #{index + 1}
+                      </p>
 
-              <p className="text-sm text-slate-600 mt-2">
-                {finding.description || '-'}
-              </p>
+                      <h3 className="mt-1 font-bold text-slate-900">
+                        {answer.template_questions?.question_text || 'Sual'}
+                      </h3>
+                    </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 text-sm">
-             <div>
-  <p className="text-slate-500 mb-1">Status:</p>
-  <FindingStatusSelect
-    findingId={finding.id}
-    planId={id}
-    currentStatus={finding.status}
-  />
-</div>
+                    <div className="flex flex-wrap gap-2">
+                      <span
+                        className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${answerBadgeClass(
+                          answer.response
+                        )}`}
+                      >
+                        {answerLabel(answer.response)}
+                      </span>
 
-                <p>
-                  <span className="text-slate-500">Deadline:</span>{' '}
-                  {finding.deadline || '-'}
-                </p>
+                      <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+                        {answer.score ?? 0} /{' '}
+                        {answer.template_questions?.max_score ?? '-'}
+                      </span>
+                    </div>
+                  </div>
 
-                <p>
-                  <span className="text-slate-500">Cavabdeh:</span>{' '}
-                  {finding.profiles?.full_name || '-'}
-                </p>
-              </div>
+                  {answer.comment && (
+                    <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm leading-6 text-slate-700">
+                      {answer.comment}
+                    </p>
+                  )}
+                </article>
+              ))}
             </div>
-          ))}
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Findings</h2>
+                <p className="text-sm text-slate-500">
+                  Tapıntılar, risklər və icra statusları
+                </p>
+              </div>
+
+              <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                {findings?.length || 0} tapıntı
+              </span>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {(findings || []).length === 0 && (
+                <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                  Tapıntı yoxdur.
+                </p>
+              )}
+
+              {(findings || []).map((finding: any, index: number) => (
+                <article
+                  key={finding.id}
+                  className="rounded-xl border border-slate-200 p-4"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs font-bold uppercase text-slate-400">
+                        Tapıntı #{index + 1}
+                      </p>
+
+                      <h3 className="mt-1 font-bold text-slate-900">
+                        {finding.title}
+                      </h3>
+                    </div>
+
+                    <span
+                      className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-bold uppercase ${severityClass(
+                        finding.severity
+                      )}`}
+                    >
+                      {finding.severity || 'low'}
+                    </span>
+                  </div>
+
+                  <p className="mt-3 text-sm leading-6 text-slate-700">
+                    {finding.description || '-'}
+                  </p>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl bg-slate-50 p-3 text-sm sm:grid-cols-3">
+                    <div>
+                      <p className="mb-1 text-xs font-semibold uppercase text-slate-500">
+                        Status
+                      </p>
+                      <FindingStatusSelect
+                        findingId={finding.id}
+                        planId={id}
+                        currentStatus={finding.status}
+                      />
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold uppercase text-slate-500">
+                        Deadline
+                      </p>
+                      <p className="mt-1 font-bold text-slate-900">
+                        {finding.deadline || '-'}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold uppercase text-slate-500">
+                        Cavabdeh
+                      </p>
+                      <p className="mt-1 font-bold text-slate-900">
+                        {finding.profiles?.full_name || '-'}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
         </div>
-      </section>
-
-      <section className="bg-white border rounded-xl p-6 shadow-sm">
-        <h2 className="text-xl font-bold mb-4">Files</h2>
-
-        {plan.file_url ? (
-          <p className="text-sm">
-            Fayl path:{' '}
-            <span className="font-mono bg-slate-100 px-2 py-1 rounded">
-              {plan.file_url}
-            </span>
-          </p>
-        ) : (
-          <p className="text-slate-500">Fayl əlavə olunmayıb.</p>
-        )}
       </section>
     </div>
   )

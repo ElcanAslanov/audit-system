@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { deleteAuditPlan } from '@/app/dashboard/plans/actions';
 
 export default function PlanDeleteButton({ planId }: { planId: string }) {
+  const router = useRouter();
+
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -11,7 +14,7 @@ export default function PlanDeleteButton({ planId }: { planId: string }) {
     setError(null);
 
     const confirmed = window.confirm(
-      'Bu audit planını silmək istədiyinizə əminsiniz? Bu əməliyyat bu plana aid cavabları, tapıntıları və təyinatları da siləcək.'
+      'Bu audit planını silmək istədiyinizə əminsiniz? Bu əməliyyat bu plana aid cavabları, tapıntıları, təyinatları və əlavə edilmiş faylı da siləcək.'
     );
 
     if (!confirmed) return;
@@ -21,7 +24,10 @@ export default function PlanDeleteButton({ planId }: { planId: string }) {
 
       if (result.error) {
         setError(result.error);
+        return;
       }
+
+      router.refresh();
     });
   };
 
@@ -31,7 +37,7 @@ export default function PlanDeleteButton({ planId }: { planId: string }) {
         type="button"
         disabled={isPending}
         onClick={handleDelete}
-        className="w-full sm:w-auto rounded-md border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex w-full justify-center rounded-lg border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
         {isPending ? 'Silinir...' : 'Sil'}
       </button>

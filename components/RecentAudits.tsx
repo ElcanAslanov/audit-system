@@ -1,41 +1,19 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { getRecentAudits } from '@/app/actions/audit-actions';
+import Link from 'next/link'
 
 function statusLabel(value?: string | null) {
-  if (value === 'tamamlandi') return 'Tamamlandı';
-  if (value === 'needs_attention') return 'Diqqət tələb edir';
-  if (value === 'planlanan') return 'Planlanan';
-  return value || '-';
+  if (value === 'tamamlandi') return 'Tamamlandı'
+  if (value === 'needs_attention') return 'Diqqət tələb edir'
+  if (value === 'planlanan') return 'Planlanan'
+  return value || '-'
 }
 
 function statusClass(value?: string | null) {
-  if (value === 'tamamlandi') return 'bg-green-50 text-green-700 border-green-200';
-  if (value === 'needs_attention') return 'bg-red-50 text-red-700 border-red-200';
-  return 'bg-slate-50 text-slate-700 border-slate-200';
+  if (value === 'tamamlandi') return 'bg-green-50 text-green-700 border-green-200'
+  if (value === 'needs_attention') return 'bg-red-50 text-red-700 border-red-200'
+  return 'bg-slate-50 text-slate-700 border-slate-200'
 }
 
-export default function RecentAudits() {
-  const [audits, setAudits] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getRecentAudits().then((data) => {
-      setAudits(data);
-      setLoading(false);
-    });
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="rounded-xl border bg-white p-5 shadow-sm">
-        <p className="text-sm text-slate-500">Son auditlər yüklənir...</p>
-      </div>
-    );
-  }
-
+export default function RecentAudits({ audits }: { audits: any[] }) {
   return (
     <div className="rounded-xl border bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -91,5 +69,5 @@ export default function RecentAudits() {
         ))}
       </div>
     </div>
-  );
+  )
 }

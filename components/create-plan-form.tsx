@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useActionState } from 'react'
+import { useEffect, useMemo, useRef, useState, useActionState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createAuditPlan } from '@/app/dashboard/plans/actions'
 import { Loader2, Plus, Search, UploadCloud } from 'lucide-react'
 
@@ -13,17 +14,28 @@ export default function CreatePlanForm({
   auditors: any[]
   templates: any[]
 }) {
-  const [state, action, pending] = useActionState(createAuditPlan, null)
-  const [searchTerm, setSearchTerm] = useState('')
+const router = useRouter()
+const formRef = useRef<HTMLFormElement | null>(null)
 
-  const filteredAuditors = useMemo(() => {
+const [state, action, pending] = useActionState(createAuditPlan, null)
+const [searchTerm, setSearchTerm] = useState('')
+
+useEffect(() => {
+  if (!state?.success) return
+
+  formRef.current?.reset()
+  setSearchTerm('')
+  router.refresh()
+}, [state?.success, router])
+
+const filteredAuditors = useMemo(() => {
     return auditors.filter((a) =>
       (a.full_name || '').toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [auditors, searchTerm])
 
   return (
-    <form action={action} className="space-y-6">
+    <form ref={formRef} action={action} className="space-y-6">
       {state?.error && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           {state.error}

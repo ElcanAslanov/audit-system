@@ -308,6 +308,22 @@ export async function deleteAuditPlan(planId: string): Promise<ActionState> {
   }
 
   try {
+    // Əvvəl planın fayl path-ni götürürük
+    const { data: plan, error: planFetchError } = await supabase
+      .from('audit_plans')
+      .select('id, file_url')
+      .eq('id', planId)
+      .maybeSingle()
+
+    if (planFetchError) throw planFetchError
+
+    if (!plan) {
+      return {
+        error: 'Audit planı tapılmadı və ya silmək icazəniz yoxdur.',
+        success: false,
+      }
+    }
+
     // Əvvəl bu plana aid findings-ləri silirik
     const { error: findingsError } = await supabase
       .from('findings')
@@ -332,13 +348,26 @@ export async function deleteAuditPlan(planId: string): Promise<ActionState> {
 
     if (assignmentsError) throw assignmentsError
 
-    // Axırda audit planını silirik
+    // Planın özünü silirik
     const { error: planError } = await supabase
       .from('audit_plans')
       .delete()
       .eq('id', planId)
 
     if (planError) throw planError
+
+    // Axırda storage faylını silirik
+    // file_url bizdə "plans/filename.ext" kimi saxlanır
+    if (plan.file_url) {
+      const { error: storageError } = await supabase.storage
+        .from('audit-docs')
+        .remove([plan.file_url])
+
+      // Storage silinməsə belə DB silinib; bunu fatal etməyək
+      if (storageError) {
+        console.error('Audit faylı storage-dən silinmədi:', storageError.message)
+      }
+    }
 
     revalidatePath('/dashboard/plans')
     revalidatePath('/dashboard')

@@ -69,11 +69,11 @@ export async function saveAuditAnswers(
 export async function getDashboardStats() {
   const supabase = await createClient()
 
-  const { data: plans, error: plansError } = await supabase
+  const { data: plans, error } = await supabase
     .from('audit_plans')
     .select('id, status, score')
 
-  if (plansError) {
+  if (error || !plans) {
     return {
       averageScore: '0',
       totalAudits: 0,
@@ -81,23 +81,24 @@ export async function getDashboardStats() {
     }
   }
 
-  const completedPlans = (plans || []).filter(
-    (plan: any) => plan.status === 'tamamlandi' || plan.status === 'needs_attention'
-  )
+  const completedPlans = (plans || []).filter((plan: any) => {
+    return plan.status === 'tamamlandi' || plan.status === 'needs_attention'
+  })
 
   const totalAudits = completedPlans.length
 
-  const highRiskCount = (plans || []).filter(
-    (plan: any) => plan.status === 'needs_attention' || Number(plan.score || 0) < 50
-  ).length
-
-  const totalScore = completedPlans.reduce(
-    (sum: number, plan: any) => sum + Number(plan.score || 0),
-    0
-  )
+  const totalScore = completedPlans.reduce((sum: number, plan: any) => {
+    return sum + Number(plan.score || 0)
+  }, 0)
 
   const averageScore =
     totalAudits > 0 ? (totalScore / totalAudits).toFixed(1) : '0'
+
+  const highRiskCount = (plans || []).filter((plan: any) => {
+    const score = Number(plan.score || 0)
+
+    return plan.status === 'needs_attention' || score < 50
+  }).length
 
   return {
     averageScore,
@@ -109,37 +110,61 @@ export async function getDashboardStats() {
 export async function getMonthlyTrend() {
   const supabase = await createClient()
 
-  // Son 6 ayın audit nəticələrini qruplaşdırıb çəkirik
-  const { data, error } = await supabase
+  const { data: plans, error } = await supabase
     .from('audit_plans')
-    .select(`
-      id,
-      created_at,
-      audit_answers (
-        score,
-        template_questions (max_score)
-      )
-    `)
+    .select('id, score, status, created_at')
+    .in('status', ['tamamlandi', 'needs_attention'])
+    .not('score', 'is', null)
+    .order('created_at', { ascending: true })
 
-  if (error) return []
+  if (error || !plans) {
+    return []
+  }
 
-  // Məlumatları aylara görə qruplaşdıran sadə məntiq
-  const monthlyData: Record<string, { totalScore: number, maxScore: number }> = {}
+  const monthNames = [
+    'Yanvar',
+    'Fevral',
+    'Mart',
+    'Aprel',
+    'May',
+    'İyun',
+    'İyul',
+    'Avqust',
+    'Sentyabr',
+    'Oktyabr',
+    'Noyabr',
+    'Dekabr',
+  ]
 
-  data.forEach(plan => {
-    const month = new Date(plan.created_at).toLocaleString('az-AZ', { month: 'long' })
-    
-    if (!monthlyData[month]) monthlyData[month] = { totalScore: 0, maxScore: 0 }
-    
-    plan.audit_answers.forEach((ans: any) => {
-      monthlyData[month].totalScore += ans.score || 0
-      monthlyData[month].maxScore += ans.template_questions?.max_score || 10
-    })
-  })
+  const grouped = new Map<string, { total: number; count: number; sort: string }>()
 
-  return Object.entries(monthlyData).map(([name, val]) => ({
-    name,
-    score: val.maxScore > 0 ? Math.round((val.totalScore / val.maxScore) * 100) : 0
+  for (const plan of plans as any[]) {
+    if (!plan.created_at) continue
+
+    const date = new Date(plan.created_at)
+    const year = date.getFullYear()
+    const month = date.getMonth()
+
+    const key = `${year}-${String(month + 1).padStart(2, '0')}`
+    const label = `${monthNames[month]} ${year}`
+
+    const current = grouped.get(key) || {
+      total: 0,
+      count: 0,
+      sort: label,
+    }
+
+    current.total += Number(plan.score || 0)
+    current.count += 1
+    current.sort = label
+
+    grouped.set(key, current)
+  }
+
+  return Array.from(grouped.entries()).map(([key, item]) => ({
+    name: item.sort,
+    score: item.count > 0 ? Math.round(item.total / item.count) : 0,
+    key,
   }))
 }
 
@@ -236,11 +261,11 @@ export async function getRecentAudits() {
 export async function getRiskSummary() {
   const supabase = await createClient()
 
-  const { data, error } = await supabase
+  const { data: findings, error } = await supabase
     .from('findings')
     .select('severity, status')
 
-  if (error) {
+  if (error || !findings) {
     return {
       high: 0,
       medium: 0,
@@ -250,13 +275,19 @@ export async function getRiskSummary() {
     }
   }
 
-  const findings = data || []
+  const isResolved = (status?: string | null) => {
+    return status === 'hell_olundu' || status === 'resolved' || status === 'closed'
+  }
+
+  const isOpen = (status?: string | null) => {
+    return !isResolved(status)
+  }
 
   return {
     high: findings.filter((f: any) => f.severity === 'high').length,
     medium: findings.filter((f: any) => f.severity === 'medium').length,
     low: findings.filter((f: any) => f.severity === 'low').length,
-    open: findings.filter((f: any) => f.status === 'aciq').length,
-    resolved: findings.filter((f: any) => f.status === 'hell_olundu').length,
+    open: findings.filter((f: any) => isOpen(f.status)).length,
+    resolved: findings.filter((f: any) => isResolved(f.status)).length,
   }
 }

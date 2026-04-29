@@ -93,6 +93,13 @@ export default async function FillAuditPage({ params }: PageProps) {
     .eq('template_sections.template_id', plan.audit_templates.id)
     .order('sort_order', { ascending: true })
 
+  const normalizedQuestions = (questions || []).map((question: any) => ({
+  ...question,
+  template_sections: Array.isArray(question.template_sections)
+    ? question.template_sections[0] || null
+    : question.template_sections || null,
+}))  
+
   const { data: existingAnswers } = await supabase
     .from('audit_answers')
     .select('question_id, response, comment, score')
@@ -184,12 +191,12 @@ export default async function FillAuditPage({ params }: PageProps) {
           </p>
         </div>
 
-        <ChecklistForm
-          questions={questions || []}
-          planId={id}
-          initialAnswers={existingAnswers || []}
-          users={users || []}
-        />
+     <ChecklistForm
+  questions={normalizedQuestions}
+  planId={id}
+  initialAnswers={existingAnswers || []}
+  users={users || []}
+/>
       </section>
     </div>
   )

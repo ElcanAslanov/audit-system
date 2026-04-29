@@ -1,42 +1,11 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { getDashboardStats } from '@/app/actions/audit-actions';
-
 type Stats = {
-  averageScore: string | number;
-  totalAudits: number;
-  highRiskCount: number;
-};
+  averageScore: string | number
+  totalAudits: number
+  highRiskCount: number
+}
 
-export default function DashboardStats() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getDashboardStats().then((data) => {
-      setStats(data);
-      setLoading(false);
-    });
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {[1, 2, 3].map((item) => (
-          <div
-            key={item}
-            className="h-32 animate-pulse rounded-xl border bg-white p-5 shadow-sm"
-          >
-            <div className="h-4 w-28 rounded bg-slate-200" />
-            <div className="mt-5 h-8 w-20 rounded bg-slate-200" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  const averageScore = Number(stats?.averageScore || 0);
+export default function DashboardStats({ stats }: { stats: Stats }) {
+  const averageScore = Number(stats?.averageScore || 0)
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -106,5 +75,5 @@ export default function DashboardStats() {
         </p>
       </div>
     </div>
-  );
+  )
 }

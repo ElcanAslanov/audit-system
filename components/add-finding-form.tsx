@@ -1,6 +1,7 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { addFinding, ActionState } from '@/app/dashboard/plans/actions'
 
 export default function AddFindingForm({
@@ -14,8 +15,20 @@ export default function AddFindingForm({
   users: any[]
   onClose: () => void
 }) {
+  const router = useRouter()
   const initialState: ActionState = { error: null, success: false }
   const [state, formAction, pending] = useActionState(addFinding, initialState)
+
+  useEffect(() => {
+    if (!state.success) return
+
+    const timer = window.setTimeout(() => {
+      onClose()
+      router.refresh()
+    }, 900)
+
+    return () => window.clearTimeout(timer)
+  }, [state.success, onClose, router])
 
   return (
     <form action={formAction} className="space-y-5">
@@ -51,7 +64,7 @@ export default function AddFindingForm({
 
       {state.success && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-          Tapıntı uğurla əlavə edildi.
+          Tapıntı uğurla əlavə edildi. Pəncərə bağlanır...
         </div>
       )}
 
@@ -63,8 +76,9 @@ export default function AddFindingForm({
           <input
             name="title"
             required
+            disabled={pending || state.success}
             placeholder="Məs: Sənədləşmə natamamdır"
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           />
         </div>
 
@@ -74,7 +88,8 @@ export default function AddFindingForm({
           </label>
           <select
             name="severity"
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+            disabled={pending || state.success}
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           >
             <option value="low">Low Risk</option>
             <option value="medium">Medium Risk</option>
@@ -89,7 +104,8 @@ export default function AddFindingForm({
           <input
             type="date"
             name="deadline"
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+            disabled={pending || state.success}
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           />
         </div>
 
@@ -99,7 +115,8 @@ export default function AddFindingForm({
           </label>
           <select
             name="assigned_to"
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+            disabled={pending || state.success}
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           >
             <option value="">Cavabdeh şəxs seçin...</option>
             {users.map((u) => (
@@ -117,8 +134,9 @@ export default function AddFindingForm({
           <textarea
             name="description"
             rows={4}
+            disabled={pending || state.success}
             placeholder="Problemin detallı təsvirini yazın..."
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           />
         </div>
       </div>
@@ -127,17 +145,18 @@ export default function AddFindingForm({
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex w-full justify-center rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
+          disabled={pending}
+          className="inline-flex w-full justify-center rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
           Bağla
         </button>
 
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || state.success}
           className="inline-flex w-full justify-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300 sm:w-auto"
         >
-          {pending ? 'Əlavə edilir...' : 'Tapıntını Əlavə Et'}
+          {pending ? 'Əlavə edilir...' : state.success ? 'Əlavə edildi' : 'Tapıntını Əlavə Et'}
         </button>
       </div>
     </form>
