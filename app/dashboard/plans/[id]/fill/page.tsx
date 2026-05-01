@@ -66,73 +66,73 @@ export default async function FillAuditPage({ params }: PageProps) {
     )
   }
 
-  
 
-const { data: profile } = await supabase
-  .from('profiles')
-  .select('role')
-  .eq('id', user.id)
-  .maybeSingle()
 
-const isAdmin = profile?.role === 'admin'
-const isCreator = plan.created_by === user.id
-const canManageLock = isAdmin || isCreator
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
 
-const isViewLocked = Boolean(plan.locked_view)
-const isEditLocked = Boolean(plan.locked_edit)
+  const isAdmin = profile?.role === 'admin'
+  const isCreator = plan.created_by === user.id
+  const canManageLock = isAdmin || isCreator
 
-if (isViewLocked && !canManageLock) {
-  return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700 shadow-sm">
-        <h2 className="text-xl font-black">Audit planına giriş kilidlənib</h2>
+  const isViewLocked = Boolean(plan.locked_view)
+  const isEditLocked = Boolean(plan.locked_edit)
 
-        <p className="mt-2 text-sm leading-6">
-          Bu plan üzrə baxış bağlanıb. Bu auditə baxmaq və ya dəyişiklik etmək
-          mümkün deyil.
-        </p>
+  if (isViewLocked && !canManageLock) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700 shadow-sm">
+          <h2 className="text-xl font-black">Audit planına giriş kilidlənib</h2>
 
-        <Link
-          href="/dashboard/plans"
-          className="mt-5 inline-flex rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700"
-        >
-          Audit planlarına qayıt
-        </Link>
-      </div>
-    </div>
-  )
-}
-
-if (isEditLocked) {
-  return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-3xl rounded-2xl border border-yellow-200 bg-yellow-50 p-6 text-center text-yellow-800 shadow-sm">
-        <h2 className="text-xl font-black">Audit redaktəyə kilidlənib</h2>
-
-        <p className="mt-2 text-sm leading-6">
-          Bu audit planında dəyişiklik etmək bağlanıb. Redaktə üçün əvvəl kilid
-          açılmalıdır.
-        </p>
-
-        <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
-          <Link
-            href={`/dashboard/plans/${id}`}
-            className="inline-flex rounded-2xl bg-yellow-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-yellow-700"
-          >
-            Detail səhifəyə keç
-          </Link>
+          <p className="mt-2 text-sm leading-6">
+            Bu plan üzrə baxış bağlanıb. Bu auditə baxmaq və ya dəyişiklik etmək
+            mümkün deyil.
+          </p>
 
           <Link
             href="/dashboard/plans"
-            className="inline-flex rounded-2xl border border-yellow-200 bg-white px-4 py-2.5 text-sm font-bold text-yellow-800 transition hover:bg-yellow-100"
+            className="mt-5 inline-flex rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700"
           >
             Audit planlarına qayıt
           </Link>
         </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
+
+  if (isEditLocked) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-yellow-200 bg-yellow-50 p-6 text-center text-yellow-800 shadow-sm">
+          <h2 className="text-xl font-black">Audit redaktəyə kilidlənib</h2>
+
+          <p className="mt-2 text-sm leading-6">
+            Bu audit planında dəyişiklik etmək bağlanıb. Redaktə üçün əvvəl kilid
+            açılmalıdır.
+          </p>
+
+          <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+            <Link
+              href={`/dashboard/plans/${id}`}
+              className="inline-flex rounded-2xl bg-yellow-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-yellow-700"
+            >
+              Detail səhifəyə keç
+            </Link>
+
+            <Link
+              href="/dashboard/plans"
+              className="inline-flex rounded-2xl border border-yellow-200 bg-white px-4 py-2.5 text-sm font-bold text-yellow-800 transition hover:bg-yellow-100"
+            >
+              Audit planlarına qayıt
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const legacyTemplate = normalizeOne(plan.audit_templates)
 
@@ -173,22 +173,22 @@ if (isEditLocked) {
       : legacyTemplate?.title || '-'
 
   const { data: planTemplateSections, error: planTemplateSectionsError } =
-  await supabase
-    .from('audit_plan_template_sections')
-    .select('section_id')
-    .eq('plan_id', id)
+    await supabase
+      .from('audit_plan_template_sections')
+      .select('section_id')
+      .eq('plan_id', id)
 
-if (planTemplateSectionsError) {
-  return (
-    <div className="p-4 text-red-600 sm:p-6 lg:p-8">
-      Plan bölmələri yüklənərkən xəta: {planTemplateSectionsError.message}
-    </div>
-  )
-}
+  if (planTemplateSectionsError) {
+    return (
+      <div className="p-4 text-red-600 sm:p-6 lg:p-8">
+        Plan bölmələri yüklənərkən xəta: {planTemplateSectionsError.message}
+      </div>
+    )
+  }
 
-const selectedSectionIds = (planTemplateSections || [])
-  .map((item: any) => item.section_id)
-  .filter(Boolean)
+  const selectedSectionIds = (planTemplateSections || [])
+    .map((item: any) => item.section_id)
+    .filter(Boolean)
 
   if (selectedTemplateIds.length === 0) {
     return (
@@ -212,9 +212,9 @@ const selectedSectionIds = (planTemplateSections || [])
     .select('id, full_name')
     .order('full_name', { ascending: true })
 
-let questionsQuery = supabase
-  .from('template_questions')
-  .select(`
+  let questionsQuery = supabase
+    .from('template_questions')
+    .select(`
     id,
     question_text,
     max_score,
@@ -228,17 +228,17 @@ let questionsQuery = supabase
       audit_templates(id, title)
     )
   `)
-  .order('sort_order', { ascending: true })
+    .order('sort_order', { ascending: true })
 
-if (selectedSectionIds.length > 0) {
-  questionsQuery = questionsQuery.in('section_id', selectedSectionIds)
-} else {
-  // Köhnə planlar üçün fallback:
-  // əgər audit_plan_template_sections boşdursa, əvvəlki kimi bütün seçilmiş şablon sualları gəlir.
-  questionsQuery = questionsQuery.in('template_sections.template_id', selectedTemplateIds)
-}
+  if (selectedSectionIds.length > 0) {
+    questionsQuery = questionsQuery.in('section_id', selectedSectionIds)
+  } else {
+    // Köhnə planlar üçün fallback:
+    // əgər audit_plan_template_sections boşdursa, əvvəlki kimi bütün seçilmiş şablon sualları gəlir.
+    questionsQuery = questionsQuery.in('template_sections.template_id', selectedTemplateIds)
+  }
 
-const { data: questions, error: questionsError } = await questionsQuery
+  const { data: questions, error: questionsError } = await questionsQuery
 
   if (questionsError) {
     return (
@@ -288,6 +288,38 @@ const { data: questions, error: questionsError } = await questionsQuery
     .from('audit_answers')
     .select('question_id, response, comment, score')
     .eq('plan_id', id)
+
+  const { data: existingFindings, error: findingsError } = await supabase
+    .from('findings')
+    .select(`
+    id,
+    plan_id,
+    question_id,
+    title,
+    severity,
+    description,
+    deadline,
+    status,
+    assigned_to,
+    profiles(full_name)
+  `)
+    .eq('plan_id', id)
+    .order('created_at', { ascending: false })
+
+  if (findingsError) {
+    return (
+      <div className="p-4 text-red-600 sm:p-6 lg:p-8">
+        Tapıntılar yüklənərkən xəta: {findingsError.message}
+      </div>
+    )
+  }
+
+  const normalizedFindings = (existingFindings || []).map((finding: any) => ({
+    ...finding,
+    profiles: Array.isArray(finding.profiles)
+      ? finding.profiles[0] || null
+      : finding.profiles || null,
+  }))
 
   const normalizedCompany = normalizeOne(plan.companies)
 
@@ -412,6 +444,7 @@ const { data: questions, error: questionsError } = await questionsQuery
           questions={normalizedQuestions}
           planId={id}
           initialAnswers={existingAnswers || []}
+          initialFindings={normalizedFindings}
           users={users || []}
         />
       </section>

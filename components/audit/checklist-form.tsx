@@ -28,6 +28,21 @@ interface Answer {
   score?: number | null;
 }
 
+interface Finding {
+  id: string;
+  plan_id?: string | null;
+  question_id?: string | null;
+  title?: string | null;
+  severity?: string | null;
+  description?: string | null;
+  deadline?: string | null;
+  status?: string | null;
+  assigned_to?: string | null;
+  profiles?: {
+    full_name?: string | null;
+  } | null;
+}
+
 interface User {
   id: string;
   full_name: string;
@@ -37,6 +52,7 @@ interface ChecklistFormProps {
   questions: Question[];
   planId: string;
   initialAnswers?: Answer[];
+  initialFindings?: Finding[];
   users: User[];
 }
 
@@ -54,19 +70,77 @@ function answerClass(value?: string | null) {
   return 'border-slate-200 bg-white text-slate-500';
 }
 
+function severityLabel(value?: string | null) {
+  if (value === 'high') return 'High Risk';
+  if (value === 'medium') return 'Medium Risk';
+  if (value === 'low') return 'Low Risk';
+  return value || '-';
+}
+
+function severityClass(value?: string | null) {
+  if (value === 'high') return 'border-red-200 bg-red-50 text-red-700';
+  if (value === 'medium') return 'border-yellow-200 bg-yellow-50 text-yellow-700';
+  return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+}
+
+function findingStatusLabel(value?: string | null) {
+  if (value === 'aciq') return 'Açıq';
+  if (value === 'icrada') return 'İcrada';
+  if (value === 'hell_olundu') return 'Həll olundu';
+  return value || '-';
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return '-';
+
+  const raw = String(value);
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if (match) {
+    const [, year, month, day] = match;
+    return `${day}.${month}.${year}`;
+  }
+
+  return raw;
+}
+
 export default function ChecklistForm({
   questions,
   planId,
   initialAnswers = [],
+  initialFindings = [],
   users,
 }: ChecklistFormProps) {
   const [state, action, pending] = useActionState(saveAuditAnswers, null);
   const [activeFinding, setActiveFinding] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  const [openFindingIds, setOpenFindingIds] = useState<Record<string, boolean>>({});
+
   const answerMap = useMemo(() => {
     return new Map(initialAnswers.map((answer) => [answer.question_id, answer]));
   }, [initialAnswers]);
+
+  const findingsByQuestion = useMemo(() => {
+  const map = new Map<string, Finding[]>();
+
+  initialFindings.forEach((finding) => {
+    if (!finding.question_id) return;
+
+    const current = map.get(finding.question_id) || [];
+    current.push(finding);
+    map.set(finding.question_id, current);
+  });
+
+  return map;
+}, [initialFindings]);
+
+const toggleFinding = (findingId: string) => {
+  setOpenFindingIds((prev) => ({
+    ...prev,
+    [findingId]: !prev[findingId],
+  }));
+};
 
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -220,10 +294,11 @@ export default function ChecklistForm({
         )}
 
         <div className="space-y-4">
-        {questions.map((q: Question, index: number) => {
-  const savedAnswer = answerMap.get(q.id);
-  const templateTitle = q.template_sections?.audit_templates?.title || 'Şablon';
-  const sectionTitle = q.template_sections?.title || 'Bölmə';
+          {questions.map((q: Question, index: number) => {
+            const savedAnswer = answerMap.get(q.id);
+const questionFindings = findingsByQuestion.get(q.id) || [];
+const templateTitle = q.template_sections?.audit_templates?.title || 'Şablon';
+const sectionTitle = q.template_sections?.title || 'Bölmə';
             const savedValue = savedAnswer?.response || '';
             const savedComment = savedAnswer?.comment || '';
 
@@ -242,28 +317,28 @@ export default function ChecklistForm({
               >
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
-                   <p className="text-xs font-bold uppercase text-slate-400">
-  Sual #{index + 1}
-</p>
+                    <p className="text-xs font-bold uppercase text-slate-400">
+                      Sual #{index + 1}
+                    </p>
 
-<div className="mt-2 flex flex-wrap gap-2">
-  <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
-    Şablon: {templateTitle}
-  </span>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+                        Şablon: {templateTitle}
+                      </span>
 
-  <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">
-    Bölmə: {sectionTitle}
-  </span>
-</div>
+                      <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">
+                        Bölmə: {sectionTitle}
+                      </span>
+                    </div>
 
 
-<h3 className="mt-1 text-base font-bold leading-6 text-slate-900 sm:text-lg">
-  {q.question_text}
-</h3>
+                    <h3 className="mt-1 text-base font-bold leading-6 text-slate-900 sm:text-lg">
+                      {q.question_text}
+                    </h3>
 
-<p className="mt-2 text-xs text-slate-500">
-  Max score: {q.max_score ?? 10}
-</p>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Max score: {q.max_score ?? 10}
+                    </p>
                   </div>
 
                   <span
@@ -363,6 +438,101 @@ export default function ChecklistForm({
                     placeholder="Şərhinizi əlavə edin..."
                   />
                 </div>
+
+                {questionFindings.length > 0 && (
+  <div className="mt-4 rounded-2xl border border-red-100 bg-red-50/40 p-3">
+    <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="text-sm font-black text-slate-900">
+          Bu sual üzrə tapıntılar
+        </p>
+        <p className="text-xs text-slate-500">
+          {questionFindings.length} tapıntı əlavə olunub.
+        </p>
+      </div>
+    </div>
+
+    <div className="space-y-2">
+      {questionFindings.map((finding) => {
+        const isOpen = Boolean(openFindingIds[finding.id]);
+
+        return (
+          <div
+            key={finding.id}
+            className="rounded-xl border border-red-100 bg-white p-3"
+          >
+            <button
+              type="button"
+              onClick={() => toggleFinding(finding.id)}
+              className="flex w-full flex-col gap-2 text-left sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <p className="font-bold text-slate-900">
+                  {finding.title || 'Tapıntı'}
+                </p>
+
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-xs font-bold ${severityClass(
+                      finding.severity
+                    )}`}
+                  >
+                    {severityLabel(finding.severity)}
+                  </span>
+
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
+                    Status: {findingStatusLabel(finding.status)}
+                  </span>
+
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
+                    Deadline: {formatDate(finding.deadline)}
+                  </span>
+                </div>
+              </div>
+
+              <span className="text-xs font-bold text-blue-600">
+                {isOpen ? 'Bağla' : 'Ətraflı bax'}
+              </span>
+            </button>
+
+            {isOpen && (
+              <div className="mt-3 border-t border-slate-100 pt-3 text-sm">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-bold uppercase text-slate-400">
+                      Cavabdeh şəxs
+                    </p>
+                    <p className="mt-1 font-semibold text-slate-700">
+                      {finding.profiles?.full_name || 'Seçilməyib'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-bold uppercase text-slate-400">
+                      Status
+                    </p>
+                    <p className="mt-1 font-semibold text-slate-700">
+                      {findingStatusLabel(finding.status)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <p className="text-xs font-bold uppercase text-slate-400">
+                    Təsvir
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap leading-6 text-slate-700">
+                    {finding.description || '-'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
 
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <button

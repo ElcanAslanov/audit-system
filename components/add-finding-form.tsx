@@ -1,8 +1,26 @@
 'use client'
 
-import { useActionState, useEffect } from 'react'
+import { useActionState, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { addFinding, ActionState } from '@/app/dashboard/plans/actions'
+
+
+function formatDateInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8)
+
+  if (digits.length <= 2) return digits
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+}
+
+function displayDateToIso(value: string) {
+  const [day, month, year] = value.split('/')
+
+  if (!day || !month || !year || year.length !== 4) return ''
+
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+}
 
 export default function AddFindingForm({
   planId,
@@ -18,6 +36,8 @@ export default function AddFindingForm({
   const router = useRouter()
   const initialState: ActionState = { error: null, success: false }
   const [state, formAction, pending] = useActionState(addFinding, initialState)
+
+  const [deadlineDisplay, setDeadlineDisplay] = useState('')
 
   useEffect(() => {
     if (!state.success) return
@@ -101,30 +121,49 @@ export default function AddFindingForm({
           <label className="mb-1 block text-sm font-semibold text-slate-700">
             Deadline
           </label>
+
           <input
-            type="date"
+            type="hidden"
             name="deadline"
+            value={displayDateToIso(deadlineDisplay)}
+          />
+
+          <input
+            type="text"
+            inputMode="numeric"
+            value={deadlineDisplay}
+            onChange={(e) => setDeadlineDisplay(formatDateInput(e.target.value))}
+            maxLength={10}
+            placeholder="GG/AA/İİİİ"
             disabled={pending || state.success}
             className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           />
+
+          <p className="mt-1 text-xs text-slate-500">
+            Məsələn: 31/12/2026
+          </p>
         </div>
 
         <div className="sm:col-span-2">
           <label className="mb-1 block text-sm font-semibold text-slate-700">
-            Cavabdeh şəxs
+            Cavabdeh şəxs <span className="text-slate-400">(istəyə bağlı)</span>
           </label>
           <select
             name="assigned_to"
             disabled={pending || state.success}
             className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           >
-            <option value="">Cavabdeh şəxs seçin...</option>
+            <option value="">Seçilməyib</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.full_name}
               </option>
             ))}
           </select>
+
+          <p className="mt-1 text-xs text-slate-500">
+            Tapıntının icrasına məsul şəxsi seçmək üçündür. Boş saxlaya bilərsiniz.
+          </p>
         </div>
 
         <div className="sm:col-span-2">
