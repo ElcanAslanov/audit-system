@@ -41,13 +41,13 @@ export default function CreatePlanPanel({
 
       {open && (
         <div className="border-t border-slate-200 p-4 sm:p-6">
-          <CreatePlanForm
-            companies={companies}
-            departments={departments}
-            auditors={auditors}
-            templates={templates}
-            onSuccess={onSuccess}
-          />
+         <CreatePlanForm
+  companies={companies}
+  departments={departments}
+  auditors={auditors}
+  templates={templates}
+  onSuccess={onSuccess}
+/>
         </div>
       )}
     </section>
