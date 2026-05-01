@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import CompanyActions from '@/components/company-actions'
-import { Building2, CalendarDays, Factory } from 'lucide-react'
-import AddCompanyModal from '@/components/add-company-modal'
+import DepartmentActions from '@/components/department-actions'
+import AddDepartmentModal from '@/components/add-department-modal'
+import { Building2, CalendarDays, Factory, Layers3 } from 'lucide-react'
 
 function formatDate(value?: string | null) {
   if (!value) return '-'
@@ -15,23 +15,49 @@ function formatDate(value?: string | null) {
   return date.toLocaleDateString('az-AZ')
 }
 
-export default async function CompaniesPage() {
+function normalizeOne(value: any) {
+  return Array.isArray(value) ? value[0] || null : value || null
+}
+
+export default async function DepartmentsPage() {
   const supabase = await createClient()
 
-  const { data: companies, error } = await supabase
+  const { data: companies, error: companiesError } = await supabase
     .from('companies')
-    .select('*')
+    .select('id, name')
+    .order('name', { ascending: true })
+
+  if (companiesError) {
+    return (
+      <div className="p-4 text-red-600 sm:p-6 lg:p-8">
+        Şirkətlər yüklənərkən xəta: {companiesError.message}
+      </div>
+    )
+  }
+
+  const { data: departments, error } = await supabase
+    .from('departments')
+    .select(`
+      id,
+      name,
+      company_id,
+      created_at,
+      companies(id, name)
+    `)
     .order('created_at', { ascending: false })
 
   if (error) {
     return (
       <div className="p-4 text-red-600 sm:p-6 lg:p-8">
-        Şirkətlər yüklənərkən xəta: {error.message}
+        Departamentlər yüklənərkən xəta: {error.message}
       </div>
     )
   }
 
-  const companyList = companies || []
+  const departmentList = (departments || []).map((department: any) => ({
+    ...department,
+    companies: normalizeOne(department.companies),
+  }))
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -40,21 +66,21 @@ export default async function CompaniesPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-sm font-semibold text-slate-500">
-                Şirkət idarəetməsi
+                Departament idarəetməsi
               </p>
 
               <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-                Şirkətlər
+                Departamentlər
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Sistemə daxil olan şirkətləri əlavə edin, redaktə edin və
+                Şirkətlərə bağlı departamentləri əlavə edin, redaktə edin və
                 siyahını idarə edin.
               </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <AddCompanyModal />
+              <AddDepartmentModal companies={companies || []} />
 
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center gap-3">
@@ -63,10 +89,10 @@ export default async function CompaniesPage() {
                   </div>
                   <div>
                     <p className="text-xs font-bold uppercase text-slate-500">
-                      Ümumi şirkət
+                      Ümumi departament
                     </p>
                     <p className="text-2xl font-black text-slate-950">
-                      {companyList.length}
+                      {departmentList.length}
                     </p>
                   </div>
                 </div>
@@ -75,62 +101,67 @@ export default async function CompaniesPage() {
           </div>
         </section>
 
-
-
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex flex-col gap-2 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-black text-slate-950">
-                Şirkət siyahısı
+                Departament siyahısı
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                {companyList.length} şirkət göstərilir.
+                {departmentList.length} departament göstərilir.
               </p>
             </div>
           </div>
 
-          {companyList.length === 0 ? (
+          {departmentList.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
               <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-white text-slate-500 shadow-sm">
-                <Building2 size={22} />
+                <Layers3 size={22} />
               </div>
               <h3 className="mt-4 font-black text-slate-900">
-                Şirkət yoxdur
+                Departament yoxdur
               </h3>
               <p className="mt-1 text-sm text-slate-500">
-                Yeni şirkət əlavə etdikdən sonra burada görünəcək.
+                Yeni departament əlavə etdikdən sonra burada görünəcək.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {companyList.map((company: any) => (
+              {departmentList.map((department: any) => (
                 <article
-                  key={company.id}
+                  key={department.id}
                   className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md"
                 >
                   <div className="flex items-start gap-4">
                     <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600">
-                      <Building2 size={22} />
+                      <Layers3 size={22} />
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate text-lg font-black text-slate-950">
-                        {company.name}
+                        {department.name}
                       </h3>
 
                       <p className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+                        <Building2 size={15} />
+                        Şirkət: {department.companies?.name || '-'}
+                      </p>
+
+                      <p className="mt-1 flex items-center gap-2 text-sm text-slate-500">
                         <CalendarDays size={15} />
-                        Qeydiyyat: {formatDate(company.created_at)}
+                        Qeydiyyat: {formatDate(department.created_at)}
                       </p>
                     </div>
                   </div>
 
                   <div className="mt-5 border-t border-slate-100 pt-4">
-                    <CompanyActions
-                      company={{
-                        id: company.id,
-                        name: company.name,
+                    <DepartmentActions
+                      department={{
+                        id: department.id,
+                        name: department.name,
+                        company_id: department.company_id,
                       }}
+                      companies={companies || []}
                     />
                   </div>
                 </article>

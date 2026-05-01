@@ -11,6 +11,7 @@ import {
   FileSearch,
   Home,
   LayoutDashboard,
+  Layers3,
   ListChecks,
   Menu,
   ShieldAlert,
@@ -69,6 +70,12 @@ const menuItems: MenuItem[] = [
     roles: ['admin'],
     icon: Building2,
   },
+  {
+  label: 'Departamentlər',
+  href: '/dashboard/departments',
+  roles: ['admin'],
+  icon: Layers3,
+},
   {
     label: 'Tapıntılar',
     href: '/dashboard/findings',

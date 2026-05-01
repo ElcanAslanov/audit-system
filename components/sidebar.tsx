@@ -13,6 +13,7 @@ import {
   FileSearch,
   Home,
   LayoutDashboard,
+  Layers3,
   ListChecks,
   ShieldAlert,
 } from 'lucide-react'
@@ -72,6 +73,12 @@ const managementItems: MenuItem[] = [
     roles: ['admin'],
     icon: Building2,
   },
+  {
+  label: 'Departamentlər',
+  href: '/dashboard/departments',
+  roles: ['admin'],
+  icon: Layers3,
+},
 ]
 
 const activityItems: MenuItem[] = [

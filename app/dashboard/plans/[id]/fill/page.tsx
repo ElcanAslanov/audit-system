@@ -87,8 +87,8 @@ export default async function FillAuditPage({ params }: PageProps) {
   const selectedTemplateIds =
     planTemplates && planTemplates.length > 0
       ? planTemplates
-          .map((item: any) => item.template_id)
-          .filter(Boolean)
+        .map((item: any) => item.template_id)
+        .filter(Boolean)
       : legacyTemplate?.id
         ? [legacyTemplate.id]
         : []
@@ -96,13 +96,31 @@ export default async function FillAuditPage({ params }: PageProps) {
   const selectedTemplateNames =
     planTemplates && planTemplates.length > 0
       ? planTemplates
-          .map((item: any) => {
-            const template = normalizeOne(item.audit_templates)
-            return template?.title
-          })
-          .filter(Boolean)
-          .join(', ')
+        .map((item: any) => {
+          const template = normalizeOne(item.audit_templates)
+          return template?.title
+        })
+        .filter(Boolean)
+        .join(', ')
       : legacyTemplate?.title || '-'
+
+  const { data: planTemplateSections, error: planTemplateSectionsError } =
+  await supabase
+    .from('audit_plan_template_sections')
+    .select('section_id')
+    .eq('plan_id', id)
+
+if (planTemplateSectionsError) {
+  return (
+    <div className="p-4 text-red-600 sm:p-6 lg:p-8">
+      Plan bölmələri yüklənərkən xəta: {planTemplateSectionsError.message}
+    </div>
+  )
+}
+
+const selectedSectionIds = (planTemplateSections || [])
+  .map((item: any) => item.section_id)
+  .filter(Boolean)
 
   if (selectedTemplateIds.length === 0) {
     return (
@@ -126,24 +144,33 @@ export default async function FillAuditPage({ params }: PageProps) {
     .select('id, full_name')
     .order('full_name', { ascending: true })
 
-  const { data: questions, error: questionsError } = await supabase
-    .from('template_questions')
-    .select(`
+let questionsQuery = supabase
+  .from('template_questions')
+  .select(`
+    id,
+    question_text,
+    max_score,
+    input_type,
+    sort_order,
+    template_sections!inner(
       id,
-      question_text,
-      max_score,
-      input_type,
+      title,
+      template_id,
       sort_order,
-      template_sections!inner(
-        id,
-        title,
-        template_id,
-        sort_order,
-        audit_templates(id, title)
-      )
-    `)
-    .in('template_sections.template_id', selectedTemplateIds)
-    .order('sort_order', { ascending: true })
+      audit_templates(id, title)
+    )
+  `)
+  .order('sort_order', { ascending: true })
+
+if (selectedSectionIds.length > 0) {
+  questionsQuery = questionsQuery.in('section_id', selectedSectionIds)
+} else {
+  // Köhnə planlar üçün fallback:
+  // əgər audit_plan_template_sections boşdursa, əvvəlki kimi bütün seçilmiş şablon sualları gəlir.
+  questionsQuery = questionsQuery.in('template_sections.template_id', selectedTemplateIds)
+}
+
+const { data: questions, error: questionsError } = await questionsQuery
 
   if (questionsError) {
     return (
@@ -162,9 +189,9 @@ export default async function FillAuditPage({ params }: PageProps) {
         ...question,
         template_sections: section
           ? {
-              ...section,
-              audit_templates: template,
-            }
+            ...section,
+            audit_templates: template,
+          }
           : null,
       }
     })
@@ -253,7 +280,7 @@ export default async function FillAuditPage({ params }: PageProps) {
           <h2 className="font-bold">Multi-template audit</h2>
           <p className="mt-2 text-sm leading-6">
             Bu audit planında {planTemplates.length} şablon birləşdirilib.
-            Checklist-də bütün seçilmiş şablonlara aid suallar göstərilir.
+            Checklist-də yalnız plan yaradılarkən seçilmiş bölmələrə aid suallar göstərilir.
           </p>
         </section>
       )}

@@ -101,10 +101,23 @@ export default async function PlansPage({ searchParams }: PageProps) {
     .select('id, name')
     .order('name', { ascending: true })
 
-  const { data: templates } = await supabase
-    .from('audit_templates')
-    .select('id, title')
-    .order('title', { ascending: true })
+  const { data: departments } = await supabase
+  .from('departments')
+  .select('id, name, company_id')
+  .order('name', { ascending: true })
+
+const { data: templates } = await supabase
+  .from('audit_templates')
+  .select(`
+    id,
+    title,
+    template_sections(
+      id,
+      title,
+      sort_order
+    )
+  `)
+  .order('title', { ascending: true })
 
   let assignableUsers: any[] = []
 
@@ -193,11 +206,12 @@ export default async function PlansPage({ searchParams }: PageProps) {
 
             <div className="flex flex-col gap-2 sm:flex-row">
               {canCreatePlan && (
-                <CreatePlanModal
-                  companies={companies || []}
-                  auditors={assignableUsers}
-                  templates={templates || []}
-                />
+              <CreatePlanModal
+  companies={companies || []}
+  departments={departments || []}
+  auditors={assignableUsers}
+  templates={templates || []}
+/>
               )}
 
               <Link

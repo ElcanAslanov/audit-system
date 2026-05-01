@@ -91,16 +91,80 @@ export default async function AuditDetailPage({ params }: PageProps) {
     )
   }
 
+  const { data: planTemplates } = await supabase
+    .from('audit_plan_templates')
+    .select(`
+    template_id,
+    audit_templates(id, title)
+  `)
+    .eq('plan_id', id)
+
+  const selectedTemplateNames =
+    planTemplates && planTemplates.length > 0
+      ? planTemplates
+        .map((item: any) => {
+          const template = Array.isArray(item.audit_templates)
+            ? item.audit_templates[0] || null
+            : item.audit_templates || null
+
+          return template?.title
+        })
+        .filter(Boolean)
+        .join(', ')
+      : plan.audit_templates?.title || '-'
+
+  const { data: planTemplateSections } = await supabase
+    .from('audit_plan_template_sections')
+    .select(`
+    section_id,
+    template_sections(
+      id,
+      title,
+      sort_order,
+      audit_templates(id, title)
+    )
+  `)
+    .eq('plan_id', id)
+
+  const selectedSectionNames =
+    planTemplateSections && planTemplateSections.length > 0
+      ? planTemplateSections
+        .map((item: any) => {
+          const section = Array.isArray(item.template_sections)
+            ? item.template_sections[0] || null
+            : item.template_sections || null
+
+          const template = Array.isArray(section?.audit_templates)
+            ? section.audit_templates[0] || null
+            : section?.audit_templates || null
+
+          return section?.title
+            ? `${template?.title || 'Şablon'} / ${section.title}`
+            : null
+        })
+        .filter(Boolean)
+        .join(', ')
+      : '-'
+
   const { data: answers } = await supabase
     .from('audit_answers')
     .select(`
-      id,
-      response,
-      comment,
-      score,
-      question_id,
-      template_questions(question_text, max_score)
-    `)
+    id,
+    response,
+    comment,
+    score,
+    question_id,
+    template_questions(
+      question_text,
+      max_score,
+      template_sections(
+        id,
+        title,
+        sort_order,
+        audit_templates(id, title)
+      )
+    )
+  `)
     .eq('plan_id', id)
 
   const { data: findings } = await supabase
@@ -148,9 +212,9 @@ export default async function AuditDetailPage({ params }: PageProps) {
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            Şablon:{' '}
+            Şablonlar:{' '}
             <span className="font-semibold text-slate-700">
-              {plan.audit_templates?.title || '-'}
+              {selectedTemplateNames}
             </span>{' '}
             • Şirkət:{' '}
             <span className="font-semibold text-slate-700">
@@ -176,18 +240,18 @@ export default async function AuditDetailPage({ params }: PageProps) {
               Auditi redaktə et
             </Link>
 
-           {hasAnswers ? (
-  <Link
-    href={`/dashboard/plans/${id}/report`}
-    className="inline-flex w-full justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto"
-  >
-    PDF Hesabat
-  </Link>
-) : (
-  <span className="inline-flex w-full justify-center rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-400 sm:w-auto">
-    PDF üçün əvvəl auditi doldurun
-  </span>
-)}
+            {hasAnswers ? (
+              <Link
+                href={`/dashboard/plans/${id}/report`}
+                className="inline-flex w-full justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto"
+              >
+                PDF Hesabat
+              </Link>
+            ) : (
+              <span className="inline-flex w-full justify-center rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-400 sm:w-auto">
+                PDF üçün əvvəl auditi doldurun
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -248,10 +312,19 @@ export default async function AuditDetailPage({ params }: PageProps) {
 
               <div>
                 <p className="text-xs font-semibold uppercase text-slate-500">
-                  Şablon
+                  Şablonlar
                 </p>
-                <p className="mt-1 font-semibold text-slate-900">
-                  {plan.audit_templates?.title || '-'}
+                <p className="mt-1 font-semibold leading-6 text-slate-900">
+                  {selectedTemplateNames}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500">
+                  Seçilmiş bölmələr
+                </p>
+                <p className="mt-1 font-semibold leading-6 text-slate-900">
+                  {selectedSectionNames}
                 </p>
               </div>
 
@@ -279,24 +352,24 @@ export default async function AuditDetailPage({ params }: PageProps) {
             <h2 className="text-lg font-bold text-slate-900">Files</h2>
 
             <div className="mt-4">
-            {plan.file_url ? (
-  <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-    <div>
-      <p className="text-xs font-semibold uppercase text-slate-500">
-        Əlavə olunmuş fayl
-      </p>
-      <p className="mt-1 break-all font-mono text-xs text-slate-700">
-        {plan.file_url}
-      </p>
-    </div>
+              {plan.file_url ? (
+                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-slate-500">
+                      Əlavə olunmuş fayl
+                    </p>
+                    <p className="mt-1 break-all font-mono text-xs text-slate-700">
+                      {plan.file_url}
+                    </p>
+                  </div>
 
-    <AuditFileLink filePath={plan.file_url} />
-  </div>
-) : (
-  <p className="text-sm text-slate-500">
-    Fayl əlavə olunmayıb.
-  </p>
-)}
+                  <AuditFileLink filePath={plan.file_url} />
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">
+                  Fayl əlavə olunmayıb.
+                </p>
+              )}
             </div>
           </div>
 
@@ -350,9 +423,31 @@ export default async function AuditDetailPage({ params }: PageProps) {
                         Sual #{index + 1}
                       </p>
 
-                      <h3 className="mt-1 font-bold text-slate-900">
-                        {answer.template_questions?.question_text || 'Sual'}
-                      </h3>
+                      {(() => {
+                        const question = Array.isArray(answer.template_questions)
+                          ? answer.template_questions[0] || null
+                          : answer.template_questions || null
+
+                        const section = Array.isArray(question?.template_sections)
+                          ? question.template_sections[0] || null
+                          : question?.template_sections || null
+
+                        const template = Array.isArray(section?.audit_templates)
+                          ? section.audit_templates[0] || null
+                          : section?.audit_templates || null
+
+                        return (
+                          <>
+                            <p className="mt-1 text-xs font-semibold text-blue-600">
+                              {template?.title || 'Şablon'} / {section?.title || 'Bölmə'}
+                            </p>
+
+                            <h3 className="mt-1 font-bold text-slate-900">
+                              {question?.question_text || 'Sual'}
+                            </h3>
+                          </>
+                        )
+                      })()}
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -366,7 +461,13 @@ export default async function AuditDetailPage({ params }: PageProps) {
 
                       <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
                         {answer.score ?? 0} /{' '}
-                        {answer.template_questions?.max_score ?? '-'}
+                        {(() => {
+                          const question = Array.isArray(answer.template_questions)
+                            ? answer.template_questions[0] || null
+                            : answer.template_questions || null
+
+                          return question?.max_score ?? '-'
+                        })()}
                       </span>
                     </div>
                   </div>

@@ -37,8 +37,16 @@ export async function createAuditPlan(
   const title = formData.get('title') as string
   const companyId = formData.get('company_id') as string
   const templateIds = formData.getAll('template_ids') as string[]
+  const selectedSectionIds = formData.getAll('template_section_ids') as string[]
   const templateId = templateIds[0] || ''
   const dueDate = formData.get('due_date') as string
+
+  const validDueDate =
+  !dueDate || /^\d{4}-\d{2}-\d{2}$/.test(dueDate)
+
+if (!validDueDate) {
+  return { error: 'Son tarix düzgün formatda deyil.', success: false }
+}
   const notes = formData.get('notes') as string
   const department = formData.get('department') as string
 
@@ -50,9 +58,17 @@ export async function createAuditPlan(
     return { error: 'Şirkət seçilməlidir.', success: false }
   }
 
+  if (!department) {
+  return { error: 'Departament seçilməlidir.', success: false }
+}
+
   if (templateIds.length === 0) {
     return { error: 'Ən azı 1 audit şablonu seçilməlidir.', success: false }
   }
+
+  if (selectedSectionIds.length === 0) {
+  return { error: 'Ən azı 1 şablon bölməsi seçilməlidir.', success: false }
+}
 
   let fileUrl: string | null = null
   const file = formData.get('file') as File | null
@@ -112,6 +128,39 @@ export async function createAuditPlan(
     if (planTemplatesError) {
       throw planTemplatesError
     }
+
+    const uniqueSectionIds = Array.from(
+  new Set(selectedSectionIds.filter(Boolean))
+)
+
+const { data: selectedSections, error: selectedSectionsError } = await supabase
+  .from('template_sections')
+  .select('id, template_id')
+  .in('id', uniqueSectionIds)
+
+if (selectedSectionsError) {
+  throw selectedSectionsError
+}
+
+const planTemplateSections = (selectedSections || [])
+  .filter((section: any) => uniqueTemplateIds.includes(section.template_id))
+  .map((section: any) => ({
+    plan_id: plan.id,
+    template_id: section.template_id,
+    section_id: section.id,
+  }))
+
+if (planTemplateSections.length === 0) {
+  throw new Error('Seçilmiş bölmələr tapılmadı.')
+}
+
+const { error: planTemplateSectionsError } = await supabase
+  .from('audit_plan_template_sections')
+  .insert(planTemplateSections)
+
+if (planTemplateSectionsError) {
+  throw planTemplateSectionsError
+}
 
     const assignedIds = formData.getAll('assigned_to') as string[]
 
@@ -467,6 +516,14 @@ export async function deleteAuditPlan(planId: string): Promise<ActionState> {
       .eq('plan_id', planId)
 
     if (answersError) throw answersError
+
+    // Sonra plan-şablon-bölmə əlaqələrini silirik
+const { error: planTemplateSectionsError } = await supabase
+  .from('audit_plan_template_sections')
+  .delete()
+  .eq('plan_id', planId)
+
+if (planTemplateSectionsError) throw planTemplateSectionsError
 
     // Sonra plan-şablon əlaqələrini silirik
     const { error: planTemplatesError } = await supabase

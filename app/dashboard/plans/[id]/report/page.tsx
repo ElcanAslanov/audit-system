@@ -102,13 +102,41 @@ export default async function AuditReportPage({ params }: PageProps) {
   const selectedTemplateNames =
     planTemplates && planTemplates.length > 0
       ? planTemplates
-          .map((item: any) => {
-            const template = normalizeOne(item.audit_templates)
-            return template?.title
-          })
-          .filter(Boolean)
-          .join(', ')
+        .map((item: any) => {
+          const template = normalizeOne(item.audit_templates)
+          return template?.title
+        })
+        .filter(Boolean)
+        .join(', ')
       : legacyTemplate?.title || '-'
+
+  const { data: planTemplateSections } = await supabase
+    .from('audit_plan_template_sections')
+    .select(`
+    section_id,
+    template_sections(
+      id,
+      title,
+      sort_order,
+      audit_templates(id, title)
+    )
+  `)
+    .eq('plan_id', id)
+
+  const selectedSectionNames =
+    planTemplateSections && planTemplateSections.length > 0
+      ? planTemplateSections
+        .map((item: any) => {
+          const section = normalizeOne(item.template_sections)
+          const template = normalizeOne(section?.audit_templates)
+
+          return section?.title
+            ? `${template?.title || 'Şablon'} / ${section.title}`
+            : null
+        })
+        .filter(Boolean)
+        .join(', ')
+      : '-'
 
   const { data: answers } = await supabase
     .from('audit_answers')
@@ -187,14 +215,14 @@ export default async function AuditReportPage({ params }: PageProps) {
         ...answer,
         template_questions: question
           ? {
-              ...question,
-              template_sections: section
-                ? {
-                    ...section,
-                    audit_templates: template,
-                  }
-                : null,
-            }
+            ...question,
+            template_sections: section
+              ? {
+                ...section,
+                audit_templates: template,
+              }
+              : null,
+          }
           : null,
       }
     })
@@ -300,7 +328,7 @@ export default async function AuditReportPage({ params }: PageProps) {
           </section>
 
           <div className="space-y-8 p-5 sm:p-8 lg:p-10 print:p-8">
-            <section className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4">
+            <section className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-5 print:grid-cols-5">
               <div>
                 <p className="text-xs font-medium uppercase text-slate-500">
                   Şirkət
@@ -325,6 +353,15 @@ export default async function AuditReportPage({ params }: PageProps) {
                 </p>
                 <p className="mt-1 font-bold text-slate-900">
                   {selectedTemplateNames}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium uppercase text-slate-500">
+                  Seçilmiş bölmələr
+                </p>
+                <p className="mt-1 font-bold leading-6 text-slate-900">
+                  {selectedSectionNames}
                 </p>
               </div>
 
@@ -489,11 +526,11 @@ export default async function AuditReportPage({ params }: PageProps) {
               </div>
             </section>
 
-          <section className={(findings || []).length > 0 ? 'report-page-break-before' : ''}>
-  <div className="mb-4">
-    <h2 className="text-xl font-extrabold text-slate-900">
-      Tapıntılar
-    </h2>
+            <section className={(findings || []).length > 0 ? 'report-page-break-before' : ''}>
+              <div className="mb-4">
+                <h2 className="text-xl font-extrabold text-slate-900">
+                  Tapıntılar
+                </h2>
                 <p className="text-sm text-slate-500">
                   Risklər, izahlar və icra statusları
                 </p>
@@ -577,10 +614,9 @@ export default async function AuditReportPage({ params }: PageProps) {
             </section>
 
             <section
-  className={`grid grid-cols-1 gap-6 border-t border-slate-200 pt-8 sm:grid-cols-2 print:grid-cols-2 ${
-    (findings || []).length > 0 ? 'report-page-break-before' : ''
-  }`}
->
+              className={`grid grid-cols-1 gap-6 border-t border-slate-200 pt-8 sm:grid-cols-2 print:grid-cols-2 ${(findings || []).length > 0 ? 'report-page-break-before' : ''
+                }`}
+            >
               <div>
                 <p className="text-sm font-semibold text-slate-900">
                   Auditor imzası
