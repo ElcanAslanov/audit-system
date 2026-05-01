@@ -342,6 +342,7 @@ export default async function FillAuditPage({ params }: PageProps) {
   id,
   plan_id,
   question_id,
+  custom_question_id,
   title,
   severity,
   description,

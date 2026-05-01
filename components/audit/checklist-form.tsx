@@ -45,6 +45,7 @@ interface Finding {
   description?: string | null;
   deadline?: string | null;
   status?: string | null;
+  custom_question_id?: string | null;
   assigned_to?: string | null;
   files?: {
     name: string;
@@ -129,8 +130,13 @@ export default function ChecklistForm({
   const [customQuestionState, customQuestionAction, customQuestionPending] =
     useActionState(addCustomQuestion, null);
 
+
+  const [showCustomQuestionForm, setShowCustomQuestionForm] = useState(false);
 const [activeFinding, setActiveFinding] = useState<string | null>(null);
-const [showCustomQuestionForm, setShowCustomQuestionForm] = useState(false);
+const [toast, setToast] = useState<{
+  type: 'success' | 'error';
+  message: string;
+} | null>(null);
 const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const supabase = useMemo(() => createClient(), []);
@@ -149,13 +155,15 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const findingsByQuestion = useMemo(() => {
     const map = new Map<string, Finding[]>();
 
-    initialFindings.forEach((finding) => {
-      if (!finding.question_id) return;
+   initialFindings.forEach((finding) => {
+  const findingQuestionKey = finding.custom_question_id || finding.question_id;
 
-      const current = map.get(finding.question_id) || [];
-      current.push(finding);
-      map.set(finding.question_id, current);
-    });
+  if (!findingQuestionKey) return;
+
+  const current = map.get(findingQuestionKey) || [];
+  current.push(finding);
+  map.set(findingQuestionKey, current);
+});
 
     return map;
   }, [initialFindings]);
@@ -283,18 +291,49 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     setSelectedAnswers({});
     setHasUnsavedChanges(true);
   };
+useEffect(() => {
+  if (!state) return;
 
-  useEffect(() => {
-    if (!state?.success) return;
+  if (state.success) {
     setHasUnsavedChanges(false);
-  }, [state?.success]);
+    setToast({
+      type: 'success',
+      message: 'Cavablar uğurla yadda saxlanıldı.',
+    });
+    return;
+  }
+
+  if (state.error) {
+    setToast({
+      type: 'error',
+      message: state.error,
+    });
+  }
+}, [state]);
 
 useEffect(() => {
-  if (!customQuestionState?.success) return;
+  if (!customQuestionState) return;
 
-  setShowCustomQuestionForm(false);
-  window.location.reload();
-}, [customQuestionState?.success]);
+  if (customQuestionState.success) {
+    setToast({
+      type: 'success',
+      message: 'Xüsusi sual əlavə edildi.',
+    });
+
+    window.setTimeout(() => {      
+      window.location.reload();
+    }, 700);
+
+    return;
+  }
+
+  if (customQuestionState.error) {
+    setToast({
+      type: 'error',
+      message: customQuestionState.error,
+    });
+  }
+}, [customQuestionState]);
 
   useEffect(() => {
     if (!hasUnsavedChanges) return;
@@ -311,10 +350,51 @@ useEffect(() => {
     };
   }, [hasUnsavedChanges]);
 
-return (
-  <>  
+  useEffect(() => {
+  if (!toast) return;
 
-    <form action={action} className="space-y-5">
+  const timer = window.setTimeout(() => {
+    setToast(null);
+  }, 4500);
+
+  return () => window.clearTimeout(timer);
+}, [toast]);
+
+  return (
+    <>
+
+       {toast && (
+      <div className="fixed right-4 top-4 z-[9999] w-[calc(100%-2rem)] max-w-md">
+        <div
+          className={`rounded-2xl border p-4 shadow-2xl backdrop-blur ${
+            toast.type === 'success'
+              ? 'border-emerald-200 bg-emerald-50/95 text-emerald-800'
+              : 'border-red-200 bg-red-50/95 text-red-800'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-black">
+                {toast.type === 'success' ? 'Uğurlu əməliyyat' : 'Xəta'}
+              </p>
+              <p className="mt-1 text-sm leading-5">
+                {toast.message}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              className="rounded-lg px-2 py-1 text-xs font-bold opacity-70 transition hover:bg-white/60 hover:opacity-100"
+            >
+              Bağla
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+      <form action={action} className="space-y-5">
         <input type="hidden" name="plan_id" value={planId} />
 
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -376,15 +456,15 @@ return (
             </button>
 
             <button
-  type="button"
-  onClick={() => setShowCustomQuestionForm(true)}
-  className="inline-flex w-full justify-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 sm:w-auto"
->
-  + Xüsusi sual əlavə et
-</button>
+              type="button"
+              onClick={() => setShowCustomQuestionForm(true)}
+              className="inline-flex w-full justify-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 sm:w-auto"
+            >
+              + Xüsusi sual əlavə et
+            </button>
           </div>
 
-       
+
         </div>
 
         {state?.error && (
@@ -714,9 +794,13 @@ return (
                 )}
 
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setActiveFinding(q.id)}
+                <button
+  type="button"
+  onClick={() =>
+    setActiveFinding(
+      isCustomQuestion ? `custom:${q.id}` : `template:${q.id}`
+    )
+  }
                     className="inline-flex w-full justify-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 sm:w-auto"
                   >
                     + Tapıntı əlavə et
@@ -760,115 +844,116 @@ return (
         </div>
       </form>
 
-{showCustomQuestionForm && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
-    <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6">
-      <form action={customQuestionAction} className="space-y-5">
-        <input type="hidden" name="plan_id" value={planId} />
+      {showCustomQuestionForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6">
+            <form action={customQuestionAction} className="space-y-5">
+              <input type="hidden" name="plan_id" value={planId} />
 
-        <div className="border-b pb-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="text-xl font-extrabold text-slate-900">
-                Yeni xüsusi sual
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Şablonda olmayan əlavə sualı bu audit planına daxil edin.
-              </p>
-            </div>
+              <div className="border-b pb-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-xl font-extrabold text-slate-900">
+                      Yeni xüsusi sual
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Şablonda olmayan əlavə sualı bu audit planına daxil edin.
+                    </p>
+                  </div>
 
-            <button
-              type="button"
-              onClick={() => setShowCustomQuestionForm(false)}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-            >
-              Bağla
-            </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomQuestionForm(false)}
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    Bağla
+                  </button>
+                </div>
+              </div>
+
+              {customQuestionState?.error && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {customQuestionState.error}
+                </div>
+              )}
+
+              {customQuestionState?.success && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+                  Xüsusi sual əlavə edildi. Səhifə yenilənir...
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Sual mətni
+                </label>
+
+                <textarea
+                  name="question_text"
+                  required
+                  rows={4}
+                  disabled={customQuestionPending || customQuestionState?.success}
+                  placeholder="Sualı daxil edin..."
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Maksimum bal
+                </label>
+
+                <input
+                  type="number"
+                  name="max_score"
+                  min={1}
+                  step="0.5"
+                  defaultValue={10}
+                  disabled={customQuestionPending || customQuestionState?.success}
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                />
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Sual sonradan checklist-də adi sual kimi cavablandırılacaq.
+                </p>
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomQuestionForm(false)}
+                  disabled={customQuestionPending}
+                  className="inline-flex w-full justify-center rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                >
+                  Bağla
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={customQuestionPending || customQuestionState?.success}
+                  className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300 sm:w-auto"
+                >
+                  {customQuestionPending
+                    ? 'Əlavə edilir...'
+                    : customQuestionState?.success
+                      ? 'Əlavə edildi'
+                      : 'Sualı əlavə et'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-
-        {customQuestionState?.error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {customQuestionState.error}
-          </div>
-        )}
-
-        {customQuestionState?.success && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-            Xüsusi sual əlavə edildi. Səhifə yenilənir...
-          </div>
-        )}
-
-        <div>
-          <label className="mb-1 block text-sm font-semibold text-slate-700">
-            Sual mətni
-          </label>
-
-          <textarea
-            name="question_text"
-            required
-            rows={4}
-            disabled={customQuestionPending || customQuestionState?.success}
-            placeholder="Sualı daxil edin..."
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-semibold text-slate-700">
-            Maksimum bal
-          </label>
-
-          <input
-            type="number"
-            name="max_score"
-            min={1}
-            step="0.5"
-            defaultValue={10}
-            disabled={customQuestionPending || customQuestionState?.success}
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
-          />
-
-          <p className="mt-1 text-xs text-slate-500">
-            Sual sonradan checklist-də adi sual kimi cavablandırılacaq.
-          </p>
-        </div>
-
-        <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-end">
-          <button
-            type="button"
-            onClick={() => setShowCustomQuestionForm(false)}
-            disabled={customQuestionPending}
-            className="inline-flex w-full justify-center rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-          >
-            Bağla
-          </button>
-
-          <button
-            type="submit"
-            disabled={customQuestionPending || customQuestionState?.success}
-            className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300 sm:w-auto"
-          >
-            {customQuestionPending
-              ? 'Əlavə edilir...'
-              : customQuestionState?.success
-                ? 'Əlavə edildi'
-                : 'Sualı əlavə et'}
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-)}
+      )}
       {activeFinding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6">
-            <AddFindingForm
-              planId={planId}
-              questionId={activeFinding}
-              users={users}
-              onClose={() => setActiveFinding(null)}
-            />
+          <AddFindingForm
+  planId={planId}
+  questionId={activeFinding.replace('template:', '').replace('custom:', '')}
+  questionType={activeFinding.startsWith('custom:') ? 'custom' : 'template'}
+  users={users}
+  onClose={() => setActiveFinding(null)}
+/>
           </div>
         </div>
       )}

@@ -210,6 +210,7 @@ export async function addFinding(
 
   const planId = String(formData.get('plan_id') || '')
   const questionId = String(formData.get('question_id') || '')
+  const questionType = String(formData.get('question_type') || 'template')
   const assignedTo = String(formData.get('assigned_to') || '')
   const title = String(formData.get('title') || '').trim()
   const severity = String(formData.get('severity') || 'low')
@@ -271,16 +272,17 @@ export async function addFinding(
 
   const { error } = await supabase.from('findings').insert([
     {
-      plan_id: planId,
-      question_id: questionId,
-      assigned_to: assignedTo || null,
-      title,
-      severity,
-      description,
-      deadline: deadline || null,
-      status: 'aciq',
-      files: uploadedFiles,
-    },
+  plan_id: planId,
+  question_id: questionType === 'custom' ? null : questionId,
+  custom_question_id: questionType === 'custom' ? questionId : null,
+  assigned_to: assignedTo || null,
+  title,
+  severity,
+  description,
+  deadline: deadline || null,
+  status: 'aciq',
+  files: uploadedFiles,
+},
   ])
 
   if (error) {
@@ -547,21 +549,68 @@ export async function saveAuditAnswers(
     }
 
     if (customAnswersWithScore.length > 0) {
-      const { error: upsertCustomError } = await supabase
-        .from('audit_answers')
-        .upsert(customAnswersWithScore, {
-          onConflict: 'plan_id,custom_question_id',
-        })
+  for (const answer of customAnswersWithScore) {
+    const { data: existingCustomAnswer, error: findCustomError } = await supabase
+      .from('audit_answers')
+      .select('id')
+      .eq('plan_id', answer.plan_id)
+      .eq('custom_question_id', answer.custom_question_id)
+      .maybeSingle()
 
-      if (upsertCustomError) {
+    if (findCustomError) {
+      return {
+        error:
+          'Əlavə sual cavabı yoxlanarkən xəta: ' +
+          findCustomError.message,
+        success: false,
+      }
+    }
+
+    if (existingCustomAnswer?.id) {
+      const { error: updateCustomError } = await supabase
+        .from('audit_answers')
+        .update({
+          response: answer.response,
+          comment: answer.comment,
+          score: answer.score,
+          updated_at: answer.updated_at,
+        })
+        .eq('id', existingCustomAnswer.id)
+
+      if (updateCustomError) {
         return {
           error:
-            'Əlavə sualların cavabları saxlanmadı: ' +
-            upsertCustomError.message,
+            'Əlavə sual cavabı yenilənmədi: ' +
+            updateCustomError.message,
+          success: false,
+        }
+      }
+    } else {
+      const { error: insertCustomError } = await supabase
+        .from('audit_answers')
+        .insert([
+          {
+            plan_id: answer.plan_id,
+            question_id: null,
+            custom_question_id: answer.custom_question_id,
+            response: answer.response,
+            comment: answer.comment,
+            score: answer.score,
+            updated_at: answer.updated_at,
+          },
+        ])
+
+      if (insertCustomError) {
+        return {
+          error:
+            'Əlavə sual cavabı əlavə olunmadı: ' +
+            insertCustomError.message,
           success: false,
         }
       }
     }
+  }
+}
 
     const { data: allAnswers, error: allAnswersError } = await supabase
       .from('audit_answers')

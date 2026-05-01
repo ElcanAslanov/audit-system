@@ -68,10 +68,10 @@ export default async function AuditDetailPage({ params }: PageProps) {
   const { data: plan, error: planError } = await supabase
     .from('audit_plans')
     .select(`
-      *,
-      companies(name),
-      audit_templates(id, title)
-    `)
+    *,
+    companies(name),
+    profiles!audit_plans_created_by_fkey(full_name)
+  `)
     .eq('id', id)
     .maybeSingle()
 
@@ -92,39 +92,39 @@ export default async function AuditDetailPage({ params }: PageProps) {
   }
 
   const { data: profile } = await supabase
-  .from('profiles')
-  .select('role')
-  .eq('id', user.id)
-  .maybeSingle()
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
 
-const isAdmin = profile?.role === 'admin'
-const isCreator = plan.created_by === user.id
-const canManageLock = isAdmin || isCreator
+  const isAdmin = profile?.role === 'admin'
+  const isCreator = plan.created_by === user.id
+  const canManageLock = isAdmin || isCreator
 
-const isViewLocked = Boolean(plan.locked_view)
-const isEditLocked = Boolean(plan.locked_edit)
+  const isViewLocked = Boolean(plan.locked_view)
+  const isEditLocked = Boolean(plan.locked_edit)
 
-if (isViewLocked && !canManageLock) {
-  return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700 shadow-sm">
-        <h2 className="text-xl font-black">Audit planına giriş kilidlənib</h2>
+  if (isViewLocked && !canManageLock) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700 shadow-sm">
+          <h2 className="text-xl font-black">Audit planına giriş kilidlənib</h2>
 
-        <p className="mt-2 text-sm leading-6">
-          Bu plan üzrə baxış bağlanıb. Bu auditə baxmaq və ya dəyişiklik etmək
-          mümkün deyil.
-        </p>
+          <p className="mt-2 text-sm leading-6">
+            Bu plan üzrə baxış bağlanıb. Bu auditə baxmaq və ya dəyişiklik etmək
+            mümkün deyil.
+          </p>
 
-        <Link
-          href="/dashboard/plans"
-          className="mt-5 inline-flex rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700"
-        >
-          Audit planlarına qayıt
-        </Link>
+          <Link
+            href="/dashboard/plans"
+            className="mt-5 inline-flex rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700"
+          >
+            Audit planlarına qayıt
+          </Link>
+        </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
 
   const { data: planTemplates } = await supabase
     .from('audit_plan_templates')
@@ -202,9 +202,9 @@ if (isViewLocked && !canManageLock) {
   `)
     .eq('plan_id', id)
 
-  const { data: findings } = await supabase
-    .from('findings')
-    .select(`
+ const { data: findings } = await supabase
+  .from('findings')
+  .select(`
       id,
       title,
       severity,
@@ -212,15 +212,22 @@ if (isViewLocked && !canManageLock) {
       deadline,
       status,
       assigned_to,
+      files,
       profiles(full_name)
     `)
-    .eq('plan_id', id)
+  .eq('plan_id', id)
 
   const hasAnswers = (answers?.length || 0) > 0
 
   const normalizedCompany = Array.isArray(plan.companies)
     ? plan.companies[0] || null
     : plan.companies || null
+  
+  const creatorProfile = Array.isArray((plan as any).profiles)
+  ? (plan as any).profiles[0] || null
+  : (plan as any).profiles || null
+
+const creatorName = creatorProfile?.full_name || '-'
 
   const totalAnswers = answers?.length || 0
   const problemAnswers =
@@ -268,31 +275,46 @@ if (isViewLocked && !canManageLock) {
           </span>
 
           <div className="flex flex-col gap-2 sm:flex-row">
-           {isEditLocked ? (
-  <span className="inline-flex w-full justify-center rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm font-semibold text-yellow-700 sm:w-auto">
-    Redaktə kilidlidir
-  </span>
-) : (
-  <Link
-    href={`/dashboard/plans/${id}/fill`}
-    className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
-  >
-    Auditi redaktə et
-  </Link>
-)}
-
-            {hasAnswers ? (
-              <Link
-                href={`/dashboard/plans/${id}/report`}
-                className="inline-flex w-full justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto"
-              >
-                PDF Hesabat
-              </Link>
-            ) : (
-              <span className="inline-flex w-full justify-center rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-400 sm:w-auto">
-                PDF üçün əvvəl auditi doldurun
+            {isEditLocked ? (
+              <span className="inline-flex w-full justify-center rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm font-semibold text-yellow-700 sm:w-auto">
+                Redaktə kilidlidir
               </span>
+            ) : (
+              <Link
+                href={`/dashboard/plans/${id}/fill`}
+                className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
+              >
+                Auditi redaktə et
+              </Link>
             )}
+
+           {hasAnswers ? (
+  <>
+    <Link
+      href={`/dashboard/plans/${id}/report`}
+      className="inline-flex w-full justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto"
+    >
+      PDF Hesabat
+    </Link>
+
+    <Link
+      href={`/dashboard/plans/${id}/export-excel`}
+      className="inline-flex w-full justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 sm:w-auto"
+    >
+      Excel export
+    </Link>
+  </>
+) : (
+  <>
+    <span className="inline-flex w-full justify-center rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-400 sm:w-auto">
+      PDF üçün əvvəl auditi doldurun
+    </span>
+
+    <span className="inline-flex w-full justify-center rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-400 sm:w-auto">
+      Excel üçün əvvəl auditi doldurun
+    </span>
+  </>
+)}
           </div>
         </div>
       </div>
@@ -327,23 +349,22 @@ if (isViewLocked && !canManageLock) {
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-  <p className="text-sm font-semibold text-slate-500">Kilid statusu</p>
-  <p
-    className={`mt-2 font-bold ${
-      isViewLocked
-        ? 'text-red-700'
-        : isEditLocked
-          ? 'text-yellow-700'
-          : 'text-emerald-700'
-    }`}
-  >
-    {isViewLocked
-      ? 'Baxış və redaktə kilidli'
-      : isEditLocked
-        ? 'Redaktə kilidli'
-        : 'Kilidsiz'}
-  </p>
-</div>
+          <p className="text-sm font-semibold text-slate-500">Kilid statusu</p>
+          <p
+            className={`mt-2 font-bold ${isViewLocked
+                ? 'text-red-700'
+                : isEditLocked
+                  ? 'text-yellow-700'
+                  : 'text-emerald-700'
+              }`}
+          >
+            {isViewLocked
+              ? 'Baxış və redaktə kilidli'
+              : isEditLocked
+                ? 'Redaktə kilidli'
+                : 'Kilidsiz'}
+          </p>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
@@ -389,13 +410,13 @@ if (isViewLocked && !canManageLock) {
               </div>
 
               <div>
-                <p className="text-xs font-semibold uppercase text-slate-500">
-                  Yaradan
-                </p>
-                <p className="mt-1 font-semibold text-slate-900">
-                  {plan.created_by || '-'}
-                </p>
-              </div>
+  <p className="text-xs font-semibold uppercase text-slate-500">
+    Yaradan
+  </p>
+  <p className="mt-1 font-semibold text-slate-900">
+    {creatorName}
+  </p>
+</div>
 
               <div>
                 <p className="text-xs font-semibold uppercase text-slate-500">
@@ -613,7 +634,7 @@ if (isViewLocked && !canManageLock) {
                       </p>
                     </div>
 
-                    
+
 
                     <div>
                       <p className="text-xs font-semibold uppercase text-slate-500">
@@ -624,6 +645,45 @@ if (isViewLocked && !canManageLock) {
                       </p>
                     </div>
                   </div>
+
+                  {Array.isArray(finding.files) && finding.files.length > 0 && (
+  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+    <p className="mb-2 text-xs font-semibold uppercase text-slate-500">
+      Fayllar
+    </p>
+
+    <div className="space-y-2">
+      {finding.files.map((file: any, fileIndex: number) => (
+        <div
+          key={`${file.path}-${fileIndex}`}
+          className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="min-w-0 truncate text-sm font-semibold text-slate-800">
+            {file.name || 'Fayl'}
+          </p>
+
+          <div className="flex gap-2">
+            <a
+              href={`/api/finding-files?path=${encodeURIComponent(file.path)}&name=${encodeURIComponent(file.name || 'fayl')}&mode=open`}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
+            >
+              Aç
+            </a>
+
+            <a
+              href={`/api/finding-files?path=${encodeURIComponent(file.path)}&name=${encodeURIComponent(file.name || 'fayl')}&mode=download`}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100"
+            >
+              Yüklə
+            </a>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
                 </article>
               ))}
             </div>

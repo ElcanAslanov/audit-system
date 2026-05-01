@@ -25,11 +25,13 @@ function displayDateToIso(value: string) {
 export default function AddFindingForm({
   planId,
   questionId,
+  questionType = 'template',
   users,
   onClose,
 }: {
   planId: string
   questionId: string
+  questionType?: 'template' | 'custom'
   users: any[]
   onClose: () => void
 }) {
@@ -54,6 +56,7 @@ export default function AddFindingForm({
     <form action={formAction} className="space-y-5">
       <input type="hidden" name="plan_id" value={planId} />
       <input type="hidden" name="question_id" value={questionId} />
+      <input type="hidden" name="question_type" value={questionType} />
 
       <div className="border-b pb-4">
         <div className="flex items-start justify-between gap-4">
