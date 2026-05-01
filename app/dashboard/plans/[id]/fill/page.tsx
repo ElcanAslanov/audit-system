@@ -284,9 +284,56 @@ export default async function FillAuditPage({ params }: PageProps) {
       return Number(a.sort_order || 0) - Number(b.sort_order || 0)
     })
 
+
+
+  const { data: customQuestions, error: customQuestionsError } = await supabase
+    .from('audit_custom_questions')
+    .select(`
+    id,
+    question_text,
+    max_score,
+    created_at,
+    created_by,
+    profiles(full_name)
+  `)
+    .eq('plan_id', id)
+    .order('created_at', { ascending: true })
+
+  if (customQuestionsError) {
+    return (
+      <div className="p-4 text-red-600 sm:p-6 lg:p-8">
+        Xüsusi suallar yüklənərkən xəta: {customQuestionsError.message}
+      </div>
+    )
+  }
+
+  const normalizedCustomQuestions = (customQuestions || []).map((question: any) => {
+    const creator = normalizeOne(question.profiles)
+
+    return {
+      id: question.id,
+      question_text: question.question_text,
+      max_score: question.max_score ?? 10,
+      is_custom: true,
+      created_by: question.created_by,
+      created_by_name: creator?.full_name || 'Auditor',
+      template_sections: {
+        id: 'custom',
+        title: 'Auditor tərəfindən əlavə edilən suallar',
+        sort_order: 999999,
+        audit_templates: {
+          id: 'custom',
+          title: 'Xüsusi sual',
+        },
+      },
+    }
+  })
+
+  const allQuestions = [...normalizedQuestions, ...normalizedCustomQuestions]
+
   const { data: existingAnswers } = await supabase
     .from('audit_answers')
-    .select('question_id, response, comment, score')
+    .select('question_id, custom_question_id, response, comment, score')
     .eq('plan_id', id)
 
   const { data: existingFindings, error: findingsError } = await supabase
@@ -325,7 +372,7 @@ export default async function FillAuditPage({ params }: PageProps) {
   const normalizedCompany = normalizeOne(plan.companies)
 
   const answeredCount = existingAnswers?.length || 0
-  const totalQuestions = normalizedQuestions.length
+  const totalQuestions = allQuestions.length
 
   const hasAnswers = answeredCount > 0
   const isCompletedOrAttention =
@@ -442,7 +489,7 @@ export default async function FillAuditPage({ params }: PageProps) {
         </div>
 
         <ChecklistForm
-          questions={normalizedQuestions}
+          questions={allQuestions}
           planId={id}
           initialAnswers={existingAnswers || []}
           initialFindings={normalizedFindings}

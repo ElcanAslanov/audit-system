@@ -301,6 +301,86 @@ export async function addFinding(
   return { error: null, success: true }
 }
 
+
+// --- 2.1. Auditor tərəfindən plana xüsusi sual əlavə et ---
+export async function addCustomQuestion(
+  prevState: ActionState | null,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'İstifadəçi tapılmadı.', success: false }
+  }
+
+  const planId = String(formData.get('plan_id') || '').trim()
+  const questionText = String(formData.get('question_text') || '').trim()
+  const rawMaxScore = String(formData.get('max_score') || '10').trim()
+
+  if (!planId) {
+    return { error: 'Plan ID tapılmadı.', success: false }
+  }
+
+  if (!questionText) {
+    return { error: 'Sual mətni daxil edilməlidir.', success: false }
+  }
+
+  let maxScore = Number(rawMaxScore || 10)
+
+  if (Number.isNaN(maxScore) || maxScore <= 0) {
+    maxScore = 10
+  }
+
+  const { data: plan, error: planError } = await supabase
+    .from('audit_plans')
+    .select('id, locked_edit')
+    .eq('id', planId)
+    .maybeSingle()
+
+  if (planError) {
+    return { error: planError.message, success: false }
+  }
+
+  if (!plan) {
+    return { error: 'Audit planı tapılmadı.', success: false }
+  }
+
+  if (plan.locked_edit) {
+    return {
+      error:
+        'Bu audit redaktəyə kilidlənib. Xüsusi sual əlavə etmək mümkün deyil.',
+      success: false,
+    }
+  }
+
+  const { error } = await supabase.from('audit_custom_questions').insert([
+    {
+      plan_id: planId,
+      question_text: questionText,
+      max_score: maxScore,
+      created_by: user.id,
+    },
+  ])
+
+  if (error) {
+    return {
+      error: 'Xüsusi sual əlavə olunmadı: ' + error.message,
+      success: false,
+    }
+  }
+
+  revalidatePath(`/dashboard/plans/${planId}/fill`)
+  revalidatePath(`/dashboard/plans/${planId}`)
+  revalidatePath('/dashboard/plans')
+
+  return { error: null, success: true }
+}
+
+// --- 3. Audit Cavablarını Yadda Saxlama ---
 // --- 3. Audit Cavablarını Yadda Saxlama ---
 export async function saveAuditAnswers(
   prevState: ActionState | null,
@@ -314,10 +394,34 @@ export async function saveAuditAnswers(
   }
 
   try {
-    const answers: any[] = []
+    const templateAnswers: any[] = []
+    const customAnswers: any[] = []
     const incomingQuestionIds: string[] = []
+    const incomingCustomQuestionIds: string[] = []
 
     for (const [key, value] of formData.entries()) {
+      if (key.startsWith('answer_custom_')) {
+        const custom_question_id = key.replace('answer_custom_', '')
+        const response = String(value || '')
+        const comment = String(
+          formData.get(`comment_custom_${custom_question_id}`) || ''
+        )
+        const rawScore = formData.get(`score_custom_${custom_question_id}`)
+
+        incomingCustomQuestionIds.push(custom_question_id)
+
+        customAnswers.push({
+          plan_id,
+          custom_question_id,
+          response,
+          comment,
+          rawScore,
+          updated_at: new Date().toISOString(),
+        })
+
+        continue
+      }
+
       if (key.startsWith('answer_')) {
         const question_id = key.replace('answer_', '')
         const response = String(value || '')
@@ -326,7 +430,7 @@ export async function saveAuditAnswers(
 
         incomingQuestionIds.push(question_id)
 
-        answers.push({
+        templateAnswers.push({
           plan_id,
           question_id,
           response,
@@ -337,52 +441,44 @@ export async function saveAuditAnswers(
       }
     }
 
-    if (answers.length === 0) {
+    if (templateAnswers.length === 0 && customAnswers.length === 0) {
       return {
         error: 'Yadda saxlamaq üçün cavab seçilməyib.',
         success: false,
       }
     }
 
-    const { data: incomingQuestions, error: incomingQuestionsError } =
-      await supabase
+    let incomingQuestions: any[] = []
+
+    if (incomingQuestionIds.length > 0) {
+      const { data, error: incomingQuestionsError } = await supabase
         .from('template_questions')
         .select('id, max_score')
         .in('id', incomingQuestionIds)
 
-    if (incomingQuestionsError) throw incomingQuestionsError
+      if (incomingQuestionsError) throw incomingQuestionsError
+
+      incomingQuestions = data || []
+    }
 
     const incomingMaxScoreMap = new Map(
-      (incomingQuestions || []).map((q: any) => [
-        q.id,
-        Number(q.max_score || 10),
-      ])
+      incomingQuestions.map((q: any) => [q.id, Number(q.max_score || 10)])
     )
 
-    const answersWithScore = answers.map((answer) => {
+    const templateAnswersWithScore = templateAnswers.map((answer) => {
       const maxScore = incomingMaxScoreMap.get(answer.question_id) || 10
 
       let score = Number(answer.rawScore || 0)
 
-      if (Number.isNaN(score)) {
-        score = 0
-      }
-
-      if (score < 0) {
-        score = 0
-      }
-
-      if (score > maxScore) {
-        score = maxScore
-      }
-
-      if (answer.response === 'na') {
-        score = 0
-      }
+      if (Number.isNaN(score)) score = 0
+      if (score < 0) score = 0
+      if (score > maxScore) score = maxScore
+      if (answer.response === 'na') score = 0
 
       return {
         plan_id: answer.plan_id,
         question_id: answer.question_id,
+        custom_question_id: null,
         response: answer.response,
         comment: answer.comment,
         score,
@@ -390,16 +486,80 @@ export async function saveAuditAnswers(
       }
     })
 
-    const { error: upsertError } = await supabase
-      .from('audit_answers')
-      .upsert(answersWithScore, {
-        onConflict: 'plan_id,question_id',
-      })
+    let incomingCustomQuestions: any[] = []
 
-    if (upsertError) {
+    if (incomingCustomQuestionIds.length > 0) {
+      const { data, error: incomingCustomQuestionsError } = await supabase
+        .from('audit_custom_questions')
+        .select('id, max_score')
+        .eq('plan_id', plan_id)
+        .in('id', incomingCustomQuestionIds)
+
+      if (incomingCustomQuestionsError) throw incomingCustomQuestionsError
+
+      incomingCustomQuestions = data || []
+    }
+
+    const incomingCustomMaxScoreMap = new Map(
+      incomingCustomQuestions.map((q: any) => [
+        q.id,
+        Number(q.max_score || 10),
+      ])
+    )
+
+    const customAnswersWithScore = customAnswers.map((answer) => {
+      const maxScore =
+        incomingCustomMaxScoreMap.get(answer.custom_question_id) || 10
+
+      let score = Number(answer.rawScore || 0)
+
+      if (Number.isNaN(score)) score = 0
+      if (score < 0) score = 0
+      if (score > maxScore) score = maxScore
+      if (answer.response === 'na') score = 0
+
       return {
-        error: 'Cavabları saxlayarkən xəta: ' + upsertError.message,
-        success: false,
+        plan_id: answer.plan_id,
+        question_id: null,
+        custom_question_id: answer.custom_question_id,
+        response: answer.response,
+        comment: answer.comment,
+        score,
+        updated_at: answer.updated_at,
+      }
+    })
+
+    if (templateAnswersWithScore.length > 0) {
+      const { error: upsertTemplateError } = await supabase
+        .from('audit_answers')
+        .upsert(templateAnswersWithScore, {
+          onConflict: 'plan_id,question_id',
+        })
+
+      if (upsertTemplateError) {
+        return {
+          error:
+            'Şablon suallarının cavabları saxlanmadı: ' +
+            upsertTemplateError.message,
+          success: false,
+        }
+      }
+    }
+
+    if (customAnswersWithScore.length > 0) {
+      const { error: upsertCustomError } = await supabase
+        .from('audit_answers')
+        .upsert(customAnswersWithScore, {
+          onConflict: 'plan_id,custom_question_id',
+        })
+
+      if (upsertCustomError) {
+        return {
+          error:
+            'Əlavə sualların cavabları saxlanmadı: ' +
+            upsertCustomError.message,
+          success: false,
+        }
       }
     }
 
@@ -407,9 +567,11 @@ export async function saveAuditAnswers(
       .from('audit_answers')
       .select(`
         question_id,
+        custom_question_id,
         response,
         score,
-        template_questions(max_score)
+        template_questions(max_score),
+        audit_custom_questions(max_score)
       `)
       .eq('plan_id', plan_id)
 
@@ -424,11 +586,18 @@ export async function saveAuditAnswers(
     }, 0)
 
     const possibleScore = scoredAnswers.reduce((sum: number, answer: any) => {
-      const question = Array.isArray(answer.template_questions)
+      const templateQuestion = Array.isArray(answer.template_questions)
         ? answer.template_questions[0] || null
         : answer.template_questions || null
 
-      return sum + Number(question?.max_score || 10)
+      const customQuestion = Array.isArray(answer.audit_custom_questions)
+        ? answer.audit_custom_questions[0] || null
+        : answer.audit_custom_questions || null
+
+      const maxScore =
+        templateQuestion?.max_score ?? customQuestion?.max_score ?? 10
+
+      return sum + Number(maxScore || 10)
     }, 0)
 
     const finalScore =

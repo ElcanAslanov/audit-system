@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useActionState } from 'react';
-import { saveAuditAnswers } from '@/app/dashboard/plans/actions';
+import {
+  addCustomQuestion,
+  saveAuditAnswers,
+} from '@/app/dashboard/plans/actions';
 import AddFindingForm from '@/components/add-finding-form';
 import CompleteAuditButton from '@/components/audit/complete-audit-button';
 import { createClient } from '@/lib/supabase/client';
@@ -11,6 +14,9 @@ interface Question {
   id: string;
   question_text: string;
   max_score?: number | null;
+  is_custom?: boolean;
+  created_by?: string | null;
+  created_by_name?: string | null;
   template_sections?: {
     id?: string;
     title?: string;
@@ -23,7 +29,8 @@ interface Question {
 }
 
 interface Answer {
-  question_id: string;
+  question_id?: string | null;
+  custom_question_id?: string | null;
   response?: string | null;
   comment?: string | null;
   score?: number | null;
@@ -119,14 +126,24 @@ export default function ChecklistForm({
   users,
 }: ChecklistFormProps) {
   const [state, action, pending] = useActionState(saveAuditAnswers, null);
-  const [activeFinding, setActiveFinding] = useState<string | null>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [customQuestionState, customQuestionAction, customQuestionPending] =
+    useActionState(addCustomQuestion, null);
+
+const [activeFinding, setActiveFinding] = useState<string | null>(null);
+const [showCustomQuestionForm, setShowCustomQuestionForm] = useState(false);
+const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
   const supabase = useMemo(() => createClient(), []);
 
   const [openFindingIds, setOpenFindingIds] = useState<Record<string, boolean>>({});
 
   const answerMap = useMemo(() => {
-    return new Map(initialAnswers.map((answer) => [answer.question_id, answer]));
+    return new Map(
+      initialAnswers.map((answer) => [
+        answer.custom_question_id || answer.question_id || '',
+        answer,
+      ])
+    );
   }, [initialAnswers]);
 
   const findingsByQuestion = useMemo(() => {
@@ -221,8 +238,10 @@ export default function ChecklistForm({
     const initial: Record<string, string> = {};
 
     initialAnswers.forEach((answer) => {
-      if (answer.response) {
-        initial[answer.question_id] = answer.response;
+      const answerKey = answer.custom_question_id || answer.question_id;
+
+      if (answerKey && answer.response) {
+        initial[answerKey] = answer.response;
       }
     });
 
@@ -270,6 +289,13 @@ export default function ChecklistForm({
     setHasUnsavedChanges(false);
   }, [state?.success]);
 
+useEffect(() => {
+  if (!customQuestionState?.success) return;
+
+  setShowCustomQuestionForm(false);
+  window.location.reload();
+}, [customQuestionState?.success]);
+
   useEffect(() => {
     if (!hasUnsavedChanges) return;
 
@@ -285,9 +311,10 @@ export default function ChecklistForm({
     };
   }, [hasUnsavedChanges]);
 
-  return (
-    <>
-      <form action={action} className="space-y-5">
+return (
+  <>  
+
+    <form action={action} className="space-y-5">
         <input type="hidden" name="plan_id" value={planId} />
 
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -347,7 +374,17 @@ export default function ChecklistForm({
             >
               Seçimləri təmizlə
             </button>
+
+            <button
+  type="button"
+  onClick={() => setShowCustomQuestionForm(true)}
+  className="inline-flex w-full justify-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 sm:w-auto"
+>
+  + Xüsusi sual əlavə et
+</button>
           </div>
+
+       
         </div>
 
         {state?.error && (
@@ -370,10 +407,25 @@ export default function ChecklistForm({
 
         <div className="space-y-4">
           {questions.map((q: Question, index: number) => {
+            const isCustomQuestion = Boolean(q.is_custom);
             const savedAnswer = answerMap.get(q.id);
             const questionFindings = findingsByQuestion.get(q.id) || [];
+
+            const answerName = isCustomQuestion
+              ? `answer_custom_${q.id}`
+              : `answer_${q.id}`;
+
+            const scoreName = isCustomQuestion
+              ? `score_custom_${q.id}`
+              : `score_${q.id}`;
+
+            const commentName = isCustomQuestion
+              ? `comment_custom_${q.id}`
+              : `comment_${q.id}`;
+
             const templateTitle = q.template_sections?.audit_templates?.title || 'Şablon';
             const sectionTitle = q.template_sections?.title || 'Bölmə';
+
             const savedValue = savedAnswer?.response || '';
             const savedComment = savedAnswer?.comment || '';
 
@@ -406,6 +458,12 @@ export default function ChecklistForm({
                       </span>
                     </div>
 
+                    {isCustomQuestion && (
+                      <p className="mt-2 inline-flex rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-bold text-orange-700">
+                        Auditor tərəfindən əlavə edilib: {q.created_by_name || 'Auditor'}
+                      </p>
+                    )}
+
 
                     <h3 className="mt-1 text-base font-bold leading-6 text-slate-900 sm:text-lg">
                       {q.question_text}
@@ -429,7 +487,7 @@ export default function ChecklistForm({
                   <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">
                     <input
                       type="radio"
-                      name={`answer_${q.id}`}
+                      name={answerName}
                       value="yes"
                       checked={currentValue === 'yes'}
                       onChange={() => handleAnswerChange(q.id, 'yes')}
@@ -441,9 +499,9 @@ export default function ChecklistForm({
                   <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-semibold text-red-700 transition hover:bg-red-100">
                     <input
                       type="radio"
-                      name={`answer_${q.id}`}
+                      name={answerName}
                       value="no"
-                      defaultChecked={savedValue.toLowerCase() === 'no'}
+                      checked={currentValue === 'no'}
                       onChange={() => {
                         handleAnswerChange(q.id, 'no');
                         setActiveFinding(q.id);
@@ -456,7 +514,7 @@ export default function ChecklistForm({
                   <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
                     <input
                       type="radio"
-                      name={`answer_${q.id}`}
+                      name={answerName}
                       value="na"
                       checked={currentValue === 'na'}
                       onChange={() => handleAnswerChange(q.id, 'na')}
@@ -474,7 +532,7 @@ export default function ChecklistForm({
 
                     <input
                       type="number"
-                      name={`score_${q.id}`}
+                      name={scoreName}
                       min={0}
                       max={maxScore}
                       step="0.5"
@@ -505,7 +563,7 @@ export default function ChecklistForm({
                   </label>
 
                   <textarea
-                    name={`comment_${q.id}`}
+                    name={commentName}
                     defaultValue={savedComment}
                     onChange={() => setHasUnsavedChanges(true)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
@@ -702,6 +760,106 @@ export default function ChecklistForm({
         </div>
       </form>
 
+{showCustomQuestionForm && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
+    <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6">
+      <form action={customQuestionAction} className="space-y-5">
+        <input type="hidden" name="plan_id" value={planId} />
+
+        <div className="border-b pb-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-xl font-extrabold text-slate-900">
+                Yeni xüsusi sual
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Şablonda olmayan əlavə sualı bu audit planına daxil edin.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowCustomQuestionForm(false)}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            >
+              Bağla
+            </button>
+          </div>
+        </div>
+
+        {customQuestionState?.error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {customQuestionState.error}
+          </div>
+        )}
+
+        {customQuestionState?.success && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+            Xüsusi sual əlavə edildi. Səhifə yenilənir...
+          </div>
+        )}
+
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-slate-700">
+            Sual mətni
+          </label>
+
+          <textarea
+            name="question_text"
+            required
+            rows={4}
+            disabled={customQuestionPending || customQuestionState?.success}
+            placeholder="Sualı daxil edin..."
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-slate-700">
+            Maksimum bal
+          </label>
+
+          <input
+            type="number"
+            name="max_score"
+            min={1}
+            step="0.5"
+            defaultValue={10}
+            disabled={customQuestionPending || customQuestionState?.success}
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+          />
+
+          <p className="mt-1 text-xs text-slate-500">
+            Sual sonradan checklist-də adi sual kimi cavablandırılacaq.
+          </p>
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-end">
+          <button
+            type="button"
+            onClick={() => setShowCustomQuestionForm(false)}
+            disabled={customQuestionPending}
+            className="inline-flex w-full justify-center rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          >
+            Bağla
+          </button>
+
+          <button
+            type="submit"
+            disabled={customQuestionPending || customQuestionState?.success}
+            className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300 sm:w-auto"
+          >
+            {customQuestionPending
+              ? 'Əlavə edilir...'
+              : customQuestionState?.success
+                ? 'Əlavə edildi'
+                : 'Sualı əlavə et'}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
       {activeFinding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6">
