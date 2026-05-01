@@ -180,6 +180,24 @@ export default function AddFindingForm({
         </div>
       </div>
 
+      <div className="sm:col-span-2">
+        <label className="mb-1 block text-sm font-semibold text-slate-700">
+          Fayllar <span className="text-slate-400">(istəyə bağlı)</span>
+        </label>
+
+        <input
+          type="file"
+          name="files"
+          multiple
+          disabled={pending || state.success}
+          className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-100"
+        />
+
+        <p className="mt-1 text-xs text-slate-500">
+          Şəkil, PDF və ya sənəd əlavə edə bilərsiniz.
+        </p>
+      </div>
+
       <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-end">
         <button
           type="button"

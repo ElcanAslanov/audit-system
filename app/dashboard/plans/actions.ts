@@ -194,25 +194,110 @@ if (planTemplateSectionsError) {
 }
 
 // --- 2. Tapıntı (Finding) Əlavə Etmə ---
-export async function addFinding(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
+export async function addFinding(
+  prevState: ActionState | null,
+  formData: FormData
+): Promise<ActionState> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: "İstifadəçi tapılmadı", success: false }
 
-  const { error } = await supabase.from('findings').insert([{
-    plan_id: formData.get('plan_id'),
-    question_id: formData.get('question_id'),
-    assigned_to: formData.get('assigned_to'),
-    title: formData.get('title'),
-    severity: formData.get('severity'),
-    description: formData.get('description'),
-    deadline: formData.get('deadline'),
-    status: 'aciq'
-  }])
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  if (error) return { error: error.message, success: false }
+  if (!user) {
+    return { error: 'İstifadəçi tapılmadı', success: false }
+  }
+
+  const planId = String(formData.get('plan_id') || '')
+  const questionId = String(formData.get('question_id') || '')
+  const assignedTo = String(formData.get('assigned_to') || '')
+  const title = String(formData.get('title') || '').trim()
+  const severity = String(formData.get('severity') || 'low')
+  const description = String(formData.get('description') || '').trim()
+  const deadline = String(formData.get('deadline') || '').trim()
+
+  if (!planId) {
+    return { error: 'Plan ID tapılmadı.', success: false }
+  }
+
+  if (!questionId) {
+    return { error: 'Sual ID tapılmadı.', success: false }
+  }
+
+  if (!title) {
+    return { error: 'Problem başlığı daxil edilməlidir.', success: false }
+  }
+
+  const uploadedFiles: {
+    name: string
+    path: string
+    size: number
+    type: string
+  }[] = []
+
+  const files = formData
+    .getAll('files')
+    .filter((file): file is File => file instanceof File && file.size > 0)
+
+  for (const file of files) {
+    const safeName = file.name
+      .replace(/[^\w.\-]+/g, '_')
+      .replace(/_+/g, '_')
+      .slice(0, 120)
+
+    const filePath = `${planId}/${questionId}/${Date.now()}-${crypto.randomUUID()}-${safeName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('finding-files')
+      .upload(filePath, file, {
+        contentType: file.type || 'application/octet-stream',
+        upsert: false,
+      })
+
+    if (uploadError) {
+      return {
+        error: 'Fayl yüklənmədi: ' + uploadError.message,
+        success: false,
+      }
+    }
+
+    uploadedFiles.push({
+      name: file.name,
+      path: filePath,
+      size: file.size,
+      type: file.type || 'application/octet-stream',
+    })
+  }
+
+  const { error } = await supabase.from('findings').insert([
+    {
+      plan_id: planId,
+      question_id: questionId,
+      assigned_to: assignedTo || null,
+      title,
+      severity,
+      description,
+      deadline: deadline || null,
+      status: 'aciq',
+      files: uploadedFiles,
+    },
+  ])
+
+  if (error) {
+    if (uploadedFiles.length > 0) {
+      await supabase.storage
+        .from('finding-files')
+        .remove(uploadedFiles.map((file) => file.path))
+    }
+
+    return { error: error.message, success: false }
+  }
 
   revalidatePath('/dashboard/plans')
+  revalidatePath(`/dashboard/plans/${planId}`)
+  revalidatePath(`/dashboard/plans/${planId}/fill`)
+  revalidatePath(`/dashboard/plans/${planId}/report`)
+
   return { error: null, success: true }
 }
 

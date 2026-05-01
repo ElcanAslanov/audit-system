@@ -292,17 +292,18 @@ export default async function FillAuditPage({ params }: PageProps) {
   const { data: existingFindings, error: findingsError } = await supabase
     .from('findings')
     .select(`
-    id,
-    plan_id,
-    question_id,
-    title,
-    severity,
-    description,
-    deadline,
-    status,
-    assigned_to,
-    profiles(full_name)
-  `)
+  id,
+  plan_id,
+  question_id,
+  title,
+  severity,
+  description,
+  deadline,
+  status,
+  assigned_to,
+  files,
+  profiles(full_name)
+`)
     .eq('plan_id', id)
     .order('created_at', { ascending: false })
 

@@ -5,6 +5,7 @@ import { useActionState } from 'react';
 import { saveAuditAnswers } from '@/app/dashboard/plans/actions';
 import AddFindingForm from '@/components/add-finding-form';
 import CompleteAuditButton from '@/components/audit/complete-audit-button';
+import { createClient } from '@/lib/supabase/client';
 
 interface Question {
   id: string;
@@ -38,6 +39,12 @@ interface Finding {
   deadline?: string | null;
   status?: string | null;
   assigned_to?: string | null;
+  files?: {
+    name: string;
+    path: string;
+    size?: number;
+    type?: string;
+  }[] | null;
   profiles?: {
     full_name?: string | null;
   } | null;
@@ -114,6 +121,7 @@ export default function ChecklistForm({
   const [state, action, pending] = useActionState(saveAuditAnswers, null);
   const [activeFinding, setActiveFinding] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const supabase = useMemo(() => createClient(), []);
 
   const [openFindingIds, setOpenFindingIds] = useState<Record<string, boolean>>({});
 
@@ -122,25 +130,92 @@ export default function ChecklistForm({
   }, [initialAnswers]);
 
   const findingsByQuestion = useMemo(() => {
-  const map = new Map<string, Finding[]>();
+    const map = new Map<string, Finding[]>();
 
-  initialFindings.forEach((finding) => {
-    if (!finding.question_id) return;
+    initialFindings.forEach((finding) => {
+      if (!finding.question_id) return;
 
-    const current = map.get(finding.question_id) || [];
-    current.push(finding);
-    map.set(finding.question_id, current);
-  });
+      const current = map.get(finding.question_id) || [];
+      current.push(finding);
+      map.set(finding.question_id, current);
+    });
 
-  return map;
-}, [initialFindings]);
+    return map;
+  }, [initialFindings]);
 
-const toggleFinding = (findingId: string) => {
-  setOpenFindingIds((prev) => ({
-    ...prev,
-    [findingId]: !prev[findingId],
-  }));
-};
+  const toggleFinding = (findingId: string) => {
+    setOpenFindingIds((prev) => ({
+      ...prev,
+      [findingId]: !prev[findingId],
+    }));
+  };
+
+  const canPreviewInBrowser = (fileType?: string | null, fileName?: string | null) => {
+    const type = fileType || ''
+    const name = (fileName || '').toLowerCase()
+
+    return (
+      type.startsWith('image/') ||
+      type === 'application/pdf' ||
+      name.endsWith('.pdf') ||
+      name.endsWith('.png') ||
+      name.endsWith('.jpg') ||
+      name.endsWith('.jpeg') ||
+      name.endsWith('.webp') ||
+      name.endsWith('.gif')
+    )
+  }
+
+  const openFindingFile = async (
+    filePath?: string | null,
+    fileName?: string | null,
+    fileType?: string | null
+  ) => {
+    if (!filePath) return
+
+    if (!canPreviewInBrowser(fileType, fileName)) {
+      await downloadFindingFile(filePath, fileName)
+      return
+    }
+
+    const { data, error } = await supabase.storage
+      .from('finding-files')
+      .createSignedUrl(filePath, 60 * 5)
+
+    if (error || !data?.signedUrl) {
+      alert(error?.message || 'Fayl linki yaradıla bilmədi.')
+      return
+    }
+
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  const downloadFindingFile = async (
+    filePath?: string | null,
+    fileName?: string | null
+  ) => {
+    if (!filePath) return;
+
+    const { data, error } = await supabase.storage
+      .from('finding-files')
+      .download(filePath);
+
+    if (error || !data) {
+      alert(error?.message || 'Fayl yüklənə bilmədi.');
+      return;
+    }
+
+    const url = URL.createObjectURL(data);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = fileName || 'fayl';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  };
 
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -296,9 +371,9 @@ const toggleFinding = (findingId: string) => {
         <div className="space-y-4">
           {questions.map((q: Question, index: number) => {
             const savedAnswer = answerMap.get(q.id);
-const questionFindings = findingsByQuestion.get(q.id) || [];
-const templateTitle = q.template_sections?.audit_templates?.title || 'Şablon';
-const sectionTitle = q.template_sections?.title || 'Bölmə';
+            const questionFindings = findingsByQuestion.get(q.id) || [];
+            const templateTitle = q.template_sections?.audit_templates?.title || 'Şablon';
+            const sectionTitle = q.template_sections?.title || 'Bölmə';
             const savedValue = savedAnswer?.response || '';
             const savedComment = savedAnswer?.comment || '';
 
@@ -440,99 +515,145 @@ const sectionTitle = q.template_sections?.title || 'Bölmə';
                 </div>
 
                 {questionFindings.length > 0 && (
-  <div className="mt-4 rounded-2xl border border-red-100 bg-red-50/40 p-3">
-    <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p className="text-sm font-black text-slate-900">
-          Bu sual üzrə tapıntılar
-        </p>
-        <p className="text-xs text-slate-500">
-          {questionFindings.length} tapıntı əlavə olunub.
-        </p>
-      </div>
-    </div>
+                  <div className="mt-4 rounded-2xl border border-red-100 bg-red-50/40 p-3">
+                    <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-black text-slate-900">
+                          Bu sual üzrə tapıntılar
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {questionFindings.length} tapıntı əlavə olunub.
+                        </p>
+                      </div>
+                    </div>
 
-    <div className="space-y-2">
-      {questionFindings.map((finding) => {
-        const isOpen = Boolean(openFindingIds[finding.id]);
+                    <div className="space-y-2">
+                      {questionFindings.map((finding) => {
+                        const isOpen = Boolean(openFindingIds[finding.id]);
 
-        return (
-          <div
-            key={finding.id}
-            className="rounded-xl border border-red-100 bg-white p-3"
-          >
-            <button
-              type="button"
-              onClick={() => toggleFinding(finding.id)}
-              className="flex w-full flex-col gap-2 text-left sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p className="font-bold text-slate-900">
-                  {finding.title || 'Tapıntı'}
-                </p>
+                        return (
+                          <div
+                            key={finding.id}
+                            className="rounded-xl border border-red-100 bg-white p-3"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => toggleFinding(finding.id)}
+                              className="flex w-full flex-col gap-2 text-left sm:flex-row sm:items-center sm:justify-between"
+                            >
+                              <div>
+                                <p className="font-bold text-slate-900">
+                                  {finding.title || 'Tapıntı'}
+                                </p>
 
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-xs font-bold ${severityClass(
-                      finding.severity
-                    )}`}
-                  >
-                    {severityLabel(finding.severity)}
-                  </span>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  <span
+                                    className={`rounded-full border px-2.5 py-1 text-xs font-bold ${severityClass(
+                                      finding.severity
+                                    )}`}
+                                  >
+                                    {severityLabel(finding.severity)}
+                                  </span>
 
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
-                    Status: {findingStatusLabel(finding.status)}
-                  </span>
+                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
+                                    Status: {findingStatusLabel(finding.status)}
+                                  </span>
 
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
-                    Deadline: {formatDate(finding.deadline)}
-                  </span>
-                </div>
-              </div>
+                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
+                                    Son tarix: {formatDate(finding.deadline)}
+                                  </span>
+                                </div>
+                              </div>
 
-              <span className="text-xs font-bold text-blue-600">
-                {isOpen ? 'Bağla' : 'Ətraflı bax'}
-              </span>
-            </button>
+                              <span className="text-xs font-bold text-blue-600">
+                                {isOpen ? 'Bağla' : 'Ətraflı bax'}
+                              </span>
+                            </button>
 
-            {isOpen && (
-              <div className="mt-3 border-t border-slate-100 pt-3 text-sm">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs font-bold uppercase text-slate-400">
-                      Cavabdeh şəxs
-                    </p>
-                    <p className="mt-1 font-semibold text-slate-700">
-                      {finding.profiles?.full_name || 'Seçilməyib'}
-                    </p>
+                            {isOpen && (
+                              <div className="mt-3 border-t border-slate-100 pt-3 text-sm">
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                  <div>
+                                    <p className="text-xs font-bold uppercase text-slate-400">
+                                      Cavabdeh şəxs
+                                    </p>
+                                    <p className="mt-1 font-semibold text-slate-700">
+                                      {finding.profiles?.full_name || 'Seçilməyib'}
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <p className="text-xs font-bold uppercase text-slate-400">
+                                      Status
+                                    </p>
+                                    <p className="mt-1 font-semibold text-slate-700">
+                                      {findingStatusLabel(finding.status)}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="mt-3">
+                                  <p className="text-xs font-bold uppercase text-slate-400">
+                                    Təsvir
+                                  </p>
+                                  <p className="mt-1 whitespace-pre-wrap leading-6 text-slate-700">
+                                    {finding.description || '-'}
+                                  </p>
+                                </div>
+
+                                <div className="mt-3">
+                                  <p className="text-xs font-bold uppercase text-slate-400">
+                                    Fayllar
+                                  </p>
+
+                                  {finding.files && finding.files.length > 0 ? (
+                                    <div className="mt-2 space-y-2">
+                                      {finding.files.map((file, fileIndex) => (
+                                        <div
+                                          key={`${file.path}-${fileIndex}`}
+                                          className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between"
+                                        >
+                                          <div className="min-w-0">
+                                            <p className="truncate text-sm font-bold text-slate-800">
+                                              {file.name || 'Fayl'}
+                                            </p>
+
+                                          </div>
+
+                                          <div className="flex gap-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => openFindingFile(file.path, file.name, file.type)}
+                                              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
+                                            >
+                                              Aç
+                                            </button>
+
+                                            <button
+                                              type="button"
+                                              onClick={() => downloadFindingFile(file.path, file.name)}
+                                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100"
+                                            >
+                                              Yüklə
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="mt-1 text-sm text-slate-500">
+                                      Fayl əlavə olunmayıb.
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-
-                  <div>
-                    <p className="text-xs font-bold uppercase text-slate-400">
-                      Status
-                    </p>
-                    <p className="mt-1 font-semibold text-slate-700">
-                      {findingStatusLabel(finding.status)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-3">
-                  <p className="text-xs font-bold uppercase text-slate-400">
-                    Təsvir
-                  </p>
-                  <p className="mt-1 whitespace-pre-wrap leading-6 text-slate-700">
-                    {finding.description || '-'}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  </div>
-)}
+                )}
 
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <button
