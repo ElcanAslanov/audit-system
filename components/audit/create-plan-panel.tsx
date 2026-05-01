@@ -5,11 +5,13 @@ import CreatePlanForm from '@/components/create-plan-form'
 
 export default function CreatePlanPanel({
   companies,
+  departments,
   auditors,
   templates,
   onSuccess,
 }: {
   companies: any[]
+  departments: any[]
   auditors: any[]
   templates: any[]
   onSuccess?: () => void
@@ -41,6 +43,7 @@ export default function CreatePlanPanel({
         <div className="border-t border-slate-200 p-4 sm:p-6">
           <CreatePlanForm
             companies={companies}
+            departments={departments}
             auditors={auditors}
             templates={templates}
             onSuccess={onSuccess}
