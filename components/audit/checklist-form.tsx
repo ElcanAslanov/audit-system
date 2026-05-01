@@ -14,6 +14,10 @@ interface Question {
     id?: string;
     title?: string;
     sort_order?: number | null;
+    audit_templates?: {
+      id?: string;
+      title?: string;
+    } | null;
   } | null;
 }
 
@@ -216,8 +220,10 @@ export default function ChecklistForm({
         )}
 
         <div className="space-y-4">
-          {questions.map((q: Question, index: number) => {
-            const savedAnswer = answerMap.get(q.id);
+        {questions.map((q: Question, index: number) => {
+  const savedAnswer = answerMap.get(q.id);
+  const templateTitle = q.template_sections?.audit_templates?.title || 'Şablon';
+  const sectionTitle = q.template_sections?.title || 'Bölmə';
             const savedValue = savedAnswer?.response || '';
             const savedComment = savedAnswer?.comment || '';
 
@@ -236,17 +242,28 @@ export default function ChecklistForm({
               >
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold uppercase text-slate-400">
-                      Sual #{index + 1}
-                    </p>
+                   <p className="text-xs font-bold uppercase text-slate-400">
+  Sual #{index + 1}
+</p>
 
-                    <h3 className="mt-1 text-base font-bold leading-6 text-slate-900 sm:text-lg">
-                      {q.question_text}
-                    </h3>
+<div className="mt-2 flex flex-wrap gap-2">
+  <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+    Şablon: {templateTitle}
+  </span>
 
-                    <p className="mt-2 text-xs text-slate-500">
-                      Max score: {q.max_score ?? 10}
-                    </p>
+  <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">
+    Bölmə: {sectionTitle}
+  </span>
+</div>
+
+
+<h3 className="mt-1 text-base font-bold leading-6 text-slate-900 sm:text-lg">
+  {q.question_text}
+</h3>
+
+<p className="mt-2 text-xs text-slate-500">
+  Max score: {q.max_score ?? 10}
+</p>
                   </div>
 
                   <span
@@ -300,37 +317,37 @@ export default function ChecklistForm({
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-  <div>
-    <label className="mb-1 block text-sm font-semibold text-slate-700">
-      Verilən bal
-    </label>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">
+                      Verilən bal
+                    </label>
 
-    <input
-      type="number"
-      name={`score_${q.id}`}
-      min={0}
-      max={maxScore}
-      step="0.5"
-      defaultValue={savedScore}
-      onChange={() => setHasUnsavedChanges(true)}
-      placeholder={`0 - ${maxScore}`}
-      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
-    />
+                    <input
+                      type="number"
+                      name={`score_${q.id}`}
+                      min={0}
+                      max={maxScore}
+                      step="0.5"
+                      defaultValue={savedScore}
+                      onChange={() => setHasUnsavedChanges(true)}
+                      placeholder={`0 - ${maxScore}`}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
+                    />
 
-    <p className="mt-1 text-xs text-slate-500">
-      Maksimum bal: {maxScore}
-    </p>
-  </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Maksimum bal: {maxScore}
+                    </p>
+                  </div>
 
-  <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
-    <p className="text-xs font-semibold uppercase text-blue-700">
-      Qiymətləndirmə
-    </p>
-    <p className="mt-1 text-sm text-blue-700">
-      Bu sual üçün 0 ilə {maxScore} arasında bal verə bilərsiniz.
-    </p>
-  </div>
-</div>
+                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
+                    <p className="text-xs font-semibold uppercase text-blue-700">
+                      Qiymətləndirmə
+                    </p>
+                    <p className="mt-1 text-sm text-blue-700">
+                      Bu sual üçün 0 ilə {maxScore} arasında bal verə bilərsiniz.
+                    </p>
+                  </div>
+                </div>
 
                 <div className="mt-4">
                   <label className="mb-1 block text-sm font-semibold text-slate-700">
