@@ -91,19 +91,28 @@ export default async function AuditDetailPage({ params }: PageProps) {
     )
   }
 
-  const isCreator = plan.created_by === user.id
+  const { data: profile } = await supabase
+  .from('profiles')
+  .select('role')
+  .eq('id', user.id)
+  .maybeSingle()
+
+const isAdmin = profile?.role === 'admin'
+const isCreator = plan.created_by === user.id
+const canManageLock = isAdmin || isCreator
+
 const isViewLocked = Boolean(plan.locked_view)
 const isEditLocked = Boolean(plan.locked_edit)
 
-if (isViewLocked && !isCreator) {
+if (isViewLocked && !canManageLock) {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700 shadow-sm">
         <h2 className="text-xl font-black">Audit planına giriş kilidlənib</h2>
 
         <p className="mt-2 text-sm leading-6">
-          Bu planı yaradan istifadəçi baxışı bağlayıb. Bu auditə baxmaq və ya
-          dəyişiklik etmək mümkün deyil.
+          Bu plan üzrə baxış bağlanıb. Bu auditə baxmaq və ya dəyişiklik etmək
+          mümkün deyil.
         </p>
 
         <Link

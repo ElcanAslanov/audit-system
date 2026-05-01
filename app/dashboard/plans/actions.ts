@@ -624,11 +624,21 @@ export async function updateAuditPlanLock(
 
   if (!user) return { error: 'İstifadəçi tapılmadı.', success: false }
 
-  const { data: plan, error: planError } = await supabase
-    .from('audit_plans')
-    .select('id, created_by')
-    .eq('id', planId)
-    .maybeSingle()
+const { data: plan, error: planError } = await supabase
+  .from('audit_plans')
+  .select('id, created_by')
+  .eq('id', planId)
+  .maybeSingle()
+
+const { data: profile, error: profileError } = await supabase
+  .from('profiles')
+  .select('role')
+  .eq('id', user.id)
+  .maybeSingle()
+
+if (profileError) {
+  return { error: profileError.message, success: false }
+}
 
   if (planError) {
     return { error: planError.message, success: false }
@@ -638,12 +648,15 @@ export async function updateAuditPlanLock(
     return { error: 'Plan tapılmadı.', success: false }
   }
 
-  if (plan.created_by !== user.id) {
-    return {
-      error: 'Bu planı yalnız planı yaradan istifadəçi kilidləyə bilər.',
-      success: false,
-    }
+ const isAdmin = profile?.role === 'admin'
+const isCreator = plan.created_by === user.id
+
+if (!isAdmin && !isCreator) {
+  return {
+    error: 'Bu planı yalnız admin və ya planı yaradan istifadəçi kilidləyə bilər.',
+    success: false,
   }
+}
 
   const payload =
     lockType === 'none'

@@ -378,12 +378,13 @@ export default async function PlansPage({ searchParams }: PageProps) {
             )}
 
             {normalizedPlans.map((plan: any) => (
-              <PlanCard
-                key={plan.id}
-                plan={plan}
-                canCreatePlan={canCreatePlan}
-                currentUserId={user.id}
-              />
+            <PlanCard
+  key={plan.id}
+  plan={plan}
+  canCreatePlan={canCreatePlan}
+  currentUserId={user.id}
+  currentUserRole={role}
+/>
             ))}
           </div>
         </section>

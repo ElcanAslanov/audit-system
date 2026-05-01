@@ -62,10 +62,12 @@ export default function PlanCard({
   plan,
   canCreatePlan,
   currentUserId,
+  currentUserRole,
 }: {
   plan: any
   canCreatePlan: boolean
   currentUserId: string
+  currentUserRole?: string
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -82,12 +84,15 @@ export default function PlanCard({
   const fillButtonLabel = hasAnswers ? 'Redaktə et' : 'Doldur'
   const answerCount = plan.audit_answers?.length || 0
 
-  const isCreator = plan.created_by === currentUserId
-  const isEditLocked = Boolean(plan.locked_edit)
-  const isViewLocked = Boolean(plan.locked_view)
+const isAdmin = currentUserRole === 'admin'
+const isCreator = plan.created_by === currentUserId
+const canManageLock = isAdmin || isCreator
 
-  const canOpenDetail = !isViewLocked || isCreator
-const canOpenFill = !isEditLocked && (!isViewLocked || isCreator)
+const isEditLocked = Boolean(plan.locked_edit)
+const isViewLocked = Boolean(plan.locked_view)
+
+const canOpenDetail = !isViewLocked || canManageLock
+const canOpenFill = !isEditLocked && (!isViewLocked || canManageLock)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -212,16 +217,16 @@ const canOpenFill = !isEditLocked && (!isViewLocked || isCreator)
     {plan.score ?? 0}%
   </span>
 
-  {isCreator && (
-    <div onClick={(e) => e.stopPropagation()}>
-      <PlanLockButton
-        planId={plan.id}
-        lockedEdit={plan.locked_edit}
-        lockedView={plan.locked_view}
-        compact
-      />
-    </div>
-  )}
+ {canManageLock && (
+  <div onClick={(e) => e.stopPropagation()}>
+    <PlanLockButton
+      planId={plan.id}
+      lockedEdit={plan.locked_edit}
+      lockedView={plan.locked_view}
+      compact
+    />
+  </div>
+)}
 </div>
         </div>
 
