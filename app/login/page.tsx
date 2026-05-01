@@ -3,11 +3,12 @@ import Image from 'next/image'
 import { signIn } from './actions'
 import {
   ArrowRight,
+  BarChart3,
+  Building2,
+  ClipboardCheck,
   LockKeyhole,
   Mail,
-  Orbit,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react'
 
 type LoginPageProps = {
@@ -78,18 +79,18 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               </div>
 
               <div className="absolute bottom-9 right-7 grid h-11 w-11 animate-[orbitFloat_4.5s_ease-in-out_infinite_300ms] place-items-center rounded-2xl bg-[#b91c1c] text-white shadow-xl">
-                <Sparkles size={19} />
+                <ClipboardCheck size={19} />
               </div>
 
               <div className="absolute bottom-9 left-7 grid h-11 w-11 animate-[orbitFloat_5s_ease-in-out_infinite_600ms] place-items-center rounded-2xl bg-[#f59e0b] text-white shadow-xl">
-                <Orbit size={19} />
+                <Building2 size={19} />
               </div>
             </div>
 
             <div className="mt-8 animate-[fadeUp_800ms_ease-out_600ms_both]">
               <div className="inline-flex items-center gap-2 rounded-full border border-red-100 bg-white/80 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#b91c1c] shadow-sm">
-                <Sparkles size={14} />
-                Cahan Audİt Sİstem
+                <BarChart3 size={14} />
+                CAHAN AUDİT SİSTEM
               </div>
             </div>
           </div>
@@ -132,7 +133,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   />
                 </div>
 
-                
+
 
                 <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950">
                   Xoş gəlmisiniz
@@ -203,7 +204,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 />
               </button>
 
-           
+
             </form>
           </div>
         </section>
