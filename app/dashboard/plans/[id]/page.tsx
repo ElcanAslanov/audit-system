@@ -91,6 +91,32 @@ export default async function AuditDetailPage({ params }: PageProps) {
     )
   }
 
+  const isCreator = plan.created_by === user.id
+const isViewLocked = Boolean(plan.locked_view)
+const isEditLocked = Boolean(plan.locked_edit)
+
+if (isViewLocked && !isCreator) {
+  return (
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700 shadow-sm">
+        <h2 className="text-xl font-black">Audit planına giriş kilidlənib</h2>
+
+        <p className="mt-2 text-sm leading-6">
+          Bu planı yaradan istifadəçi baxışı bağlayıb. Bu auditə baxmaq və ya
+          dəyişiklik etmək mümkün deyil.
+        </p>
+
+        <Link
+          href="/dashboard/plans"
+          className="mt-5 inline-flex rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700"
+        >
+          Audit planlarına qayıt
+        </Link>
+      </div>
+    </div>
+  )
+}
+
   const { data: planTemplates } = await supabase
     .from('audit_plan_templates')
     .select(`
@@ -233,12 +259,18 @@ export default async function AuditDetailPage({ params }: PageProps) {
           </span>
 
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Link
-              href={`/dashboard/plans/${id}/fill`}
-              className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
-            >
-              Auditi redaktə et
-            </Link>
+           {isEditLocked ? (
+  <span className="inline-flex w-full justify-center rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm font-semibold text-yellow-700 sm:w-auto">
+    Redaktə kilidlidir
+  </span>
+) : (
+  <Link
+    href={`/dashboard/plans/${id}/fill`}
+    className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
+  >
+    Auditi redaktə et
+  </Link>
+)}
 
             {hasAnswers ? (
               <Link
@@ -256,7 +288,7 @@ export default async function AuditDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-semibold text-slate-500">Status</p>
           <p className="mt-2 font-bold text-slate-900">
@@ -284,6 +316,25 @@ export default async function AuditDetailPage({ params }: PageProps) {
             {plan.due_date || '-'}
           </p>
         </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+  <p className="text-sm font-semibold text-slate-500">Kilid statusu</p>
+  <p
+    className={`mt-2 font-bold ${
+      isViewLocked
+        ? 'text-red-700'
+        : isEditLocked
+          ? 'text-yellow-700'
+          : 'text-emerald-700'
+    }`}
+  >
+    {isViewLocked
+      ? 'Baxış və redaktə kilidli'
+      : isEditLocked
+        ? 'Redaktə kilidli'
+        : 'Kilidsiz'}
+  </p>
+</div>
       </section>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
@@ -552,6 +603,8 @@ export default async function AuditDetailPage({ params }: PageProps) {
                         {finding.deadline || '-'}
                       </p>
                     </div>
+
+                    
 
                     <div>
                       <p className="text-xs font-semibold uppercase text-slate-500">

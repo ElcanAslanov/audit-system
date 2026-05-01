@@ -611,3 +611,78 @@ export async function checkAuditReady(planId: string): Promise<ActionState> {
 
   return { error: null, success: true }
 }
+
+export async function updateAuditPlanLock(
+  planId: string,
+  lockType: 'none' | 'edit' | 'view'
+): Promise<ActionState> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { error: 'İstifadəçi tapılmadı.', success: false }
+
+  const { data: plan, error: planError } = await supabase
+    .from('audit_plans')
+    .select('id, created_by')
+    .eq('id', planId)
+    .maybeSingle()
+
+  if (planError) {
+    return { error: planError.message, success: false }
+  }
+
+  if (!plan) {
+    return { error: 'Plan tapılmadı.', success: false }
+  }
+
+  if (plan.created_by !== user.id) {
+    return {
+      error: 'Bu planı yalnız planı yaradan istifadəçi kilidləyə bilər.',
+      success: false,
+    }
+  }
+
+  const payload =
+    lockType === 'none'
+      ? {
+          locked_edit: false,
+          locked_view: false,
+          locked_by: null,
+          locked_at: null,
+        }
+      : lockType === 'edit'
+        ? {
+            locked_edit: true,
+            locked_view: false,
+            locked_by: user.id,
+            locked_at: new Date().toISOString(),
+          }
+        : {
+            locked_edit: true,
+            locked_view: true,
+            locked_by: user.id,
+            locked_at: new Date().toISOString(),
+          }
+
+  const { error } = await supabase
+    .from('audit_plans')
+    .update(payload)
+    .eq('id', planId)
+
+  if (error) {
+    return {
+      error: 'Plan kilidi yenilənmədi: ' + error.message,
+      success: false,
+    }
+  }
+
+  revalidatePath('/dashboard/plans')
+  revalidatePath(`/dashboard/plans/${planId}`)
+  revalidatePath(`/dashboard/plans/${planId}/fill`)
+  revalidatePath(`/dashboard/plans/${planId}/report`)
+
+  return { error: null, success: true }
+}

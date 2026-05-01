@@ -66,6 +66,63 @@ export default async function FillAuditPage({ params }: PageProps) {
     )
   }
 
+  const isCreator = plan.created_by === user.id
+const isViewLocked = Boolean(plan.locked_view)
+const isEditLocked = Boolean(plan.locked_edit)
+
+if (isViewLocked && !isCreator) {
+  return (
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700 shadow-sm">
+        <h2 className="text-xl font-black">Audit planına giriş kilidlənib</h2>
+
+        <p className="mt-2 text-sm leading-6">
+          Bu planı yaradan istifadəçi baxışı bağlayıb. Bu auditə baxmaq və ya
+          dəyişiklik etmək mümkün deyil.
+        </p>
+
+        <Link
+          href="/dashboard/plans"
+          className="mt-5 inline-flex rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700"
+        >
+          Audit planlarına qayıt
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+if (isEditLocked) {
+  return (
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-yellow-200 bg-yellow-50 p-6 text-center text-yellow-800 shadow-sm">
+        <h2 className="text-xl font-black">Audit redaktəyə kilidlənib</h2>
+
+        <p className="mt-2 text-sm leading-6">
+          Bu audit planında dəyişiklik etmək bağlanıb. Yalnız detail səhifədə
+          nəticələrə baxa bilərsiniz.
+        </p>
+
+        <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+          <Link
+            href={`/dashboard/plans/${id}`}
+            className="inline-flex rounded-2xl bg-yellow-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-yellow-700"
+          >
+            Detail səhifəyə keç
+          </Link>
+
+          <Link
+            href="/dashboard/plans"
+            className="inline-flex rounded-2xl border border-yellow-200 bg-white px-4 py-2.5 text-sm font-bold text-yellow-800 transition hover:bg-yellow-100"
+          >
+            Audit planlarına qayıt
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
   const legacyTemplate = normalizeOne(plan.audit_templates)
 
   const { data: planTemplates, error: planTemplatesError } = await supabase

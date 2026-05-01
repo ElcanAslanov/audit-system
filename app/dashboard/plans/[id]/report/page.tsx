@@ -89,6 +89,32 @@ export default async function AuditReportPage({ params }: PageProps) {
     )
   }
 
+const isCreator = plan.created_by === user.id
+const isViewLocked = Boolean(plan.locked_view)
+const isEditLocked = Boolean(plan.locked_edit)
+
+if (isViewLocked && !isCreator) {
+  return (
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700 shadow-sm">
+        <h2 className="text-xl font-black">Hesabata giriş kilidlənib</h2>
+
+        <p className="mt-2 text-sm leading-6">
+          Bu planı yaradan istifadəçi baxışı bağlayıb. Bu audit hesabatına
+          baxmaq mümkün deyil.
+        </p>
+
+        <Link
+          href="/dashboard/plans"
+          className="mt-5 inline-flex rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700"
+        >
+          Audit planlarına qayıt
+        </Link>
+      </div>
+    </div>
+  )
+}
+
   const legacyTemplate = normalizeOne(plan.audit_templates)
 
   const { data: planTemplates } = await supabase
@@ -170,12 +196,18 @@ export default async function AuditReportPage({ params }: PageProps) {
           </p>
 
           <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-            <Link
-              href={`/dashboard/plans/${id}/fill`}
-              className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
-            >
-              Auditi doldur
-            </Link>
+           {isEditLocked ? (
+  <span className="inline-flex w-full justify-center rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2.5 text-sm font-semibold text-yellow-700 sm:w-auto">
+    Redaktə kilidlidir
+  </span>
+) : (
+  <Link
+    href={`/dashboard/plans/${id}/fill`}
+    className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
+  >
+    Auditi doldur
+  </Link>
+)}
 
             <Link
               href={`/dashboard/plans/${id}`}
