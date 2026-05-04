@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import PlanCard from '@/components/audit/plan-card'
 import PlanAccessButton from '@/components/audit/plan-access-button'
+import PlanLockButton from '@/components/audit/plan-lock-button'
+import PlanDeleteButton from '@/components/audit/plan-delete-button'
 import { ClipboardCheck } from 'lucide-react'
 
 function statusLabel(value?: string | null) {
@@ -54,16 +56,27 @@ export default function PlansViewSwitcher({
   currentUserId,
   currentUserRole,
 }: Props) {
-  const [view, setView] = useState<'cards' | 'table'>('cards')
+const [view, setView] = useState<'cards' | 'table'>('cards')
+
+useEffect(() => {
+  const savedView = window.localStorage.getItem('plans-view-mode')
+
+  if (savedView === 'cards' || savedView === 'table') {
+    setView(savedView)
+  }
+}, [])
+
+const changeView = (nextView: 'cards' | 'table') => {
+  setView(nextView)
+  window.localStorage.setItem('plans-view-mode', nextView)
+}
   const safeCurrentUserRole = currentUserRole || undefined
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-lg font-black text-slate-950">
-            Cari Planlar
-          </h2>
+          <h2 className="text-lg font-black text-slate-950">Cari Planlar</h2>
           <p className="mt-1 text-sm text-slate-500">
             {plans.length} audit planı göstərilir.
           </p>
@@ -72,22 +85,24 @@ export default function PlansViewSwitcher({
         <div className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1 text-sm font-bold">
           <button
             type="button"
-            onClick={() => setView('cards')}
-            className={`rounded-xl px-4 py-2 text-center transition ${view === 'cards'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'text-slate-600 hover:bg-white'
-              }`}
+            onClick={() => changeView('cards')}
+            className={`rounded-xl px-4 py-2 text-center transition ${
+              view === 'cards'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-white'
+            }`}
           >
             Kart
           </button>
 
           <button
             type="button"
-            onClick={() => setView('table')}
-            className={`rounded-xl px-4 py-2 text-center transition ${view === 'table'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'text-slate-600 hover:bg-white'
-              }`}
+            onClick={() => changeView('table')}
+            className={`rounded-xl px-4 py-2 text-center transition ${
+              view === 'table'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-white'
+            }`}
           >
             Tablo
           </button>
@@ -99,9 +114,11 @@ export default function PlansViewSwitcher({
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-white text-slate-500 shadow-sm">
             <ClipboardCheck size={22} />
           </div>
+
           <h3 className="mt-4 font-black text-slate-900">
             Audit planı tapılmadı
           </h3>
+
           <p className="mt-1 text-sm text-slate-500">
             Seçilmiş filterlərə uyğun nəticə yoxdur.
           </p>
@@ -153,7 +170,7 @@ export default function PlansViewSwitcher({
                   <th className="px-4 py-3 text-left font-black text-slate-600">
                     Deadline
                   </th>
-                  <th className="px-4 py-3 text-right font-black text-slate-600">
+                  <th className="min-w-[360px] px-4 py-3 text-right font-black text-slate-600">
                     Əməliyyat
                   </th>
                 </tr>
@@ -167,33 +184,35 @@ export default function PlansViewSwitcher({
 
                   return (
                     <tr key={plan.id} className="transition hover:bg-slate-50">
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 align-top">
                         <Link
                           href={`/dashboard/plans/${plan.id}`}
+                          onClick={(event) => event.stopPropagation()}
                           className="font-black text-slate-900 hover:text-blue-600"
                         >
                           {plan.title}
                         </Link>
+
                         <p className="mt-1 text-xs text-slate-500">
                           {plan.audit_answers?.length || 0} cavab
                         </p>
                       </td>
 
-                      <td className="px-4 py-3 font-semibold text-slate-700">
+                      <td className="px-4 py-3 align-top font-semibold text-slate-700">
                         {plan.companies?.name || '-'}
                       </td>
 
-                      <td className="px-4 py-3 text-slate-700">
+                      <td className="px-4 py-3 align-top text-slate-700">
                         {plan.department || '-'}
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 align-top">
                         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
                           {statusLabel(plan.status)}
                         </span>
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 align-top">
                         <span
                           className={`rounded-full px-2.5 py-1 text-xs font-bold ${lockClass(
                             plan
@@ -203,29 +222,38 @@ export default function PlansViewSwitcher({
                         </span>
                       </td>
 
-                      <td className="px-4 py-3 font-black text-slate-900">
+                      <td className="px-4 py-3 align-top font-black text-slate-900">
                         {plan.score ?? 0}%
                       </td>
 
-                      <td className="px-4 py-3 text-slate-700">
+                      <td className="px-4 py-3 align-top text-slate-700">
                         {formatDate(plan.start_date)}
                       </td>
 
-                      <td className="px-4 py-3 text-slate-700">
+                      <td className="px-4 py-3 align-top text-slate-700">
                         {formatDate(plan.due_date)}
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 align-top">
                         <div className="flex flex-wrap justify-end gap-2">
-                          <PlanAccessButton
-                            plan={plan}
-                            allUsers={allUsers}
-                            currentUserId={currentUserId}
-                            currentUserRole={safeCurrentUserRole}
-                          />
+                          <div
+                            onClick={(event) => {
+                              event.preventDefault()
+                              event.stopPropagation()
+                            }}
+                          >
+                            <PlanAccessButton
+                              plan={plan}
+                              allUsers={allUsers}
+                              currentUserId={currentUserId}
+                              currentUserRole={safeCurrentUserRole}
+                            />
+                          </div>
+
                           <Link
                             href={`/dashboard/plans/${plan.id}`}
-                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                            onClick={(event) => event.stopPropagation()}
+                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
                           >
                             Bax
                           </Link>
@@ -233,28 +261,38 @@ export default function PlansViewSwitcher({
                           {!plan.locked_edit && (
                             <Link
                               href={`/dashboard/plans/${plan.id}/fill`}
-                              className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700"
+                              onClick={(event) => event.stopPropagation()}
+                              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700"
                             >
                               Doldur
                             </Link>
                           )}
 
                           {canManageLock && (
-                            <Link
-                              href={`/dashboard/plans/${plan.id}`}
-                              className="rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs font-bold text-yellow-700 transition hover:bg-yellow-100"
+                            <div
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                              }}
                             >
-                              Kilid
-                            </Link>
+                              <PlanLockButton
+                                planId={plan.id}
+                                lockedEdit={plan.locked_edit}
+                                lockedView={plan.locked_view}
+                                compact
+                              />
+                            </div>
                           )}
 
                           {canCreatePlan && (
-                            <Link
-                              href={`/dashboard/plans/${plan.id}`}
-                              className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100"
+                            <div
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                              }}
                             >
-                              Sil
-                            </Link>
+                              <PlanDeleteButton planId={plan.id} />
+                            </div>
                           )}
                         </div>
                       </td>
