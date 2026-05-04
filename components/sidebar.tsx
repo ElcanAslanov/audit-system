@@ -20,6 +20,7 @@ import {
 
 type SidebarProps = {
   role: string
+  fullName?: string | null
 }
 
 type MenuItem = {
@@ -204,7 +205,7 @@ if (isDashboardRoot) {
   )
 }
 
-export default function Sidebar({ role }: SidebarProps) {
+export default function Sidebar({ role, fullName }: SidebarProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -225,7 +226,7 @@ export default function Sidebar({ role }: SidebarProps) {
     canSee(item, role)
   )
   const visibleActivityItems = activityItems.filter((item) => canSee(item, role))
-
+const displayName = fullName?.trim() || 'Sistem istifadəçisi'
   return (
     <aside
       className={`hidden h-screen shrink-0 overflow-visible bg-slate-950 text-white transition-all duration-500 ease-in-out lg:sticky lg:top-0 lg:flex lg:flex-col ${
@@ -278,15 +279,20 @@ export default function Sidebar({ role }: SidebarProps) {
           </div>
 
           {!collapsed && (
-            <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/40 p-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
-                Rol
-              </p>
-              <p className="mt-1 text-sm font-bold text-slate-100">
-                {roleLabel(role)}
-              </p>
-            </div>
-          )}
+  <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+      İstifadəçi
+    </p>
+
+    <p className="mt-1 truncate text-sm font-black text-slate-100">
+      {displayName}
+    </p>
+
+    <p className="mt-1 text-xs font-semibold text-slate-400">
+      {roleLabel(role)}
+    </p>
+  </div>
+)}
         </div>
 
         <nav className="relative z-10 flex flex-1 flex-col overflow-y-auto overflow-x-visible pr-1 [scrollbar-width:thin] [scrollbar-color:#334155_transparent]">
@@ -339,14 +345,26 @@ export default function Sidebar({ role }: SidebarProps) {
             collapsed ? 'p-3' : 'p-4'
           }`}
         >
-          <div
-            className={`mb-4 flex items-center transition-all duration-500 ${
-              collapsed ? 'justify-center' : 'gap-3'
-            }`}
-          >
-          
-            
-          </div>
+        <div
+  className={`mb-4 flex items-center transition-all duration-500 ${
+    collapsed ? 'justify-center' : 'gap-3'
+  }`}
+>
+  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-slate-800 text-sm font-black text-slate-200">
+    {displayName.slice(0, 1).toUpperCase()}
+  </div>
+
+  {!collapsed && (
+    <div className="min-w-0">
+      <p className="truncate text-sm font-black text-white">
+        {displayName}
+      </p>
+      <p className="truncate text-xs font-semibold text-slate-400">
+        {roleLabel(role)}
+      </p>
+    </div>
+  )}
+</div>
 
          {!collapsed ? (
   <LogoutButton />

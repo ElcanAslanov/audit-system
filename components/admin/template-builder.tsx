@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createTemplate } from '@/app/dashboard/admin/templates/actions'
 import { Loader2, Plus, Save, Trash2 } from 'lucide-react'
 
@@ -16,6 +16,8 @@ type SectionItem = {
 }
 
 export default function TemplateBuilder() {
+  const formRef = useRef<HTMLFormElement | null>(null)
+
   const [sections, setSections] = useState<SectionItem[]>([
     {
       title: '',
@@ -100,14 +102,16 @@ export default function TemplateBuilder() {
     setSections(next)
   }
 
-  const resetForm = () => {
-    setSections([
-      {
-        title: '',
-        questions: [{ text: '', type: 'yes_no', max_score: 10 }],
-      },
-    ])
-  }
+const resetForm = () => {
+  formRef.current?.reset()
+
+  setSections([
+    {
+      title: '',
+      questions: [{ text: '', type: 'yes_no', max_score: 10 }],
+    },
+  ])
+}
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -136,8 +140,8 @@ export default function TemplateBuilder() {
     0
   )
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+return (
+  <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
       {message && (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
           {message}

@@ -90,6 +90,7 @@ export default function PlanCard({
   const isAdmin = currentUserRole === 'admin'
   const isCreator = plan.created_by === currentUserId
   const canManageLock = isAdmin || isCreator
+  const canManageAccess = isAdmin || isCreator
 
   const isEditLocked = Boolean(plan.locked_edit)
   const isViewLocked = Boolean(plan.locked_view)
@@ -211,35 +212,37 @@ export default function PlanCard({
             </p>
           </div>
 
-        <div className="flex shrink-0 items-center gap-1.5">
-  <span
-    className={`rounded-full px-2.5 py-1 text-xs font-black ${scoreClass(
-      plan.score
-    )}`}
-  >
-    {plan.score ?? 0}%
-  </span>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-black ${scoreClass(
+                plan.score
+              )}`}
+            >
+              {plan.score ?? 0}%
+            </span>
 
-  <div onClick={(e) => e.stopPropagation()}>
-    <PlanAccessButton
-      plan={plan}
-      allUsers={allUsers}
-      currentUserId={currentUserId}
-      currentUserRole={currentUserRole}
-    />
-  </div>
+            {canManageAccess && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <PlanAccessButton
+                  plan={plan}
+                  allUsers={allUsers}
+                  currentUserId={currentUserId}
+                  currentUserRole={currentUserRole}
+                />
+              </div>
+            )}
 
-  {canManageLock && (
-    <div onClick={(e) => e.stopPropagation()}>
-      <PlanLockButton
-        planId={plan.id}
-        lockedEdit={plan.locked_edit}
-        lockedView={plan.locked_view}
-        compact
-      />
-    </div>
-  )}
-</div>
+            {canManageLock && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <PlanLockButton
+                  planId={plan.id}
+                  lockedEdit={plan.locked_edit}
+                  lockedView={plan.locked_view}
+                  compact
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">

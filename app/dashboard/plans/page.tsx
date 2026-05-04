@@ -71,9 +71,35 @@ export default async function PlansPage({ searchParams }: PageProps) {
     .eq('id', user.id)
     .single()
 
-  const role = profile?.role
+const role = profile?.role
 
-  if (!profile) {
+const isAdmin = role === 'admin'
+
+const { data: assignedRows } = await supabase
+  .from('plan_assignments')
+  .select('plan_id')
+  .eq('user_id', user.id)
+
+const { data: viewerRows } = await supabase
+  .from('audit_plan_viewers')
+  .select('plan_id')
+  .eq('user_id', user.id)
+
+const assignedPlanIds = (assignedRows || [])
+  .map((row: any) => row.plan_id)
+  .filter(Boolean)
+
+const viewerPlanIds = (viewerRows || [])
+  .map((row: any) => row.plan_id)
+  .filter(Boolean)
+
+const visiblePlanIds = Array.from(
+  new Set([...assignedPlanIds, ...viewerPlanIds])
+)
+
+
+
+if (!profile) {
     return (
       <div className="p-4 text-red-600 sm:p-6 lg:p-8">
         Profil tapılmadı.
@@ -135,6 +161,8 @@ audit_answers(id)
     )
     .order('created_at', { ascending: false })
 
+
+
   if (status) {
     planQuery = planQuery.eq('status', status)
   }
@@ -147,9 +175,29 @@ audit_answers(id)
     planQuery = planQuery.or(`title.ilike.%${q}%,department.ilike.%${q}%`)
   }
 
-  const { data: plans, error: planError, count } = await planQuery.range(from, to)
-  const totalPlans = count || 0
-  const totalPages = Math.max(Math.ceil(totalPlans / pageSize), 1)
+const { data: rawPlans, error: planError } = await planQuery
+
+let visiblePlans = rawPlans || []
+
+if (!isAdmin) {
+  visiblePlans = visiblePlans.filter((plan: any) => {
+    const isCreatedByMe = plan.created_by === user.id
+
+    const isAssignedToMe = (plan.plan_assignments || []).some(
+      (item: any) => item.user_id === user.id
+    )
+
+    const isViewer = (plan.audit_plan_viewers || []).some(
+      (item: any) => item.user_id === user.id
+    )
+
+    return isCreatedByMe || isAssignedToMe || isViewer
+  })
+}
+
+const totalPlans = visiblePlans.length
+const totalPages = Math.max(Math.ceil(totalPlans / pageSize), 1)
+const plans = visiblePlans.slice(from, to + 1)
 
   const makePageHref = (nextPage: number) => {
     const search = new URLSearchParams()

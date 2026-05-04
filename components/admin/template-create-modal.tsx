@@ -59,17 +59,15 @@ export default function TemplateCreateModal() {
             type="button"
             aria-label="Modalı bağla"
             onClick={closeModal}
-            className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
-              open ? 'opacity-100' : 'opacity-0'
-            }`}
+            className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'
+              }`}
           />
 
           <div
-            className={`relative z-10 flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-all duration-300 ease-out ${
-              open
+            className={`relative z-10 flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-all duration-300 ease-out ${open
                 ? 'translate-y-0 scale-100 opacity-100'
                 : 'translate-y-4 scale-95 opacity-0'
-            }`}
+              }`}
           >
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-white p-5 sm:p-6">
               <div>

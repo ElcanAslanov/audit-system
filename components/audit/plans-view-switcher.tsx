@@ -56,20 +56,20 @@ export default function PlansViewSwitcher({
   currentUserId,
   currentUserRole,
 }: Props) {
-const [view, setView] = useState<'cards' | 'table'>('cards')
+  const [view, setView] = useState<'cards' | 'table'>('cards')
 
-useEffect(() => {
-  const savedView = window.localStorage.getItem('plans-view-mode')
+  useEffect(() => {
+    const savedView = window.localStorage.getItem('plans-view-mode')
 
-  if (savedView === 'cards' || savedView === 'table') {
-    setView(savedView)
+    if (savedView === 'cards' || savedView === 'table') {
+      setView(savedView)
+    }
+  }, [])
+
+  const changeView = (nextView: 'cards' | 'table') => {
+    setView(nextView)
+    window.localStorage.setItem('plans-view-mode', nextView)
   }
-}, [])
-
-const changeView = (nextView: 'cards' | 'table') => {
-  setView(nextView)
-  window.localStorage.setItem('plans-view-mode', nextView)
-}
   const safeCurrentUserRole = currentUserRole || undefined
 
   return (
@@ -86,11 +86,10 @@ const changeView = (nextView: 'cards' | 'table') => {
           <button
             type="button"
             onClick={() => changeView('cards')}
-            className={`rounded-xl px-4 py-2 text-center transition ${
-              view === 'cards'
+            className={`rounded-xl px-4 py-2 text-center transition ${view === 'cards'
                 ? 'bg-slate-900 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-white'
-            }`}
+              }`}
           >
             Kart
           </button>
@@ -98,11 +97,10 @@ const changeView = (nextView: 'cards' | 'table') => {
           <button
             type="button"
             onClick={() => changeView('table')}
-            className={`rounded-xl px-4 py-2 text-center transition ${
-              view === 'table'
+            className={`rounded-xl px-4 py-2 text-center transition ${view === 'table'
                 ? 'bg-slate-900 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-white'
-            }`}
+              }`}
           >
             Tablo
           </button>
@@ -178,9 +176,10 @@ const changeView = (nextView: 'cards' | 'table') => {
 
               <tbody className="divide-y divide-slate-100 bg-white">
                 {plans.map((plan: any) => {
-                  const isAdmin = safeCurrentUserRole === 'admin'
-                  const isCreator = plan.created_by === currentUserId
-                  const canManageLock = isAdmin || isCreator
+        const isAdmin = safeCurrentUserRole === 'admin'
+const isCreator = plan.created_by === currentUserId
+const canManageLock = isAdmin || isCreator
+const canManageAccess = isAdmin || isCreator
 
                   return (
                     <tr key={plan.id} className="transition hover:bg-slate-50">
@@ -236,19 +235,21 @@ const changeView = (nextView: 'cards' | 'table') => {
 
                       <td className="px-4 py-3 align-top">
                         <div className="flex flex-wrap justify-end gap-2">
-                          <div
-                            onClick={(event) => {
-                              event.preventDefault()
-                              event.stopPropagation()
-                            }}
-                          >
-                            <PlanAccessButton
-                              plan={plan}
-                              allUsers={allUsers}
-                              currentUserId={currentUserId}
-                              currentUserRole={safeCurrentUserRole}
-                            />
-                          </div>
+                         {canManageAccess && (
+  <div
+    onClick={(event) => {
+      event.preventDefault()
+      event.stopPropagation()
+    }}
+  >
+    <PlanAccessButton
+      plan={plan}
+      allUsers={allUsers}
+      currentUserId={currentUserId}
+      currentUserRole={safeCurrentUserRole}
+    />
+  </div>
+)}
 
                           <Link
                             href={`/dashboard/plans/${plan.id}`}

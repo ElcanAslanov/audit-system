@@ -14,12 +14,18 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
+  const fullName =
+    profile.full_name ||
+    profile.fullName ||
+    profile.name ||
+    'Sistem istifadəçisi'
+
   return (
     <div className="min-h-screen bg-slate-50">
-      <MobileSidebar role={profile.role} />
+      <MobileSidebar role={profile.role} fullName={fullName} />
 
       <div className="flex min-h-screen">
-        <Sidebar role={profile.role} />
+        <Sidebar role={profile.role} fullName={fullName} />
 
         <main className="min-w-0 flex-1">
           {children}
