@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import PlanCard from '@/components/audit/plan-card'
+import PlanAccessButton from '@/components/audit/plan-access-button'
 import { ClipboardCheck } from 'lucide-react'
 
 function statusLabel(value?: string | null) {
@@ -40,6 +41,7 @@ function formatDate(value?: string | null) {
 
 type Props = {
   plans: any[]
+  allUsers: any[]
   canCreatePlan: boolean
   currentUserId: string
   currentUserRole?: string | null
@@ -47,6 +49,7 @@ type Props = {
 
 export default function PlansViewSwitcher({
   plans,
+  allUsers,
   canCreatePlan,
   currentUserId,
   currentUserRole,
@@ -111,6 +114,7 @@ export default function PlansViewSwitcher({
             <PlanCard
               key={plan.id}
               plan={plan}
+              allUsers={allUsers}
               canCreatePlan={canCreatePlan}
               currentUserId={currentUserId}
               currentUserRole={safeCurrentUserRole}
@@ -204,7 +208,7 @@ export default function PlansViewSwitcher({
                       </td>
 
                       <td className="px-4 py-3 text-slate-700">
-                       {formatDate(plan.start_date)}
+                        {formatDate(plan.start_date)}
                       </td>
 
                       <td className="px-4 py-3 text-slate-700">
@@ -213,6 +217,12 @@ export default function PlansViewSwitcher({
 
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap justify-end gap-2">
+                          <PlanAccessButton
+                            plan={plan}
+                            allUsers={allUsers}
+                            currentUserId={currentUserId}
+                            currentUserRole={safeCurrentUserRole}
+                          />
                           <Link
                             href={`/dashboard/plans/${plan.id}`}
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"

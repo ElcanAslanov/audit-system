@@ -348,14 +348,14 @@ export default async function AuditDetailPage({ params }: PageProps) {
           </p>
         </div>
 
-        
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-  <p className="text-sm font-semibold text-slate-500">Tarix aralığı</p>
-  <p className="mt-2 font-bold text-slate-900">
-    {plan.start_date || '-'} → {plan.due_date || '-'}
-  </p>
-</div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-semibold text-slate-500">Tarix aralığı</p>
+          <p className="mt-2 font-bold text-slate-900">
+            {plan.start_date || '-'} → {plan.due_date || '-'}
+          </p>
+        </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-semibold text-slate-500">Kilid statusu</p>
@@ -419,22 +419,22 @@ export default async function AuditDetailPage({ params }: PageProps) {
               </div>
 
               <div>
-  <p className="text-xs font-semibold uppercase text-slate-500">
-    Başlama tarixi
-  </p>
-  <p className="mt-1 font-semibold text-slate-900">
-    {formatDate(plan.start_date)}
-  </p>
-</div>
+                <p className="text-xs font-semibold uppercase text-slate-500">
+                  Başlama tarixi
+                </p>
+                <p className="mt-1 font-semibold text-slate-900">
+                  {formatDate(plan.start_date)}
+                </p>
+              </div>
 
-<div>
-  <p className="text-xs font-semibold uppercase text-slate-500">
-    Son tarix
-  </p>
-  <p className="mt-1 font-semibold text-slate-900">
-    {formatDate(plan.due_date)}
-  </p>
-</div>
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500">
+                  Son tarix
+                </p>
+                <p className="mt-1 font-semibold text-slate-900">
+                  {formatDate(plan.due_date)}
+                </p>
+              </div>
 
               <div>
                 <p className="text-xs font-semibold uppercase text-slate-500">
@@ -652,7 +652,7 @@ export default async function AuditDetailPage({ params }: PageProps) {
                       />
                     </div>
 
-                   
+
                     <div>
                       <p className="text-xs font-semibold uppercase text-slate-500">
                         Deadline

@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import CreatePlanModal from '@/components/audit/create-plan-modal'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import PlanCard from '@/components/audit/plan-card'
 import PlansViewSwitcher from '@/components/audit/plans-view-switcher'
 import {
   BarChart3,
@@ -18,9 +17,11 @@ type PageProps = {
     q?: string
     status?: string
     company_id?: string
-    view?: string
+    page?: string
   }>
 }
+
+
 
 function statusLabel(value?: string | null) {
   if (value === 'tamamlandi') return 'Tamamlandı'
@@ -50,6 +51,10 @@ export default async function PlansPage({ searchParams }: PageProps) {
   const q = params?.q?.trim() || ''
   const status = params?.status || ''
   const companyId = params?.company_id || ''
+  const page = Math.max(Number(params?.page || 1), 1)
+  const pageSize = 12
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
 
   const supabase = await createClient()
@@ -115,12 +120,19 @@ export default async function PlansPage({ searchParams }: PageProps) {
 
   let planQuery = supabase
     .from('audit_plans')
-    .select(`
+    .select(
+      `
       *,
       companies(name),
-      plan_assignments(profiles(full_name)),
-      audit_answers(id)
-    `)
+plan_assignments(user_id, profiles(id, full_name)),
+audit_plan_viewers(
+  user_id,
+  profiles!audit_plan_viewers_user_id_fkey(id, full_name)
+),
+audit_answers(id)
+    `,
+      { count: 'exact' }
+    )
     .order('created_at', { ascending: false })
 
   if (status) {
@@ -135,7 +147,20 @@ export default async function PlansPage({ searchParams }: PageProps) {
     planQuery = planQuery.or(`title.ilike.%${q}%,department.ilike.%${q}%`)
   }
 
-  const { data: plans, error: planError } = await planQuery
+  const { data: plans, error: planError, count } = await planQuery.range(from, to)
+  const totalPlans = count || 0
+  const totalPages = Math.max(Math.ceil(totalPlans / pageSize), 1)
+
+  const makePageHref = (nextPage: number) => {
+    const search = new URLSearchParams()
+
+    if (q) search.set('q', q)
+    if (status) search.set('status', status)
+    if (companyId) search.set('company_id', companyId)
+    search.set('page', String(nextPage))
+
+    return `/dashboard/plans?${search.toString()}`
+  }
 
   if (planError) {
     console.error('Planları çəkərkən xəta:', planError)
@@ -378,10 +403,45 @@ export default async function PlansPage({ searchParams }: PageProps) {
 
         <PlansViewSwitcher
           plans={normalizedPlans}
+          allUsers={allProfiles || []}
           canCreatePlan={canCreatePlan}
           currentUserId={user.id}
           currentUserRole={role || undefined}
         />
+
+        <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-semibold text-slate-600">
+            Səhifə {page} / {totalPages} • Ümumi {totalPlans} plan
+          </p>
+
+          <div className="flex gap-2">
+            {page > 1 ? (
+              <Link
+                href={makePageHref(page - 1)}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+              >
+                Əvvəlki
+              </Link>
+            ) : (
+              <span className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-300">
+                Əvvəlki
+              </span>
+            )}
+
+            {page < totalPages ? (
+              <Link
+                href={makePageHref(page + 1)}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+              >
+                Növbəti
+              </Link>
+            ) : (
+              <span className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-300">
+                Növbəti
+              </span>
+            )}
+          </div>
+        </div>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-4 flex flex-col gap-2 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -435,7 +495,7 @@ export default async function PlansPage({ searchParams }: PageProps) {
                   {plansByDeadline.length === 0 && (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="px-4 py-8 text-center text-sm text-slate-500"
                       >
                         Deadline üzrə göstəriləcək plan yoxdur.

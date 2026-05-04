@@ -1018,3 +1018,132 @@ export async function updateAuditPlanLock(
 
   return { error: null, success: true }
 }
+
+export async function addPlanViewer(
+  planId: string,
+  userId: string
+): Promise<ActionState> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { error: 'İstifadəçi tapılmadı.', success: false }
+
+  if (!planId) return { error: 'Plan ID tapılmadı.', success: false }
+  if (!userId) return { error: 'İstifadəçi seçilməyib.', success: false }
+
+  const { data: plan, error: planError } = await supabase
+    .from('audit_plans')
+    .select('id, created_by')
+    .eq('id', planId)
+    .maybeSingle()
+
+  if (planError) return { error: planError.message, success: false }
+  if (!plan) return { error: 'Plan tapılmadı.', success: false }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (profileError) return { error: profileError.message, success: false }
+
+  const isAdmin = profile?.role === 'admin'
+  const isCreator = plan.created_by === user.id
+
+  if (!isAdmin && !isCreator) {
+    return {
+      error: 'Əlavə baxış icazəsini yalnız admin və ya planı yaradan verə bilər.',
+      success: false,
+    }
+  }
+
+  const { error } = await supabase.from('audit_plan_viewers').upsert(
+    [
+      {
+        plan_id: planId,
+        user_id: userId,
+        created_by: user.id,
+      },
+    ],
+    {
+      onConflict: 'plan_id,user_id',
+    }
+  )
+
+  if (error) {
+    return {
+      error: 'Baxış icazəsi əlavə olunmadı: ' + error.message,
+      success: false,
+    }
+  }
+
+  revalidatePath('/dashboard/plans')
+  revalidatePath(`/dashboard/plans/${planId}`)
+
+  return { error: null, success: true }
+}
+
+export async function removePlanViewer(
+  planId: string,
+  userId: string
+): Promise<ActionState> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { error: 'İstifadəçi tapılmadı.', success: false }
+
+  if (!planId) return { error: 'Plan ID tapılmadı.', success: false }
+  if (!userId) return { error: 'İstifadəçi tapılmadı.', success: false }
+
+  const { data: plan, error: planError } = await supabase
+    .from('audit_plans')
+    .select('id, created_by')
+    .eq('id', planId)
+    .maybeSingle()
+
+  if (planError) return { error: planError.message, success: false }
+  if (!plan) return { error: 'Plan tapılmadı.', success: false }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (profileError) return { error: profileError.message, success: false }
+
+  const isAdmin = profile?.role === 'admin'
+  const isCreator = plan.created_by === user.id
+
+  if (!isAdmin && !isCreator) {
+    return {
+      error: 'Baxış icazəsini yalnız admin və ya planı yaradan silə bilər.',
+      success: false,
+    }
+  }
+
+  const { error } = await supabase
+    .from('audit_plan_viewers')
+    .delete()
+    .eq('plan_id', planId)
+    .eq('user_id', userId)
+
+  if (error) {
+    return {
+      error: 'Baxış icazəsi silinmədi: ' + error.message,
+      success: false,
+    }
+  }
+
+  revalidatePath('/dashboard/plans')
+  revalidatePath(`/dashboard/plans/${planId}`)
+
+  return { error: null, success: true }
+}

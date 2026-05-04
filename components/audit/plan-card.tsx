@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { EyeOff, FileText, Lock, PencilLine, PencilOff, X } from 'lucide-react'
 import PlanLockButton from '@/components/audit/plan-lock-button'
 import PlanDeleteButton from '@/components/audit/plan-delete-button'
+import PlanAccessButton from '@/components/audit/plan-access-button'
 
 function statusLabel(value?: string | null) {
   if (value === 'tamamlandi') return 'Tamamlandı'
@@ -60,11 +61,13 @@ function formatDate(value?: string | null) {
 
 export default function PlanCard({
   plan,
+  allUsers = [],
   canCreatePlan,
   currentUserId,
   currentUserRole,
 }: {
   plan: any
+  allUsers?: any[]
   canCreatePlan: boolean
   currentUserId: string
   currentUserRole?: string
@@ -208,26 +211,35 @@ export default function PlanCard({
             </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5">
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs font-black ${scoreClass(
-                plan.score
-              )}`}
-            >
-              {plan.score ?? 0}%
-            </span>
+        <div className="flex shrink-0 items-center gap-1.5">
+  <span
+    className={`rounded-full px-2.5 py-1 text-xs font-black ${scoreClass(
+      plan.score
+    )}`}
+  >
+    {plan.score ?? 0}%
+  </span>
 
-            {canManageLock && (
-              <div onClick={(e) => e.stopPropagation()}>
-                <PlanLockButton
-                  planId={plan.id}
-                  lockedEdit={plan.locked_edit}
-                  lockedView={plan.locked_view}
-                  compact
-                />
-              </div>
-            )}
-          </div>
+  <div onClick={(e) => e.stopPropagation()}>
+    <PlanAccessButton
+      plan={plan}
+      allUsers={allUsers}
+      currentUserId={currentUserId}
+      currentUserRole={currentUserRole}
+    />
+  </div>
+
+  {canManageLock && (
+    <div onClick={(e) => e.stopPropagation()}>
+      <PlanLockButton
+        planId={plan.id}
+        lockedEdit={plan.locked_edit}
+        lockedView={plan.locked_view}
+        compact
+      />
+    </div>
+  )}
+</div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -258,8 +270,8 @@ export default function PlanCard({
           </span>
 
           <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
-  Başlama: {formatDate(plan.start_date)}
-</span>
+            Başlama: {formatDate(plan.start_date)}
+          </span>
 
           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
             Son tarix: {formatDate(plan.due_date)}
