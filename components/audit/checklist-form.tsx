@@ -8,6 +8,8 @@ import {
 } from '@/app/dashboard/plans/actions';
 import AddFindingForm from '@/components/add-finding-form';
 import CompleteAuditButton from '@/components/audit/complete-audit-button';
+import FindingDeleteButton from '@/components/audit/finding-delete-button';
+import FindingFileDeleteButton from '@/components/audit/finding-file-delete-button';
 import { createClient } from '@/lib/supabase/client';
 
 interface Question {
@@ -132,41 +134,51 @@ export default function ChecklistForm({
 
 
   const [showCustomQuestionForm, setShowCustomQuestionForm] = useState(false);
-const [activeFinding, setActiveFinding] = useState<string | null>(null);
-const [toast, setToast] = useState<{
-  type: 'success' | 'error';
-  message: string;
-} | null>(null);
-const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [activeFinding, setActiveFinding] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const supabase = useMemo(() => createClient(), []);
 
-  const [openFindingIds, setOpenFindingIds] = useState<Record<string, boolean>>({});
+ const [openFindingIds, setOpenFindingIds] = useState<Record<string, boolean>>({});
+const [deletedFindingIds, setDeletedFindingIds] = useState<string[]>([]);
+const [localFindings, setLocalFindings] = useState<Finding[]>(initialFindings);
 
-  const answerMap = useMemo(() => {
-    return new Map(
-      initialAnswers.map((answer) => [
-        answer.custom_question_id || answer.question_id || '',
-        answer,
-      ])
-    );
-  }, [initialAnswers]);
+useEffect(() => {
+  setLocalFindings(
+    initialFindings.filter(
+      (finding) => !deletedFindingIds.includes(finding.id)
+    )
+  );
+}, [initialFindings, deletedFindingIds]);
 
-  const findingsByQuestion = useMemo(() => {
-    const map = new Map<string, Finding[]>();
+const answerMap = useMemo(() => {
+  return new Map(
+    initialAnswers.map((answer) => [
+      answer.custom_question_id || answer.question_id || '',
+      answer,
+    ])
+  );
+}, [initialAnswers]);
 
-   initialFindings.forEach((finding) => {
-  const findingQuestionKey = finding.custom_question_id || finding.question_id;
+const findingsByQuestion = useMemo(() => {
+  const map = new Map<string, Finding[]>();
 
-  if (!findingQuestionKey) return;
+  localFindings.forEach((finding) => {
+    const findingQuestionKey = finding.custom_question_id || finding.question_id;
 
-  const current = map.get(findingQuestionKey) || [];
-  current.push(finding);
-  map.set(findingQuestionKey, current);
-});
+    if (!findingQuestionKey) return;
 
-    return map;
-  }, [initialFindings]);
+    const current = map.get(findingQuestionKey) || [];
+    current.push(finding);
+    map.set(findingQuestionKey, current);
+  });
+
+  return map;
+}, [localFindings]);
 
   const toggleFinding = (findingId: string) => {
     setOpenFindingIds((prev) => ({
@@ -291,49 +303,49 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     setSelectedAnswers({});
     setHasUnsavedChanges(true);
   };
-useEffect(() => {
-  if (!state) return;
+  useEffect(() => {
+    if (!state) return;
 
-  if (state.success) {
-    setHasUnsavedChanges(false);
-    setToast({
-      type: 'success',
-      message: 'Cavablar uğurla yadda saxlanıldı.',
-    });
-    return;
-  }
+    if (state.success) {
+      setHasUnsavedChanges(false);
+      setToast({
+        type: 'success',
+        message: 'Cavablar uğurla yadda saxlanıldı.',
+      });
+      return;
+    }
 
-  if (state.error) {
-    setToast({
-      type: 'error',
-      message: state.error,
-    });
-  }
-}, [state]);
+    if (state.error) {
+      setToast({
+        type: 'error',
+        message: state.error,
+      });
+    }
+  }, [state]);
 
-useEffect(() => {
-  if (!customQuestionState) return;
+  useEffect(() => {
+    if (!customQuestionState) return;
 
-  if (customQuestionState.success) {
-    setToast({
-      type: 'success',
-      message: 'Xüsusi sual əlavə edildi.',
-    });
+    if (customQuestionState.success) {
+      setToast({
+        type: 'success',
+        message: 'Xüsusi sual əlavə edildi.',
+      });
 
-    window.setTimeout(() => {      
-      window.location.reload();
-    }, 700);
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 700);
 
-    return;
-  }
+      return;
+    }
 
-  if (customQuestionState.error) {
-    setToast({
-      type: 'error',
-      message: customQuestionState.error,
-    });
-  }
-}, [customQuestionState]);
+    if (customQuestionState.error) {
+      setToast({
+        type: 'error',
+        message: customQuestionState.error,
+      });
+    }
+  }, [customQuestionState]);
 
   useEffect(() => {
     if (!hasUnsavedChanges) return;
@@ -351,48 +363,47 @@ useEffect(() => {
   }, [hasUnsavedChanges]);
 
   useEffect(() => {
-  if (!toast) return;
+    if (!toast) return;
 
-  const timer = window.setTimeout(() => {
-    setToast(null);
-  }, 4500);
+    const timer = window.setTimeout(() => {
+      setToast(null);
+    }, 4500);
 
-  return () => window.clearTimeout(timer);
-}, [toast]);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   return (
     <>
 
-       {toast && (
-      <div className="fixed right-4 top-4 z-[9999] w-[calc(100%-2rem)] max-w-md">
-        <div
-          className={`rounded-2xl border p-4 shadow-2xl backdrop-blur ${
-            toast.type === 'success'
+      {toast && (
+        <div className="fixed right-4 top-4 z-[9999] w-[calc(100%-2rem)] max-w-md">
+          <div
+            className={`rounded-2xl border p-4 shadow-2xl backdrop-blur ${toast.type === 'success'
               ? 'border-emerald-200 bg-emerald-50/95 text-emerald-800'
               : 'border-red-200 bg-red-50/95 text-red-800'
-          }`}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-black">
-                {toast.type === 'success' ? 'Uğurlu əməliyyat' : 'Xəta'}
-              </p>
-              <p className="mt-1 text-sm leading-5">
-                {toast.message}
-              </p>
-            </div>
+              }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-black">
+                  {toast.type === 'success' ? 'Uğurlu əməliyyat' : 'Xəta'}
+                </p>
+                <p className="mt-1 text-sm leading-5">
+                  {toast.message}
+                </p>
+              </div>
 
-            <button
-              type="button"
-              onClick={() => setToast(null)}
-              className="rounded-lg px-2 py-1 text-xs font-bold opacity-70 transition hover:bg-white/60 hover:opacity-100"
-            >
-              Bağla
-            </button>
+              <button
+                type="button"
+                onClick={() => setToast(null)}
+                className="rounded-lg px-2 py-1 text-xs font-bold opacity-70 transition hover:bg-white/60 hover:opacity-100"
+              >
+                Bağla
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
       <form action={action} className="space-y-5">
         <input type="hidden" name="plan_id" value={planId} />
@@ -674,11 +685,7 @@ useEffect(() => {
                             key={finding.id}
                             className="rounded-xl border border-red-100 bg-white p-3"
                           >
-                            <button
-                              type="button"
-                              onClick={() => toggleFinding(finding.id)}
-                              className="flex w-full flex-col gap-2 text-left sm:flex-row sm:items-center sm:justify-between"
-                            >
+                            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                               <div>
                                 <p className="font-bold text-slate-900">
                                   {finding.title || 'Tapıntı'}
@@ -703,10 +710,41 @@ useEffect(() => {
                                 </div>
                               </div>
 
-                              <span className="text-xs font-bold text-blue-600">
-                                {isOpen ? 'Bağla' : 'Ətraflı bax'}
-                              </span>
-                            </button>
+                              <div className="flex shrink-0 items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleFinding(finding.id)}
+                                  className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 transition hover:bg-blue-100"
+                                >
+                                  {isOpen ? 'Bağla' : 'Ətraflı bax'}
+                                </button>
+
+                            <FindingDeleteButton
+  findingId={finding.id}
+  planId={planId}
+ onDeleted={() => {
+  setDeletedFindingIds((prev) =>
+    prev.includes(finding.id) ? prev : [...prev, finding.id]
+  );
+
+  setLocalFindings((prev) =>
+    prev.filter((item) => item.id !== finding.id)
+  );
+
+  setOpenFindingIds((prev) => {
+    const next = { ...prev };
+    delete next[finding.id];
+    return next;
+  });
+
+  setToast({
+    type: 'success',
+    message: 'Tapıntı silindi.',
+  });
+}}
+/>
+                              </div>
+                            </div>
 
                             {isOpen && (
                               <div className="mt-3 border-t border-slate-100 pt-3 text-sm">
@@ -758,7 +796,7 @@ useEffect(() => {
 
                                           </div>
 
-                                          <div className="flex gap-2">
+                                          <div className="flex flex-wrap gap-2">
                                             <button
                                               type="button"
                                               onClick={() => openFindingFile(file.path, file.name, file.type)}
@@ -774,6 +812,13 @@ useEffect(() => {
                                             >
                                               Yüklə
                                             </button>
+
+                                            <FindingFileDeleteButton
+                                              findingId={finding.id}
+                                              planId={planId}
+                                              filePath={file.path}
+                                              fileName={file.name}
+                                            />
                                           </div>
                                         </div>
                                       ))}
@@ -794,13 +839,13 @@ useEffect(() => {
                 )}
 
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <button
-  type="button"
-  onClick={() =>
-    setActiveFinding(
-      isCustomQuestion ? `custom:${q.id}` : `template:${q.id}`
-    )
-  }
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setActiveFinding(
+                        isCustomQuestion ? `custom:${q.id}` : `template:${q.id}`
+                      )
+                    }
                     className="inline-flex w-full justify-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 sm:w-auto"
                   >
                     + Tapıntı əlavə et
@@ -947,13 +992,13 @@ useEffect(() => {
       {activeFinding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6">
-          <AddFindingForm
-  planId={planId}
-  questionId={activeFinding.replace('template:', '').replace('custom:', '')}
-  questionType={activeFinding.startsWith('custom:') ? 'custom' : 'template'}
-  users={users}
-  onClose={() => setActiveFinding(null)}
-/>
+            <AddFindingForm
+              planId={planId}
+              questionId={activeFinding.replace('template:', '').replace('custom:', '')}
+              questionType={activeFinding.startsWith('custom:') ? 'custom' : 'template'}
+              users={users}
+              onClose={() => setActiveFinding(null)}
+            />
           </div>
         </div>
       )}

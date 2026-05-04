@@ -1096,3 +1096,216 @@ export async function removePlanViewer(
 
   return { error: null, success: true }
 }
+
+export async function deleteFinding(
+  findingId: string,
+  planId: string
+): Promise<ActionState> {
+  const supabase = await createClient()
+
+  if (!findingId) {
+    return { error: 'Tapıntı ID tapılmadı.', success: false }
+  }
+
+  if (!planId) {
+    return { error: 'Plan ID tapılmadı.', success: false }
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'İstifadəçi tapılmadı.', success: false }
+  }
+
+  const { data: plan, error: planError } = await supabase
+    .from('audit_plans')
+    .select('id, created_by, locked_edit, locked_view')
+    .eq('id', planId)
+    .maybeSingle()
+
+  if (planError) {
+    return { error: planError.message, success: false }
+  }
+
+  if (!plan) {
+    return { error: 'Audit planı tapılmadı.', success: false }
+  }
+
+  if (plan.locked_edit || plan.locked_view) {
+    return {
+      error: 'Bu plan kilidlidir. Tapıntı silmək mümkün deyil.',
+      success: false,
+    }
+  }
+
+  const { data: finding, error: findingError } = await supabase
+    .from('findings')
+    .select('id, files')
+    .eq('id', findingId)
+    .eq('plan_id', planId)
+    .maybeSingle()
+
+  if (findingError) {
+    return { error: findingError.message, success: false }
+  }
+
+  if (!finding) {
+    return { error: 'Tapıntı tapılmadı.', success: false }
+  }
+
+const { data: deletedRows, error: deleteError } = await supabase
+  .from('findings')
+  .delete()
+  .eq('id', findingId)
+  .eq('plan_id', planId)
+  .select('id')
+
+if (deleteError) {
+  return {
+    error: 'Tapıntı silinmədi: ' + deleteError.message,
+    success: false,
+  }
+}
+
+if (!deletedRows || deletedRows.length === 0) {
+  return {
+    error:
+      'Tapıntı database-dən silinmədi. Böyük ehtimalla Supabase RLS DELETE icazəsi yoxdur.',
+    success: false,
+  }
+}
+
+  const filePaths = Array.isArray((finding as any).files)
+    ? (finding as any).files
+        .map((file: any) => file?.path)
+        .filter(Boolean)
+    : []
+
+  if (filePaths.length > 0) {
+    supabase.storage
+      .from('finding-files')
+      .remove(filePaths)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Tapıntı faylları storage-dən silinmədi:', error.message)
+        }
+      })
+  }
+
+  revalidatePath(`/dashboard/plans/${planId}`)
+  revalidatePath(`/dashboard/plans/${planId}/fill`)
+  revalidatePath(`/dashboard/plans/${planId}/report`)
+  revalidatePath('/dashboard/plans')
+  revalidatePath('/dashboard/findings')
+  revalidatePath('/dashboard')
+
+  return { error: null, success: true }
+}
+
+export async function deleteFindingFile(
+  findingId: string,
+  planId: string,
+  filePath: string
+): Promise<ActionState> {
+  const supabase = await createClient()
+
+  if (!findingId) {
+    return { error: 'Tapıntı ID tapılmadı.', success: false }
+  }
+
+  if (!planId) {
+    return { error: 'Plan ID tapılmadı.', success: false }
+  }
+
+  if (!filePath) {
+    return { error: 'Fayl yolu tapılmadı.', success: false }
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'İstifadəçi tapılmadı.', success: false }
+  }
+
+  const { data: plan, error: planError } = await supabase
+    .from('audit_plans')
+    .select('id, locked_edit, locked_view')
+    .eq('id', planId)
+    .maybeSingle()
+
+  if (planError) {
+    return { error: planError.message, success: false }
+  }
+
+  if (!plan) {
+    return { error: 'Audit planı tapılmadı.', success: false }
+  }
+
+  if (plan.locked_edit || plan.locked_view) {
+    return {
+      error: 'Bu plan kilidlidir. Fayl silmək mümkün deyil.',
+      success: false,
+    }
+  }
+
+  const { data: finding, error: findingError } = await supabase
+    .from('findings')
+    .select('id, files')
+    .eq('id', findingId)
+    .eq('plan_id', planId)
+    .maybeSingle()
+
+  if (findingError) {
+    return { error: findingError.message, success: false }
+  }
+
+  if (!finding) {
+    return { error: 'Tapıntı tapılmadı.', success: false }
+  }
+
+  const oldFiles = Array.isArray((finding as any).files)
+    ? (finding as any).files
+    : []
+
+  const fileExists = oldFiles.some((file: any) => file?.path === filePath)
+
+  if (!fileExists) {
+    return { error: 'Fayl tapıntıda tapılmadı.', success: false }
+  }
+
+  const nextFiles = oldFiles.filter((file: any) => file?.path !== filePath)
+
+  const { error: updateError } = await supabase
+    .from('findings')
+    .update({ files: nextFiles })
+    .eq('id', findingId)
+    .eq('plan_id', planId)
+
+  if (updateError) {
+    return {
+      error: 'Tapıntı fayl siyahısı yenilənmədi: ' + updateError.message,
+      success: false,
+    }
+  }
+
+  supabase.storage
+    .from('finding-files')
+    .remove([filePath])
+    .then(({ error }) => {
+      if (error) {
+        console.error('Tapıntı faylı storage-dən silinmədi:', error.message)
+      }
+    })
+
+  revalidatePath(`/dashboard/plans/${planId}`)
+  revalidatePath(`/dashboard/plans/${planId}/fill`)
+  revalidatePath(`/dashboard/plans/${planId}/report`)
+  revalidatePath('/dashboard/findings')
+  revalidatePath('/dashboard/plans')
+
+  return { error: null, success: true }
+}
