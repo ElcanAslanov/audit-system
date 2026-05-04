@@ -196,7 +196,7 @@ export default function CreatePlanForm({
                 type="hidden"
                 name="due_date"
                 value={displayDateToIso(dueDateDisplay)}
-              />              
+              />
 
               <input
                 type="text"
@@ -238,19 +238,18 @@ export default function CreatePlanForm({
 
             <div>
               <label className="mb-1 block text-sm font-bold text-slate-700">
-                Departament
+                Departament <span className="font-semibold text-slate-400">(istəyə bağlı)</span>
               </label>
 
               <select
                 name="department"
-                required
                 disabled={!selectedCompanyId}
                 value={selectedDepartmentName}
                 onChange={(e) => setSelectedDepartmentName(e.target.value)}
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <option value="">
-                  {selectedCompanyId ? 'Departament seçin...' : 'Əvvəl şirkət seçin...'}
+                  {selectedCompanyId ? 'Departament seçin' : 'Əvvəl şirkət seçin...'}
                 </option>
 
                 {filteredDepartments.map((department: any) => (
@@ -354,15 +353,15 @@ export default function CreatePlanForm({
                                   className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition hover:bg-slate-50"
                                 >
                                   <input
-                                    type="checkbox"
-                                    name="template_section_ids"
-                                    value={section.id}
-                                    checked={isSectionSelected}
-                                    onChange={(e) =>
-                                      toggleSection(templateId, sectionId, e.target.checked)
-                                    }
-                                    className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                  />
+  type="checkbox"
+  name="template_section_ids"
+  value={`${templateId}:${section.id}`}
+  checked={isSectionSelected}
+  onChange={(e) =>
+    toggleSection(templateId, sectionId, e.target.checked)
+  }
+  className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+/>
 
                                   <span className="font-medium text-slate-600">
                                     {section.title || 'Adsız bölmə'}
