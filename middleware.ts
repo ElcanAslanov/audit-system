@@ -6,13 +6,16 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   let response = NextResponse.next({
-    request,
+    request: {
+      headers: request.headers,
+    },
   })
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Missing Supabase env in middleware')
     return response
   }
 
@@ -27,7 +30,9 @@ export async function middleware(request: NextRequest) {
         })
 
         response = NextResponse.next({
-          request,
+          request: {
+            headers: request.headers,
+          },
         })
 
         cookiesToSet.forEach(({ name, value, options }) => {
@@ -40,13 +45,17 @@ export async function middleware(request: NextRequest) {
   try {
     const {
       data: { user },
+      error,
     } = await supabase.auth.getUser()
+
+    if (error) {
+      console.error('Supabase getUser error in middleware:', error.message)
+    }
 
     if (!user && pathname.startsWith('/dashboard')) {
       const redirectUrl = request.nextUrl.clone()
       redirectUrl.pathname = '/login'
       redirectUrl.searchParams.set('redirectedFrom', pathname)
-
       return NextResponse.redirect(redirectUrl)
     }
 
@@ -54,7 +63,6 @@ export async function middleware(request: NextRequest) {
       const redirectUrl = request.nextUrl.clone()
       redirectUrl.pathname = '/dashboard'
       redirectUrl.search = ''
-
       return NextResponse.redirect(redirectUrl)
     }
   } catch (error) {
@@ -64,7 +72,6 @@ export async function middleware(request: NextRequest) {
       const redirectUrl = request.nextUrl.clone()
       redirectUrl.pathname = '/login'
       redirectUrl.search = ''
-
       return NextResponse.redirect(redirectUrl)
     }
   }
