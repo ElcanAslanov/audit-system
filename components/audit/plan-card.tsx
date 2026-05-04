@@ -84,15 +84,15 @@ export default function PlanCard({
   const fillButtonLabel = hasAnswers ? 'Redaktə et' : 'Doldur'
   const answerCount = plan.audit_answers?.length || 0
 
-const isAdmin = currentUserRole === 'admin'
-const isCreator = plan.created_by === currentUserId
-const canManageLock = isAdmin || isCreator
+  const isAdmin = currentUserRole === 'admin'
+  const isCreator = plan.created_by === currentUserId
+  const canManageLock = isAdmin || isCreator
 
-const isEditLocked = Boolean(plan.locked_edit)
-const isViewLocked = Boolean(plan.locked_view)
+  const isEditLocked = Boolean(plan.locked_edit)
+  const isViewLocked = Boolean(plan.locked_view)
 
-const canOpenDetail = !isViewLocked || canManageLock
-const canOpenFill = !isEditLocked && (!isViewLocked || canManageLock)
+  const canOpenDetail = !isViewLocked || canManageLock
+  const canOpenFill = !isEditLocked && (!isViewLocked || canManageLock)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -122,12 +122,12 @@ const canOpenFill = !isEditLocked && (!isViewLocked || canManageLock)
 
   return (
     <article
-  onClick={() => setMenuOpen(true)}
-  className="group relative flex min-h-[255px] cursor-pointer flex-col overflow-visible rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
->
-     <div className="overflow-hidden rounded-t-3xl">
-  <div className="h-1.5 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500" />
-</div>
+      onClick={() => setMenuOpen(true)}
+      className="group relative flex min-h-[255px] cursor-pointer flex-col overflow-visible rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+    >
+      <div className="overflow-hidden rounded-t-3xl">
+        <div className="h-1.5 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500" />
+      </div>
 
       {menuOpen && (
         <div
@@ -209,37 +209,37 @@ const canOpenFill = !isEditLocked && (!isViewLocked || canManageLock)
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
-  <span
-    className={`rounded-full px-2.5 py-1 text-xs font-black ${scoreClass(
-      plan.score
-    )}`}
-  >
-    {plan.score ?? 0}%
-  </span>
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-black ${scoreClass(
+                plan.score
+              )}`}
+            >
+              {plan.score ?? 0}%
+            </span>
 
- {canManageLock && (
-  <div onClick={(e) => e.stopPropagation()}>
-    <PlanLockButton
-      planId={plan.id}
-      lockedEdit={plan.locked_edit}
-      lockedView={plan.locked_view}
-      compact
-    />
-  </div>
-)}
-</div>
+            {canManageLock && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <PlanLockButton
+                  planId={plan.id}
+                  lockedEdit={plan.locked_edit}
+                  lockedView={plan.locked_view}
+                  compact
+                />
+              </div>
+            )}
+          </div>
         </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-  <span
-    className={`rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(
-      plan.status
-    )}`}
-  >
-    {statusLabel(plan.status)}
-  </span>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span
+            className={`rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(
+              plan.status
+            )}`}
+          >
+            {statusLabel(plan.status)}
+          </span>
 
-  {isViewLocked && (
+          {isViewLocked && (
             <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700">
               <EyeOff size={12} />
               Baxış kilidli
@@ -256,6 +256,10 @@ const canOpenFill = !isEditLocked && (!isViewLocked || canManageLock)
           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
             {answerCount} cavab
           </span>
+
+          <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+  Başlama: {formatDate(plan.start_date)}
+</span>
 
           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
             Son tarix: {formatDate(plan.due_date)}
@@ -321,7 +325,7 @@ const canOpenFill = !isEditLocked && (!isViewLocked || canManageLock)
             )}
 
             {canCreatePlan && <PlanDeleteButton planId={plan.id} />}
-          
+
           </div>
         </div>
       </div>

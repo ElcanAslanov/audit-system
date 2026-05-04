@@ -40,13 +40,28 @@ export async function createAuditPlan(
   const selectedSectionIds = formData.getAll('template_section_ids') as string[]
   const templateId = templateIds[0] || ''
   const dueDate = formData.get('due_date') as string
+  const startDate = formData.get('start_date') as string
+
+  const validStartDate =
+    !startDate || /^\d{4}-\d{2}-\d{2}$/.test(startDate)
 
   const validDueDate =
-  !dueDate || /^\d{4}-\d{2}-\d{2}$/.test(dueDate)
+    !dueDate || /^\d{4}-\d{2}-\d{2}$/.test(dueDate)
 
-if (!validDueDate) {
-  return { error: 'Son tarix düzgün formatda deyil.', success: false }
-}
+  if (!validStartDate) {
+    return { error: 'Başlama tarixi düzgün formatda deyil.', success: false }
+  }
+
+  if (!validDueDate) {
+    return { error: 'Son tarix düzgün formatda deyil.', success: false }
+  }
+
+  if (startDate && dueDate && startDate > dueDate) {
+    return {
+      error: 'Başlama tarixi son tarixdən sonra ola bilməz.',
+      success: false,
+    }
+  }
   const notes = formData.get('notes') as string
   const department = formData.get('department') as string
 
@@ -59,16 +74,16 @@ if (!validDueDate) {
   }
 
   if (!department) {
-  return { error: 'Departament seçilməlidir.', success: false }
-}
+    return { error: 'Departament seçilməlidir.', success: false }
+  }
 
   if (templateIds.length === 0) {
     return { error: 'Ən azı 1 audit şablonu seçilməlidir.', success: false }
   }
 
   if (selectedSectionIds.length === 0) {
-  return { error: 'Ən azı 1 şablon bölməsi seçilməlidir.', success: false }
-}
+    return { error: 'Ən azı 1 şablon bölməsi seçilməlidir.', success: false }
+  }
 
   let fileUrl: string | null = null
   const file = formData.get('file') as File | null
@@ -102,6 +117,7 @@ if (!validDueDate) {
           company_id: companyId,
           template_id: templateId, // legacy uyğunluq üçün ilk seçilən şablon
           due_date: dueDate || null,
+          start_date: startDate || null,
           notes,
           file_url: fileUrl,
           created_by: user.id,
@@ -130,37 +146,37 @@ if (!validDueDate) {
     }
 
     const uniqueSectionIds = Array.from(
-  new Set(selectedSectionIds.filter(Boolean))
-)
+      new Set(selectedSectionIds.filter(Boolean))
+    )
 
-const { data: selectedSections, error: selectedSectionsError } = await supabase
-  .from('template_sections')
-  .select('id, template_id')
-  .in('id', uniqueSectionIds)
+    const { data: selectedSections, error: selectedSectionsError } = await supabase
+      .from('template_sections')
+      .select('id, template_id')
+      .in('id', uniqueSectionIds)
 
-if (selectedSectionsError) {
-  throw selectedSectionsError
-}
+    if (selectedSectionsError) {
+      throw selectedSectionsError
+    }
 
-const planTemplateSections = (selectedSections || [])
-  .filter((section: any) => uniqueTemplateIds.includes(section.template_id))
-  .map((section: any) => ({
-    plan_id: plan.id,
-    template_id: section.template_id,
-    section_id: section.id,
-  }))
+    const planTemplateSections = (selectedSections || [])
+      .filter((section: any) => uniqueTemplateIds.includes(section.template_id))
+      .map((section: any) => ({
+        plan_id: plan.id,
+        template_id: section.template_id,
+        section_id: section.id,
+      }))
 
-if (planTemplateSections.length === 0) {
-  throw new Error('Seçilmiş bölmələr tapılmadı.')
-}
+    if (planTemplateSections.length === 0) {
+      throw new Error('Seçilmiş bölmələr tapılmadı.')
+    }
 
-const { error: planTemplateSectionsError } = await supabase
-  .from('audit_plan_template_sections')
-  .insert(planTemplateSections)
+    const { error: planTemplateSectionsError } = await supabase
+      .from('audit_plan_template_sections')
+      .insert(planTemplateSections)
 
-if (planTemplateSectionsError) {
-  throw planTemplateSectionsError
-}
+    if (planTemplateSectionsError) {
+      throw planTemplateSectionsError
+    }
 
     const assignedIds = formData.getAll('assigned_to') as string[]
 
@@ -272,17 +288,17 @@ export async function addFinding(
 
   const { error } = await supabase.from('findings').insert([
     {
-  plan_id: planId,
-  question_id: questionType === 'custom' ? null : questionId,
-  custom_question_id: questionType === 'custom' ? questionId : null,
-  assigned_to: assignedTo || null,
-  title,
-  severity,
-  description,
-  deadline: deadline || null,
-  status: 'aciq',
-  files: uploadedFiles,
-},
+      plan_id: planId,
+      question_id: questionType === 'custom' ? null : questionId,
+      custom_question_id: questionType === 'custom' ? questionId : null,
+      assigned_to: assignedTo || null,
+      title,
+      severity,
+      description,
+      deadline: deadline || null,
+      status: 'aciq',
+      files: uploadedFiles,
+    },
   ])
 
   if (error) {
@@ -549,68 +565,68 @@ export async function saveAuditAnswers(
     }
 
     if (customAnswersWithScore.length > 0) {
-  for (const answer of customAnswersWithScore) {
-    const { data: existingCustomAnswer, error: findCustomError } = await supabase
-      .from('audit_answers')
-      .select('id')
-      .eq('plan_id', answer.plan_id)
-      .eq('custom_question_id', answer.custom_question_id)
-      .maybeSingle()
+      for (const answer of customAnswersWithScore) {
+        const { data: existingCustomAnswer, error: findCustomError } = await supabase
+          .from('audit_answers')
+          .select('id')
+          .eq('plan_id', answer.plan_id)
+          .eq('custom_question_id', answer.custom_question_id)
+          .maybeSingle()
 
-    if (findCustomError) {
-      return {
-        error:
-          'Əlavə sual cavabı yoxlanarkən xəta: ' +
-          findCustomError.message,
-        success: false,
-      }
-    }
+        if (findCustomError) {
+          return {
+            error:
+              'Əlavə sual cavabı yoxlanarkən xəta: ' +
+              findCustomError.message,
+            success: false,
+          }
+        }
 
-    if (existingCustomAnswer?.id) {
-      const { error: updateCustomError } = await supabase
-        .from('audit_answers')
-        .update({
-          response: answer.response,
-          comment: answer.comment,
-          score: answer.score,
-          updated_at: answer.updated_at,
-        })
-        .eq('id', existingCustomAnswer.id)
+        if (existingCustomAnswer?.id) {
+          const { error: updateCustomError } = await supabase
+            .from('audit_answers')
+            .update({
+              response: answer.response,
+              comment: answer.comment,
+              score: answer.score,
+              updated_at: answer.updated_at,
+            })
+            .eq('id', existingCustomAnswer.id)
 
-      if (updateCustomError) {
-        return {
-          error:
-            'Əlavə sual cavabı yenilənmədi: ' +
-            updateCustomError.message,
-          success: false,
+          if (updateCustomError) {
+            return {
+              error:
+                'Əlavə sual cavabı yenilənmədi: ' +
+                updateCustomError.message,
+              success: false,
+            }
+          }
+        } else {
+          const { error: insertCustomError } = await supabase
+            .from('audit_answers')
+            .insert([
+              {
+                plan_id: answer.plan_id,
+                question_id: null,
+                custom_question_id: answer.custom_question_id,
+                response: answer.response,
+                comment: answer.comment,
+                score: answer.score,
+                updated_at: answer.updated_at,
+              },
+            ])
+
+          if (insertCustomError) {
+            return {
+              error:
+                'Əlavə sual cavabı əlavə olunmadı: ' +
+                insertCustomError.message,
+              success: false,
+            }
+          }
         }
       }
-    } else {
-      const { error: insertCustomError } = await supabase
-        .from('audit_answers')
-        .insert([
-          {
-            plan_id: answer.plan_id,
-            question_id: null,
-            custom_question_id: answer.custom_question_id,
-            response: answer.response,
-            comment: answer.comment,
-            score: answer.score,
-            updated_at: answer.updated_at,
-          },
-        ])
-
-      if (insertCustomError) {
-        return {
-          error:
-            'Əlavə sual cavabı əlavə olunmadı: ' +
-            insertCustomError.message,
-          success: false,
-        }
-      }
     }
-  }
-}
 
     const { data: allAnswers, error: allAnswersError } = await supabase
       .from('audit_answers')
@@ -821,12 +837,12 @@ export async function deleteAuditPlan(planId: string): Promise<ActionState> {
     if (answersError) throw answersError
 
     // Sonra plan-şablon-bölmə əlaqələrini silirik
-const { error: planTemplateSectionsError } = await supabase
-  .from('audit_plan_template_sections')
-  .delete()
-  .eq('plan_id', planId)
+    const { error: planTemplateSectionsError } = await supabase
+      .from('audit_plan_template_sections')
+      .delete()
+      .eq('plan_id', planId)
 
-if (planTemplateSectionsError) throw planTemplateSectionsError
+    if (planTemplateSectionsError) throw planTemplateSectionsError
 
     // Sonra plan-şablon əlaqələrini silirik
     const { error: planTemplatesError } = await supabase
@@ -927,21 +943,21 @@ export async function updateAuditPlanLock(
 
   if (!user) return { error: 'İstifadəçi tapılmadı.', success: false }
 
-const { data: plan, error: planError } = await supabase
-  .from('audit_plans')
-  .select('id, created_by')
-  .eq('id', planId)
-  .maybeSingle()
+  const { data: plan, error: planError } = await supabase
+    .from('audit_plans')
+    .select('id, created_by')
+    .eq('id', planId)
+    .maybeSingle()
 
-const { data: profile, error: profileError } = await supabase
-  .from('profiles')
-  .select('role')
-  .eq('id', user.id)
-  .maybeSingle()
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
 
-if (profileError) {
-  return { error: profileError.message, success: false }
-}
+  if (profileError) {
+    return { error: profileError.message, success: false }
+  }
 
   if (planError) {
     return { error: planError.message, success: false }
@@ -951,37 +967,37 @@ if (profileError) {
     return { error: 'Plan tapılmadı.', success: false }
   }
 
- const isAdmin = profile?.role === 'admin'
-const isCreator = plan.created_by === user.id
+  const isAdmin = profile?.role === 'admin'
+  const isCreator = plan.created_by === user.id
 
-if (!isAdmin && !isCreator) {
-  return {
-    error: 'Bu planı yalnız admin və ya planı yaradan istifadəçi kilidləyə bilər.',
-    success: false,
+  if (!isAdmin && !isCreator) {
+    return {
+      error: 'Bu planı yalnız admin və ya planı yaradan istifadəçi kilidləyə bilər.',
+      success: false,
+    }
   }
-}
 
   const payload =
     lockType === 'none'
       ? {
-          locked_edit: false,
-          locked_view: false,
-          locked_by: null,
-          locked_at: null,
-        }
+        locked_edit: false,
+        locked_view: false,
+        locked_by: null,
+        locked_at: null,
+      }
       : lockType === 'edit'
         ? {
-            locked_edit: true,
-            locked_view: false,
-            locked_by: user.id,
-            locked_at: new Date().toISOString(),
-          }
+          locked_edit: true,
+          locked_view: false,
+          locked_by: user.id,
+          locked_at: new Date().toISOString(),
+        }
         : {
-            locked_edit: true,
-            locked_view: true,
-            locked_by: user.id,
-            locked_at: new Date().toISOString(),
-          }
+          locked_edit: true,
+          locked_view: true,
+          locked_by: user.id,
+          locked_at: new Date().toISOString(),
+        }
 
   const { error } = await supabase
     .from('audit_plans')

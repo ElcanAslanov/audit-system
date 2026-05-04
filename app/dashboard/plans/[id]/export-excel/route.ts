@@ -423,18 +423,19 @@ export async function GET(_request: Request, { params }: RouteProps) {
   overviewSheet.mergeCells('A4:B4')
   styleSectionLabel(overviewSheet.getCell('A4'))
 
-  const overviewRows = [
-    ['Plan', plan.title || '-'],
-    ['Şirkət', normalizedCompany?.name || '-'],
-    ['Departament', plan.department || '-'],
-    ['Şablonlar', selectedTemplateNames],
-    ['Seçilmiş bölmələr', selectedSectionNames],
-    ['Status', statusLabel(plan.status)],
-    ['Score', `${plan.score ?? 0}%`],
-    ['Son tarix', formatDate(plan.due_date)],
-    ['Yaradan', creatorProfile?.full_name || '-'],
-    ['Qeydlər', plan.notes || '-'],
-  ]
+const overviewRows = [
+  ['Plan', plan.title || '-'],
+  ['Şirkət', normalizedCompany?.name || '-'],
+  ['Departament', plan.department || '-'],
+  ['Şablonlar', selectedTemplateNames],
+  ['Seçilmiş bölmələr', selectedSectionNames],
+  ['Status', statusLabel(plan.status)],
+  ['Score', `${plan.score ?? 0}%`],
+  ['Başlama tarixi', formatDate(plan.start_date)],
+  ['Son tarix', formatDate(plan.due_date)],
+  ['Yaradan', creatorProfile?.full_name || '-'],
+  ['Qeydlər', plan.notes || '-'],
+]
 
   overviewRows.forEach((row, index) => {
     const rowNumber = 5 + index

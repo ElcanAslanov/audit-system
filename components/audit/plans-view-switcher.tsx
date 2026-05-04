@@ -24,6 +24,20 @@ function lockClass(plan: any) {
   return 'bg-emerald-50 text-emerald-700'
 }
 
+function formatDate(value?: string | null) {
+  if (!value) return '-'
+
+  const raw = String(value)
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
+
+  if (match) {
+    const [, year, month, day] = match
+    return `${day}.${month}.${year}`
+  }
+
+  return raw
+}
+
 type Props = {
   plans: any[]
   canCreatePlan: boolean
@@ -56,11 +70,10 @@ export default function PlansViewSwitcher({
           <button
             type="button"
             onClick={() => setView('cards')}
-            className={`rounded-xl px-4 py-2 text-center transition ${
-              view === 'cards'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-white'
-            }`}
+            className={`rounded-xl px-4 py-2 text-center transition ${view === 'cards'
+              ? 'bg-slate-900 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-white'
+              }`}
           >
             Kart
           </button>
@@ -68,11 +81,10 @@ export default function PlansViewSwitcher({
           <button
             type="button"
             onClick={() => setView('table')}
-            className={`rounded-xl px-4 py-2 text-center transition ${
-              view === 'table'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-white'
-            }`}
+            className={`rounded-xl px-4 py-2 text-center transition ${view === 'table'
+              ? 'bg-slate-900 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-white'
+              }`}
           >
             Tablo
           </button>
@@ -132,6 +144,9 @@ export default function PlansViewSwitcher({
                     Score
                   </th>
                   <th className="px-4 py-3 text-left font-black text-slate-600">
+                    Başlama
+                  </th>
+                  <th className="px-4 py-3 text-left font-black text-slate-600">
                     Deadline
                   </th>
                   <th className="px-4 py-3 text-right font-black text-slate-600">
@@ -189,7 +204,11 @@ export default function PlansViewSwitcher({
                       </td>
 
                       <td className="px-4 py-3 text-slate-700">
-                        {plan.due_date || '-'}
+                       {formatDate(plan.start_date)}
+                      </td>
+
+                      <td className="px-4 py-3 text-slate-700">
+                        {formatDate(plan.due_date)}
                       </td>
 
                       <td className="px-4 py-3">

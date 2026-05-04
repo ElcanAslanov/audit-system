@@ -28,6 +28,7 @@ export default function CreatePlanForm({
   const [selectedCompanyId, setSelectedCompanyId] = useState('')
   const [selectedDepartmentName, setSelectedDepartmentName] = useState('')
   const [dueDateDisplay, setDueDateDisplay] = useState('')
+  const [startDateDisplay, setStartDateDisplay] = useState('')
 
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([])
   const [selectedSectionIds, setSelectedSectionIds] = useState<Record<string, string[]>>({})
@@ -41,6 +42,7 @@ export default function CreatePlanForm({
     setSelectedCompanyId('')
     setSelectedDepartmentName('')
     setDueDateDisplay('')
+    setStartDateDisplay('')
     setSelectedTemplateIds([])
     setSelectedSectionIds({})
     router.refresh()
@@ -99,21 +101,21 @@ export default function CreatePlanForm({
   }
 
   function formatDateInput(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 8)
+    const digits = value.replace(/\D/g, '').slice(0, 8)
 
-  if (digits.length <= 2) return digits
-  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+    if (digits.length <= 2) return digits
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
 
-  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
-}
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+  }
 
-function displayDateToIso(value: string) {
-  const [day, month, year] = value.split('/')
+  function displayDateToIso(value: string) {
+    const [day, month, year] = value.split('/')
 
-  if (!day || !month || !year || year.length !== 4) return ''
+    if (!day || !month || !year || year.length !== 4) return ''
 
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-}
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  }
 
   function toggleSection(templateId: string, sectionId: string, checked: boolean) {
     setSelectedSectionIds((prev) => {
@@ -157,33 +159,59 @@ function displayDateToIso(value: string) {
               />
             </div>
 
+            <div>
+              <label className="mb-1 block text-sm font-bold text-slate-700">
+                Başlama tarixi
+              </label>
+
+              <input
+                type="hidden"
+                name="start_date"
+                value={displayDateToIso(startDateDisplay)}
+              />
+
+              <input
+                type="text"
+                inputMode="numeric"
+                value={startDateDisplay}
+                onChange={(e) => setStartDateDisplay(formatDateInput(e.target.value))}
+                maxLength={10}
+                placeholder="GG/AA/İİİİ"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
+              />
+
+              <p className="mt-1 text-xs text-slate-500">
+                Məsələn: 01/03/2026
+              </p>
+            </div>
 
 
-         <div>
-  <label className="mb-1 block text-sm font-bold text-slate-700">
-    Son tarix
-  </label>
 
-  <input
-    type="hidden"
-    name="due_date"
-    value={displayDateToIso(dueDateDisplay)}
-  />
+            <div>
+              <label className="mb-1 block text-sm font-bold text-slate-700">
+                Son tarix
+              </label>
 
-  <input
-    type="text"
-    inputMode="numeric"
-    value={dueDateDisplay}
-    onChange={(e) => setDueDateDisplay(formatDateInput(e.target.value))}
-    placeholder="GG/AA/İİİİ"
-    maxLength={10}
-    className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
-  />
+              <input
+                type="hidden"
+                name="due_date"
+                value={displayDateToIso(dueDateDisplay)}
+              />              
 
-  <p className="mt-1 text-xs text-slate-500">
-    Məsələn: 31/12/2026
-  </p>
-</div>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={dueDateDisplay}
+                onChange={(e) => setDueDateDisplay(formatDateInput(e.target.value))}
+                placeholder="GG/AA/İİİİ"
+                maxLength={10}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
+              />
+
+              <p className="mt-1 text-xs text-slate-500">
+                Məsələn: 31/12/2026
+              </p>
+            </div>
 
             <div>
               <label className="mb-1 block text-sm font-bold text-slate-700">
@@ -402,11 +430,11 @@ function displayDateToIso(value: string) {
                     value={a.id}
                     className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
-                <div className="min-w-0">
-  <p className="truncate text-sm font-semibold text-slate-700">
-    {a.full_name}
-  </p>
-</div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-700">
+                      {a.full_name}
+                    </p>
+                  </div>
                 </label>
               ))
             ) : (

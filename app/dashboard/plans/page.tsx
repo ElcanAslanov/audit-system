@@ -29,6 +29,20 @@ function statusLabel(value?: string | null) {
   return value || '-'
 }
 
+function formatDate(value?: string | null) {
+  if (!value) return '-'
+
+  const raw = String(value)
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
+
+  if (match) {
+    const [, year, month, day] = match
+    return `${day}.${month}.${year}`
+  }
+
+  return raw
+}
+
 
 export default async function PlansPage({ searchParams }: PageProps) {
   const params = await searchParams
@@ -140,11 +154,11 @@ export default async function PlansPage({ searchParams }: PageProps) {
   }))
 
   const plansByDeadline = [...normalizedPlans].sort((a: any, b: any) => {
-  const aTime = a.due_date ? new Date(a.due_date).getTime() : Number.MAX_SAFE_INTEGER
-  const bTime = b.due_date ? new Date(b.due_date).getTime() : Number.MAX_SAFE_INTEGER
+    const aTime = a.due_date ? new Date(a.due_date).getTime() : Number.MAX_SAFE_INTEGER
+    const bTime = b.due_date ? new Date(b.due_date).getTime() : Number.MAX_SAFE_INTEGER
 
-  return aTime - bTime
-})
+    return aTime - bTime
+  })
 
   const completedCount = normalizedPlans.filter(
     (plan: any) => plan.status === 'tamamlandi'
@@ -166,7 +180,7 @@ export default async function PlansPage({ searchParams }: PageProps) {
   const canCreatePlan =
     role === 'admin' || role === 'rehber' || role === 'audit_muavini'
 
- 
+
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -362,126 +376,131 @@ export default async function PlansPage({ searchParams }: PageProps) {
           )}
         </section>
 
-   <PlansViewSwitcher
-  plans={normalizedPlans}
-  canCreatePlan={canCreatePlan}
-  currentUserId={user.id}
-  currentUserRole={role || undefined}
-/>
+        <PlansViewSwitcher
+          plans={normalizedPlans}
+          canCreatePlan={canCreatePlan}
+          currentUserId={user.id}
+          currentUserRole={role || undefined}
+        />
 
         <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-  <div className="mb-4 flex flex-col gap-2 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <h2 className="text-lg font-black text-slate-950">
-        Deadline sıralaması
-      </h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Planlar son tarixə görə yaxından uzağa sıralanır.
-      </p>
-    </div>
+          <div className="mb-4 flex flex-col gap-2 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-black text-slate-950">
+                Deadline sıralaması
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Planlar son tarixə görə yaxından uzağa sıralanır.
+              </p>
+            </div>
 
-    <span className="w-fit rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-yellow-700">
-      Yaxın tarix → uzaq tarix
-    </span>
-  </div>
+            <span className="w-fit rounded-full bg-yellow-50 px-3 py-1 text-xs font-black text-yellow-700">
+              Yaxın tarix → uzaq tarix
+            </span>
+          </div>
 
-  <div className="overflow-hidden rounded-2xl border border-slate-200">
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-50">
-          <tr>
-            <th className="px-4 py-3 text-left font-black text-slate-600">
-              #
-            </th>
-            <th className="px-4 py-3 text-left font-black text-slate-600">
-              Plan
-            </th>
-            <th className="px-4 py-3 text-left font-black text-slate-600">
-              Şirkət
-            </th>
-            <th className="px-4 py-3 text-left font-black text-slate-600">
-              Departament
-            </th>
-            <th className="px-4 py-3 text-left font-black text-slate-600">
-              Deadline
-            </th>
-            <th className="px-4 py-3 text-left font-black text-slate-600">
-              Status
-            </th>
-            <th className="px-4 py-3 text-right font-black text-slate-600">
-              Bax
-            </th>
-          </tr>
-        </thead>
+          <div className="overflow-hidden rounded-2xl border border-slate-200">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-black text-slate-600">
+                      #
+                    </th>
+                    <th className="px-4 py-3 text-left font-black text-slate-600">
+                      Plan
+                    </th>
+                    <th className="px-4 py-3 text-left font-black text-slate-600">
+                      Şirkət
+                    </th>
+                    <th className="px-4 py-3 text-left font-black text-slate-600">
+                      Departament
+                    </th>
+                    <th className="px-4 py-3 text-left font-black text-slate-600">
+                      Başlama tarixi
+                    </th>
+                    <th className="px-4 py-3 text-left font-black text-slate-600">
+                      Deadline
+                    </th>
+                    <th className="px-4 py-3 text-left font-black text-slate-600">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-right font-black text-slate-600">
+                      Bax
+                    </th>
+                  </tr>
+                </thead>
 
-        <tbody className="divide-y divide-slate-100 bg-white">
-          {plansByDeadline.length === 0 && (
-            <tr>
-              <td
-                colSpan={7}
-                className="px-4 py-8 text-center text-sm text-slate-500"
-              >
-                Deadline üzrə göstəriləcək plan yoxdur.
-              </td>
-            </tr>
-          )}
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {plansByDeadline.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-4 py-8 text-center text-sm text-slate-500"
+                      >
+                        Deadline üzrə göstəriləcək plan yoxdur.
+                      </td>
+                    </tr>
+                  )}
 
-          {plansByDeadline.map((plan: any, index: number) => (
-            <tr key={plan.id} className="transition hover:bg-slate-50">
-              <td className="px-4 py-3 font-bold text-slate-500">
-                {index + 1}
-              </td>
+                  {plansByDeadline.map((plan: any, index: number) => (
+                    <tr key={plan.id} className="transition hover:bg-slate-50">
+                      <td className="px-4 py-3 font-bold text-slate-500">
+                        {index + 1}
+                      </td>
 
-              <td className="px-4 py-3">
-                <Link
-                  href={`/dashboard/plans/${plan.id}`}
-                  className="font-black text-slate-900 hover:text-blue-600"
-                >
-                  {plan.title}
-                </Link>
-              </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/dashboard/plans/${plan.id}`}
+                          className="font-black text-slate-900 hover:text-blue-600"
+                        >
+                          {plan.title}
+                        </Link>
+                      </td>
 
-              <td className="px-4 py-3 text-slate-700">
-                {plan.companies?.name || '-'}
-              </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {plan.companies?.name || '-'}
+                      </td>
 
-              <td className="px-4 py-3 text-slate-700">
-                {plan.department || '-'}
-              </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {plan.department || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {formatDate(plan.start_date)}
+                      </td>
 
-              <td className="px-4 py-3">
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-black ${
-                    plan.due_date
-                      ? 'bg-yellow-50 text-yellow-700'
-                      : 'bg-slate-100 text-slate-500'
-                  }`}
-                >
-                  {plan.due_date || 'Son tarix yoxdur'}
-                </span>
-              </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-black ${plan.due_date
+                            ? 'bg-yellow-50 text-yellow-700'
+                            : 'bg-slate-100 text-slate-500'
+                            }`}
+                        >
+                          {plan.due_date ? formatDate(plan.due_date) : 'Son tarix yoxdur'}
+                        </span>
+                      </td>
 
-              <td className="px-4 py-3">
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
-                  {statusLabel(plan.status)}
-                </span>
-              </td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
+                          {statusLabel(plan.status)}
+                        </span>
+                      </td>
 
-              <td className="px-4 py-3 text-right">
-                <Link
-                  href={`/dashboard/plans/${plan.id}`}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Bax
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          href={`/dashboard/plans/${plan.id}`}
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          Bax
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   )
