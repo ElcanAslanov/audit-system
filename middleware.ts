@@ -3,6 +3,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
   let response = NextResponse.next({
     request,
   })
@@ -11,15 +13,6 @@ export async function middleware(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Missing Supabase environment variables in middleware:', {
-      hasUrl: Boolean(supabaseUrl),
-      hasAnonKey: Boolean(supabaseAnonKey),
-    })
-
-    if (request.nextUrl.pathname.startsWith('/dashboard')) {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
-
     return response
   }
 
@@ -44,28 +37,41 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  if (error) {
-    console.error('Middleware auth error:', error.message)
-  }
+    if (!user && pathname.startsWith('/dashboard')) {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/login'
+      redirectUrl.searchParams.set('redirectedFrom', pathname)
 
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
+      return NextResponse.redirect(redirectUrl)
+    }
 
-  if (user && request.nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    if (user && pathname === '/login') {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/dashboard'
+      redirectUrl.search = ''
+
+      return NextResponse.redirect(redirectUrl)
+    }
+  } catch (error) {
+    console.error('Middleware failed:', error)
+
+    if (pathname.startsWith('/dashboard')) {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/login'
+      redirectUrl.search = ''
+
+      return NextResponse.redirect(redirectUrl)
+    }
   }
 
   return response
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js|map)$).*)',
-  ],
+  matcher: ['/dashboard/:path*', '/login'],
 }
