@@ -20,6 +20,93 @@ function sanitizeFilename(filename: string): string {
     .replace(/[^a-z0-9._-]/gi, "")
     .toLowerCase();
 }
+
+async function getCurrentUserProfile(supabase: any, userId: string) {
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('role, company_id')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (error) {
+    return {
+      profile: null,
+      error: error.message,
+    }
+  }
+
+  if (!profile) {
+    return {
+      profile: null,
+      error: 'Profil tapılmadı.',
+    }
+  }
+
+  return {
+    profile: {
+      role: String(profile.role || '').toLowerCase(),
+      company_id: profile.company_id || null,
+    },
+    error: null,
+  }
+}
+
+async function validateAuditMuaviniAssignments(
+  supabase: any,
+  currentUserId: string,
+  assignedIds: string[]
+) {
+  const current = await getCurrentUserProfile(supabase, currentUserId)
+
+  if (current.error) {
+    return { error: current.error }
+  }
+
+  const role = current.profile?.role
+  const companyId = current.profile?.company_id
+
+  if (role !== 'audit_muavini') {
+    return { error: null }
+  }
+
+  const uniqueAssignedIds = Array.from(new Set(assignedIds.filter(Boolean)))
+
+  if (uniqueAssignedIds.length === 0) {
+    return { error: null }
+  }
+
+  if (!companyId) {
+    return {
+      error:
+        'Audit müavininin şirkəti təyin edilməyib. Auditor təyin etmək mümkün deyil.',
+    }
+  }
+
+  const { data: allowedAuditors, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('role', 'auditor')
+    .eq('company_id', companyId)
+    .in('id', uniqueAssignedIds)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  const allowedIds = new Set((allowedAuditors || []).map((item: any) => item.id))
+
+  const invalidAssignedIds = uniqueAssignedIds.filter((id) => !allowedIds.has(id))
+
+  if (invalidAssignedIds.length > 0) {
+    return {
+      error:
+        'Audit müavini yalnız öz şirkətinə aid auditorları təyin edə bilər.',
+    }
+  }
+
+  return { error: null }
+}
+
 async function getCurrentProfileRole(supabase: any, userId: string) {
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -115,6 +202,19 @@ if (isObserverRole(currentRole.role)) {
     return { error: 'Ən azı 1 şablon bölməsi seçilməlidir.', success: false }
   }
 
+  const assignedIds = formData.getAll('assigned_to') as string[]
+
+const assignmentValidation = await validateAuditMuaviniAssignments(
+  supabase,
+  user.id,
+  assignedIds
+
+)
+
+if (assignmentValidation.error) {
+  return { error: assignmentValidation.error, success: false }
+}
+
   let fileUrl: string | null = null
   const file = formData.get('file') as File | null
 
@@ -190,14 +290,24 @@ if (isObserverRole(currentRole.role)) {
       throw new Error('Seçilmiş bölmələr tapılmadı.')
     }
 
-    const assignedIds = formData.getAll('assigned_to') as string[]
+    
 
-    const assignments = Array.from(new Set(assignedIds.filter(Boolean))).map(
-      (id) => ({
-        plan_id: plan.id,
-        user_id: id,
-      })
-    )
+const assignmentValidation = await validateAuditMuaviniAssignments(
+  supabase,
+  user.id,
+  assignedIds
+)
+
+if (assignmentValidation.error) {
+  throw new Error(assignmentValidation.error)
+}
+
+const assignments = Array.from(new Set(assignedIds.filter(Boolean))).map(
+  (id) => ({
+    plan_id: plan.id,
+    user_id: id,
+  })
+)
 
     const insertTasks = [
       supabase.from('audit_plan_templates').insert(planTemplates),
@@ -1487,6 +1597,16 @@ if (String(profile?.role || '').toLowerCase() === 'musahideci') {
   const templateIds = formData.getAll('template_ids') as string[]
   const selectedSectionIds = formData.getAll('template_section_ids') as string[]
   const assignedIds = formData.getAll('assigned_to') as string[]
+
+  const assignmentValidation = await validateAuditMuaviniAssignments(
+  supabase,
+  user.id,
+  assignedIds
+)
+
+if (assignmentValidation.error) {
+  return { error: assignmentValidation.error, success: false }
+}
 
   const validStartDate =
     !startDate || /^\d{4}-\d{2}-\d{2}$/.test(startDate)

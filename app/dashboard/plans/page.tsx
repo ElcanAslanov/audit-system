@@ -65,11 +65,11 @@ export default async function PlansPage({ searchParams }: PageProps) {
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('role, company_id')
+  .eq('id', user.id)
+  .single()
 
   const role = profile?.role
 
@@ -108,9 +108,9 @@ const canViewAllPlans = isAdmin || isMusahideci
     )
   }
 
-  const { data: allProfiles } = await supabase
-    .from('profiles')
-    .select('id, full_name, role')
+const { data: allProfiles } = await supabase
+  .from('profiles')
+  .select('id, full_name, role, company_id')
 
   const { data: companies } = await supabase
     .from('companies')
@@ -135,15 +135,19 @@ const canViewAllPlans = isAdmin || isMusahideci
   `)
     .order('title', { ascending: true })
 
-  let assignableUsers: any[] = []
+ let assignableUsers: any[] = []
 
-  if (allProfiles) {
-    if (role === 'audit_muavini') {
-      assignableUsers = allProfiles.filter((p: any) => p.role === 'auditor')
-    } else if (role === 'admin' || role === 'rehber') {
-      assignableUsers = allProfiles.filter((p: any) => p.role !== 'admin')
-    }
+if (allProfiles) {
+  if (role === 'audit_muavini') {
+    assignableUsers = allProfiles.filter(
+      (p: any) =>
+        p.role === 'auditor' &&
+        String(p.company_id || '') === String(profile.company_id || '')
+    )
+  } else if (role === 'admin' || role === 'rehber') {
+    assignableUsers = allProfiles.filter((p: any) => p.role !== 'admin')
   }
+}
 
   let planQuery = supabase
     .from('audit_plans')
