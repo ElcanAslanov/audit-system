@@ -105,7 +105,7 @@ export default async function FindingsPage({ searchParams }: PageProps) {
   if (error) {
     return (
       <div className="p-4 text-red-600 sm:p-6 lg:p-8">
-        Tapıntılar yüklənərkən xəta: {error.message}
+        Çatışmazlıqlar yüklənərkən xəta: {error.message}
       </div>
     )
   }
@@ -148,10 +148,10 @@ export default async function FindingsPage({ searchParams }: PageProps) {
       <div className="flex flex-col gap-4 border-b pb-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">
-            Tapıntılar
+            Çatışmazlıqlar
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-500">
-            Audit zamanı aşkarlanan tapıntıları izləyin, filterləyin və
+            Audit zamanı aşkarlanan çatışmazlıqları izləyin, filterləyin və
             statuslarını yeniləyin.
           </p>
         </div>
@@ -166,7 +166,7 @@ export default async function FindingsPage({ searchParams }: PageProps) {
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-semibold text-slate-500">Ümumi tapıntı</p>
+          <p className="text-sm font-semibold text-slate-500">Ümumi çatışmazlıq</p>
           <p className="mt-2 text-3xl font-black text-slate-900">
             {normalizedFindings.length}
           </p>
@@ -203,7 +203,7 @@ export default async function FindingsPage({ searchParams }: PageProps) {
         <div className="mb-5 border-b pb-4">
           <h2 className="text-xl font-bold text-slate-900">Filterlər</h2>
           <p className="text-sm text-slate-500">
-            Tapıntıları status, risk və axtarışa görə süzün.
+            çatışmazlıqları status, risk və axtarışa görə süzün.
           </p>
         </div>
 
@@ -314,10 +314,10 @@ export default async function FindingsPage({ searchParams }: PageProps) {
         <div className="flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-bold text-slate-900">
-              Tapıntı siyahısı
+              Çatışmazlıq siyahısı
             </h2>
             <p className="text-sm text-slate-500">
-              Açıq tapıntılar: {openCount}
+              Açıq çatışmazlıqlar: {openCount}
             </p>
           </div>
         </div>
@@ -325,7 +325,7 @@ export default async function FindingsPage({ searchParams }: PageProps) {
         <div className="mt-5 grid grid-cols-1 gap-4">
           {normalizedFindings.length === 0 && (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
-              Seçilmiş filterlərə uyğun tapıntı yoxdur.
+              Seçilmiş filterlərə uyğun çatışmazlıq yoxdur.
             </div>
           )}
 
@@ -351,7 +351,7 @@ export default async function FindingsPage({ searchParams }: PageProps) {
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-xs font-bold uppercase text-slate-400">
-                          Tapıntı #{index + 1}
+                          Çatışmazlıq #{index + 1}
                         </p>
 
                         <h3 className="mt-1 text-lg font-extrabold text-slate-900">

@@ -86,7 +86,7 @@ export default function FindingFileDeleteButton({
                     Fayl silinsin?
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Bu fayl tapıntıdan silinəcək. Tapıntının özü qalacaq.
+                    Bu fayl çatışmazlıqdan silinəcək. çatışmazlıqnın özü qalacaq.
                   </p>
 
                   {fileName && (

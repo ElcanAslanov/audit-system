@@ -16,7 +16,22 @@ export default async function TemplateEditPage({ params }: PageProps) {
   } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('role')
+  .eq('id', user.id)
+  .maybeSingle()
 
+const role = String(profile?.role || '').toLowerCase()
+const canManageTemplates = ['admin', 'rehber', 'audit_muavini'].includes(role)
+
+if (!profile || !canManageTemplates) {
+  return (
+    <div className="p-4 text-red-600 sm:p-6 lg:p-8">
+      Bu səhifəyə giriş icazəniz yoxdur.
+    </div>
+  )
+}
   const { data: template, error } = await supabase
     .from('audit_templates')
     .select(`

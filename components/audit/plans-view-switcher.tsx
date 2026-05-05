@@ -6,6 +6,7 @@ import PlanCard from '@/components/audit/plan-card'
 import PlanAccessButton from '@/components/audit/plan-access-button'
 import PlanLockButton from '@/components/audit/plan-lock-button'
 import PlanDeleteButton from '@/components/audit/plan-delete-button'
+import PlanEditButton from '@/components/audit/plan-edit-button'
 import { ClipboardCheck } from 'lucide-react'
 
 function statusLabel(value?: string | null) {
@@ -44,17 +45,28 @@ function formatDate(value?: string | null) {
 type Props = {
   plans: any[]
   allUsers: any[]
+  auditors: any[]
+  companies: any[]
+  departments: any[]
+  templates: any[]
   canCreatePlan: boolean
   currentUserId: string
   currentUserRole?: string | null
+   isReadOnlyObserver?: boolean
 }
 
 export default function PlansViewSwitcher({
   plans,
   allUsers,
+  auditors,
+  companies,
+  departments,
+  templates,
   canCreatePlan,
   currentUserId,
   currentUserRole,
+    isReadOnlyObserver = false,
+
 }: Props) {
   const [view, setView] = useState<'cards' | 'table'>('cards')
 
@@ -71,7 +83,8 @@ export default function PlansViewSwitcher({
     window.localStorage.setItem('plans-view-mode', nextView)
   }
   const safeCurrentUserRole = currentUserRole || undefined
-
+const isObserver =
+  isReadOnlyObserver || String(safeCurrentUserRole || '').toLowerCase() === 'musahideci'
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
@@ -87,8 +100,8 @@ export default function PlansViewSwitcher({
             type="button"
             onClick={() => changeView('cards')}
             className={`rounded-xl px-4 py-2 text-center transition ${view === 'cards'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-white'
+              ? 'bg-slate-900 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-white'
               }`}
           >
             Kart
@@ -98,8 +111,8 @@ export default function PlansViewSwitcher({
             type="button"
             onClick={() => changeView('table')}
             className={`rounded-xl px-4 py-2 text-center transition ${view === 'table'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-white'
+              ? 'bg-slate-900 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-white'
               }`}
           >
             Tablo
@@ -130,9 +143,15 @@ export default function PlansViewSwitcher({
               key={plan.id}
               plan={plan}
               allUsers={allUsers}
+              auditors={auditors}
+              companies={companies}
+              departments={departments}
+              templates={templates}
               canCreatePlan={canCreatePlan}
               currentUserId={currentUserId}
               currentUserRole={safeCurrentUserRole}
+                isReadOnlyObserver={isObserver}
+
             />
           ))}
         </div>
@@ -176,10 +195,14 @@ export default function PlansViewSwitcher({
 
               <tbody className="divide-y divide-slate-100 bg-white">
                 {plans.map((plan: any) => {
-        const isAdmin = safeCurrentUserRole === 'admin'
+                 const isAdmin = safeCurrentUserRole === 'admin'
 const isCreator = plan.created_by === currentUserId
-const canManageLock = isAdmin || isCreator
-const canManageAccess = isAdmin || isCreator
+
+const canManageLock = !isObserver && (isAdmin || isCreator)
+const canManageAccess = !isObserver && (isAdmin || isCreator)
+const canManagePlan = !isObserver && (isAdmin || isCreator)
+const canFillPlan = !isObserver && !plan.locked_edit
+const canDeletePlan = !isObserver && canCreatePlan
 
                   return (
                     <tr key={plan.id} className="transition hover:bg-slate-50">
@@ -235,21 +258,39 @@ const canManageAccess = isAdmin || isCreator
 
                       <td className="px-4 py-3 align-top">
                         <div className="flex flex-wrap justify-end gap-2">
-                         {canManageAccess && (
-  <div
-    onClick={(event) => {
-      event.preventDefault()
-      event.stopPropagation()
-    }}
-  >
-    <PlanAccessButton
-      plan={plan}
-      allUsers={allUsers}
-      currentUserId={currentUserId}
-      currentUserRole={safeCurrentUserRole}
-    />
-  </div>
-)}
+                          {canManageAccess && (
+                            <div
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                              }}
+                            >
+                              <PlanAccessButton
+                                plan={plan}
+                                allUsers={allUsers}
+                                currentUserId={currentUserId}
+                                currentUserRole={safeCurrentUserRole}
+                              />
+                            </div>
+                          )}
+
+                          {canManagePlan && (
+                            <div
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                              }}
+                            >
+                              <PlanEditButton
+                                plan={plan}
+                                companies={companies}
+                                departments={departments}
+                                auditors={auditors}
+                                templates={templates}
+                                compact
+                              />
+                            </div>
+                          )}
 
                           <Link
                             href={`/dashboard/plans/${plan.id}`}
@@ -259,15 +300,15 @@ const canManageAccess = isAdmin || isCreator
                             Bax
                           </Link>
 
-                          {!plan.locked_edit && (
-                            <Link
-                              href={`/dashboard/plans/${plan.id}/fill`}
-                              onClick={(event) => event.stopPropagation()}
-                              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700"
-                            >
-                              Doldur
-                            </Link>
-                          )}
+                         {canFillPlan && (
+  <Link
+    href={`/dashboard/plans/${plan.id}/fill`}
+    onClick={(event) => event.stopPropagation()}
+    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700"
+  >
+    Doldur
+  </Link>
+)}
 
                           {canManageLock && (
                             <div
@@ -285,16 +326,16 @@ const canManageAccess = isAdmin || isCreator
                             </div>
                           )}
 
-                          {canCreatePlan && (
-                            <div
-                              onClick={(event) => {
-                                event.preventDefault()
-                                event.stopPropagation()
-                              }}
-                            >
-                              <PlanDeleteButton planId={plan.id} />
-                            </div>
-                          )}
+                         {canDeletePlan && (
+  <div
+    onClick={(event) => {
+      event.preventDefault()
+      event.stopPropagation()
+    }}
+  >
+    <PlanDeleteButton planId={plan.id} />
+  </div>
+)}
                         </div>
                       </td>
                     </tr>

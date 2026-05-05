@@ -15,7 +15,23 @@ export default async function TemplateDetailPage({ params }: PageProps) {
   } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('role')
+  .eq('id', user.id)
+  .maybeSingle()
 
+const role = String(profile?.role || '').toLowerCase()
+const canViewTemplates = ['admin', 'rehber', 'audit_muavini', 'musahideci'].includes(role)
+const canManageTemplates = ['admin', 'rehber', 'audit_muavini'].includes(role)
+
+if (!profile || !canViewTemplates) {
+  return (
+    <div className="p-4 text-red-600 sm:p-6 lg:p-8">
+      Bu səhifəyə giriş icazəniz yoxdur.
+    </div>
+  )
+}
   const { data: template, error } = await supabase
     .from('audit_templates')
     .select(`
@@ -86,12 +102,14 @@ export default async function TemplateDetailPage({ params }: PageProps) {
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Link
-            href={`/dashboard/admin/templates/${id}/edit`}
-            className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
-          >
-            Redaktə et
-          </Link>
+         {canManageTemplates && (
+  <Link
+    href={`/dashboard/admin/templates/${id}/edit`}
+    className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
+  >
+    Redaktə et
+  </Link>
+)}
 
           <Link
             href="/dashboard/admin/templates"

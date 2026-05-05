@@ -34,7 +34,7 @@ export default function RiskSummary({
 
         <div>
           <h2 className="text-xl font-black text-slate-950">
-            Tapıntı riskləri
+            Çatışmazlıq riskləri
           </h2>
           <p className="mt-1 text-sm leading-6 text-slate-500">
             Risk səviyyələri və icra vəziyyəti üzrə ümumi baxış
@@ -102,7 +102,7 @@ export default function RiskSummary({
               Həll olunma göstəricisi
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Həll olunan tapıntılar / ümumi statuslu tapıntılar
+              Həll olunan çatışmazlıqlar / ümumi statuslu çatışmazlıqlar
             </p>
           </div>
 
@@ -123,7 +123,7 @@ export default function RiskSummary({
         <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm text-slate-500">Açıq tapıntılar</p>
+              <p className="text-sm text-slate-500">Açıq çatışmazlıqlar</p>
               <p className="mt-1 text-2xl font-black text-slate-950">
                 {summary.open}
               </p>
@@ -154,7 +154,7 @@ export default function RiskSummary({
       {totalRisk === 0 && (
         <div className="mt-4 rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center">
           <p className="text-sm font-semibold text-slate-500">
-            Hələ risk tapıntısı yoxdur.
+            Hələ risk çatışmazlığı yoxdur.
           </p>
         </div>
       )}

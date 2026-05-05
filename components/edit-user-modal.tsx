@@ -15,7 +15,7 @@ import {
 function roleLabel(role?: string | null) {
   if (role === 'admin') return 'Admin'
   if (role === 'rehber') return 'Rəhbər'
-  if (role === 'muavin') return 'Müavin'
+  if (role === 'musahideci') return 'Müşahidəçi'
   if (role === 'audit_muavini') return 'Audit müavini'
   if (role === 'auditor') return 'Auditor'
   return role || '-'
@@ -36,12 +36,12 @@ export default function EditUserModal({
   const [error, setError] = useState<string | null>(null)
 
   const [form, setForm] = useState({
-  full_name: user.full_name || '',
-  email: user.email || '',
-  role: user.role || 'auditor',
-  company_id: user.company_id || '',
-  password: '',
-})
+    full_name: user.full_name || '',
+    email: user.email || '',
+    role: user.role || 'auditor',
+    company_id: user.company_id || '',
+    password: '',
+  })
 
   useEffect(() => {
     setMounted(true)
@@ -91,13 +91,13 @@ export default function EditUserModal({
     }
 
     startTransition(async () => {
-    const result = await updateUserProfile(user.id, {
-  full_name: form.full_name.trim(),
-  email: form.email.trim(),
-  role: form.role,
-  company_id: form.company_id,
-  password: form.password.trim(),
-})
+      const result = await updateUserProfile(user.id, {
+        full_name: form.full_name.trim(),
+        email: form.email.trim(),
+        role: form.role,
+        company_id: form.company_id,
+        password: form.password.trim(),
+      })
 
       if (result?.error) {
         setError(result.error)
@@ -116,17 +116,15 @@ export default function EditUserModal({
         type="button"
         aria-label="Modalı bağla"
         onClick={handleClose}
-        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
-          open ? 'opacity-100' : 'opacity-0'
-        }`}
+        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'
+          }`}
       />
 
       <div
-        className={`relative z-10 w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-all duration-300 ease-out ${
-          open
+        className={`relative z-10 w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-all duration-300 ease-out ${open
             ? 'translate-y-0 scale-100 opacity-100'
             : 'translate-y-4 scale-95 opacity-0'
-        }`}
+          }`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-white p-5 sm:p-6">
           <div>
@@ -211,27 +209,27 @@ export default function EditUserModal({
               </div>
 
               <div className="sm:col-span-2">
-  <label className="mb-1 block text-sm font-bold text-slate-700">
-    Yeni şifrə
-  </label>
+                <label className="mb-1 block text-sm font-bold text-slate-700">
+                  Yeni şifrə
+                </label>
 
-  <input
-    type="password"
-    value={form.password}
-    onChange={(e) =>
-      setForm((prev) => ({
-        ...prev,
-        password: e.target.value,
-      }))
-    }
-    placeholder="Boş saxlanılsa şifrə dəyişməyəcək"
-    className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
-  />
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      password: e.target.value,
+                    }))
+                  }
+                  placeholder="Boş saxlanılsa şifrə dəyişməyəcək"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                />
 
-  <p className="mt-1 text-xs text-slate-500">
-    Şifrəni dəyişmək istəmirsinizsə, bu sahəni boş saxlayın.
-  </p>
-</div>
+                <p className="mt-1 text-xs text-slate-500">
+                  Şifrəni dəyişmək istəmirsinizsə, bu sahəni boş saxlayın.
+                </p>
+              </div>
 
               <div>
                 <label className="mb-1 block text-sm font-bold text-slate-700">
@@ -256,7 +254,7 @@ export default function EditUserModal({
                   >
                     <option value="auditor">Auditor</option>
                     <option value="audit_muavini">Audit müavini</option>
-                    <option value="muavin">Müavin</option>
+                    <option value="musahideci">Müşahidəçi</option>
                     <option value="rehber">Rəhbər</option>
                     <option value="admin">Admin</option>
                   </select>

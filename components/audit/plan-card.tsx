@@ -6,6 +6,7 @@ import { EyeOff, FileText, Lock, PencilLine, PencilOff, X } from 'lucide-react'
 import PlanLockButton from '@/components/audit/plan-lock-button'
 import PlanDeleteButton from '@/components/audit/plan-delete-button'
 import PlanAccessButton from '@/components/audit/plan-access-button'
+import PlanEditButton from '@/components/audit/plan-edit-button'
 
 function statusLabel(value?: string | null) {
   if (value === 'tamamlandi') return 'Tamamlandı'
@@ -62,15 +63,25 @@ function formatDate(value?: string | null) {
 export default function PlanCard({
   plan,
   allUsers = [],
+  auditors = [],
+  companies = [],
+  departments = [],
+  templates = [],
   canCreatePlan,
   currentUserId,
   currentUserRole,
+  isReadOnlyObserver = false,
 }: {
   plan: any
   allUsers?: any[]
+  auditors?: any[]
+  companies?: any[]
+  departments?: any[]
+  templates?: any[]
   canCreatePlan: boolean
   currentUserId: string
   currentUserRole?: string
+  isReadOnlyObserver?: boolean
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -87,16 +98,21 @@ export default function PlanCard({
   const fillButtonLabel = hasAnswers ? 'Redaktə et' : 'Doldur'
   const answerCount = plan.audit_answers?.length || 0
 
-  const isAdmin = currentUserRole === 'admin'
-  const isCreator = plan.created_by === currentUserId
-  const canManageLock = isAdmin || isCreator
-  const canManageAccess = isAdmin || isCreator
+const role = String(currentUserRole || '').toLowerCase()
+const isAdmin = role === 'admin'
+const isObserver = isReadOnlyObserver || role === 'musahideci'
+const isCreator = plan.created_by === currentUserId
 
-  const isEditLocked = Boolean(plan.locked_edit)
-  const isViewLocked = Boolean(plan.locked_view)
+const canManageLock = !isObserver && (isAdmin || isCreator)
+const canManageAccess = !isObserver && (isAdmin || isCreator)
+const canManagePlan = !isObserver && (isAdmin || isCreator)
+const canDeletePlan = !isObserver && canCreatePlan
 
-  const canOpenDetail = !isViewLocked || canManageLock
-  const canOpenFill = !isEditLocked && (!isViewLocked || canManageLock)
+const isEditLocked = Boolean(plan.locked_edit)
+const isViewLocked = Boolean(plan.locked_view)
+
+const canOpenDetail = isObserver || !isViewLocked || canManageLock
+const canOpenFill = !isObserver && !isEditLocked && (!isViewLocked || canManageLock)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -178,24 +194,25 @@ export default function PlanCard({
               </button>
             )}
 
-            {canOpenFill ? (
-              <Link
-                href={`/dashboard/plans/${plan.id}/fill`}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
-              >
-                <PencilLine size={16} />
-                {fillButtonLabel}
-              </Link>
-            ) : (
-              <button
-                type="button"
-                disabled
-                className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-100 px-3 py-2.5 text-sm font-bold text-slate-400"
-              >
-                <PencilOff size={16} />
-                Redaktə kilidli
-              </button>
-            )}
+           {!isObserver &&
+  (canOpenFill ? (
+    <Link
+      href={`/dashboard/plans/${plan.id}/fill`}
+      className="flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
+    >
+      <PencilLine size={16} />
+      {fillButtonLabel}
+    </Link>
+  ) : (
+    <button
+      type="button"
+      disabled
+      className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-100 px-3 py-2.5 text-sm font-bold text-slate-400"
+    >
+      <PencilOff size={16} />
+      Redaktə kilidli
+    </button>
+  ))}
           </div>
         </div>
       )}
@@ -231,6 +248,19 @@ export default function PlanCard({
                 />
               </div>
             )}
+
+            {canManagePlan && (
+  <div onClick={(e) => e.stopPropagation()}>
+    <PlanEditButton
+      plan={plan}
+      companies={companies}
+      departments={departments}
+      auditors={auditors}
+      templates={templates}
+      compact
+    />
+  </div>
+)}
 
             {canManageLock && (
               <div onClick={(e) => e.stopPropagation()}>
@@ -291,7 +321,7 @@ export default function PlanCard({
         </div>
 
         <div className="mt-auto pt-4" onClick={(e) => e.stopPropagation()}>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+         <div className={`grid gap-2 ${isObserver ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
             {canOpenDetail ? (
               <Link
                 href={`/dashboard/plans/${plan.id}`}
@@ -311,24 +341,25 @@ export default function PlanCard({
               </button>
             )}
 
-            {canOpenFill ? (
-              <Link
-                href={`/dashboard/plans/${plan.id}/fill`}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
-              >
-                <PencilLine size={16} />
-                {fillButtonLabel}
-              </Link>
-            ) : (
-              <button
-                type="button"
-                disabled
-                className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-100 px-3 py-2.5 text-sm font-bold text-slate-400"
-              >
-                <PencilOff size={16} />
-                Redaktə kilidli
-              </button>
-            )}
+           {!isObserver &&
+  (canOpenFill ? (
+    <Link
+      href={`/dashboard/plans/${plan.id}/fill`}
+      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
+    >
+      <PencilLine size={16} />
+      {fillButtonLabel}
+    </Link>
+  ) : (
+    <button
+      type="button"
+      disabled
+      className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-100 px-3 py-2.5 text-sm font-bold text-slate-400"
+    >
+      <PencilOff size={16} />
+      Redaktə kilidli
+    </button>
+  ))}
 
             {hasAnswers && canOpenDetail && (
               <Link
@@ -339,7 +370,7 @@ export default function PlanCard({
               </Link>
             )}
 
-            {canCreatePlan && <PlanDeleteButton planId={plan.id} />}
+           {canDeletePlan && <PlanDeleteButton planId={plan.id} />}
 
           </div>
         </div>

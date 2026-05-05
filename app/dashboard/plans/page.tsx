@@ -71,35 +71,36 @@ export default async function PlansPage({ searchParams }: PageProps) {
     .eq('id', user.id)
     .single()
 
-const role = profile?.role
+  const role = profile?.role
 
-const isAdmin = role === 'admin'
+  const isAdmin = role === 'admin'
+const isMusahideci = role === 'musahideci'
+const canViewAllPlans = isAdmin || isMusahideci
+  const { data: assignedRows } = await supabase
+    .from('plan_assignments')
+    .select('plan_id')
+    .eq('user_id', user.id)
 
-const { data: assignedRows } = await supabase
-  .from('plan_assignments')
-  .select('plan_id')
-  .eq('user_id', user.id)
+  const { data: viewerRows } = await supabase
+    .from('audit_plan_viewers')
+    .select('plan_id')
+    .eq('user_id', user.id)
 
-const { data: viewerRows } = await supabase
-  .from('audit_plan_viewers')
-  .select('plan_id')
-  .eq('user_id', user.id)
+  const assignedPlanIds = (assignedRows || [])
+    .map((row: any) => row.plan_id)
+    .filter(Boolean)
 
-const assignedPlanIds = (assignedRows || [])
-  .map((row: any) => row.plan_id)
-  .filter(Boolean)
+  const viewerPlanIds = (viewerRows || [])
+    .map((row: any) => row.plan_id)
+    .filter(Boolean)
 
-const viewerPlanIds = (viewerRows || [])
-  .map((row: any) => row.plan_id)
-  .filter(Boolean)
-
-const visiblePlanIds = Array.from(
-  new Set([...assignedPlanIds, ...viewerPlanIds])
-)
+  const visiblePlanIds = Array.from(
+    new Set([...assignedPlanIds, ...viewerPlanIds])
+  )
 
 
 
-if (!profile) {
+  if (!profile) {
     return (
       <div className="p-4 text-red-600 sm:p-6 lg:p-8">
         Profil tapılmadı.
@@ -150,12 +151,19 @@ if (!profile) {
       `
       *,
       companies(name),
-plan_assignments(user_id, profiles(id, full_name)),
-audit_plan_viewers(
-  user_id,
-  profiles!audit_plan_viewers_user_id_fkey(id, full_name)
-),
-audit_answers(id)
+      plan_assignments(user_id, profiles(id, full_name)),
+      audit_plan_viewers(
+        user_id,
+        profiles!audit_plan_viewers_user_id_fkey(id, full_name)
+      ),
+      audit_answers(id),
+      audit_plan_templates(
+        template_id
+      ),
+      audit_plan_template_sections(
+        template_id,
+        section_id
+      )
     `,
       { count: 'exact' }
     )
@@ -175,11 +183,11 @@ audit_answers(id)
     planQuery = planQuery.or(`title.ilike.%${q}%,department.ilike.%${q}%`)
   }
 
-const { data: rawPlans, error: planError } = await planQuery
+  const { data: rawPlans, error: planError } = await planQuery
 
-let visiblePlans = rawPlans || []
+  let visiblePlans = rawPlans || []
 
-if (!isAdmin) {
+ if (!canViewAllPlans) {
   visiblePlans = visiblePlans.filter((plan: any) => {
     const isCreatedByMe = plan.created_by === user.id
 
@@ -195,9 +203,9 @@ if (!isAdmin) {
   })
 }
 
-const totalPlans = visiblePlans.length
-const totalPages = Math.max(Math.ceil(totalPlans / pageSize), 1)
-const plans = visiblePlans.slice(from, to + 1)
+  const totalPlans = visiblePlans.length
+  const totalPages = Math.max(Math.ceil(totalPlans / pageSize), 1)
+  const plans = visiblePlans.slice(from, to + 1)
 
   const makePageHref = (nextPage: number) => {
     const search = new URLSearchParams()
@@ -252,7 +260,7 @@ const plans = visiblePlans.slice(from, to + 1)
   const hasFilters = Boolean(q || status || companyId)
   const canCreatePlan =
     role === 'admin' || role === 'rehber' || role === 'audit_muavini'
-
+const isReadOnlyObserver = role === 'musahideci'
 
 
   return (
@@ -452,9 +460,14 @@ const plans = visiblePlans.slice(from, to + 1)
         <PlansViewSwitcher
           plans={normalizedPlans}
           allUsers={allProfiles || []}
+          auditors={assignableUsers}
+          companies={companies || []}
+          departments={departments || []}
+          templates={templates || []}
           canCreatePlan={canCreatePlan}
           currentUserId={user.id}
           currentUserRole={role || undefined}
+          isReadOnlyObserver={isReadOnlyObserver}
         />
 
         <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">

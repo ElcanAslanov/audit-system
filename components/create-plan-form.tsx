@@ -353,15 +353,15 @@ export default function CreatePlanForm({
                                   className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition hover:bg-slate-50"
                                 >
                                   <input
-  type="checkbox"
-  name="template_section_ids"
-  value={`${templateId}:${section.id}`}
-  checked={isSectionSelected}
-  onChange={(e) =>
-    toggleSection(templateId, sectionId, e.target.checked)
-  }
-  className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-/>
+                                    type="checkbox"
+                                    name="template_section_ids"
+                                    value={`${templateId}:${section.id}`}
+                                    checked={isSectionSelected}
+                                    onChange={(e) =>
+                                      toggleSection(templateId, sectionId, e.target.checked)
+                                    }
+                                    className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                  />
 
                                   <span className="font-medium text-slate-600">
                                     {section.title || 'Adsız bölmə'}

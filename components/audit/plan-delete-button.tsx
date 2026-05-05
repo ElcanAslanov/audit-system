@@ -93,7 +93,7 @@ export default function PlanDeleteButton({ planId }: { planId: string }) {
                     Audit planı silinsin?
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Bu əməliyyat plana aid cavabları, tapıntıları, təyinatları
+                    Bu əməliyyat plana aid cavabları, çatışmazlıqları, təyinatları
                     və əlavə edilmiş faylı silə bilər. Əməliyyatı geri qaytarmaq
                     mümkün olmayacaq.
                   </p>

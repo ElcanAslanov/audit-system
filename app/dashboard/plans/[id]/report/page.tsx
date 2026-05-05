@@ -348,7 +348,7 @@ if (isViewLocked && !canManageLock) {
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
                   Bu hesabat audit nəticələrinin, checklist cavablarının,
-                  tapıntıların və təsdiq imzalarının ümumi xülasəsini təqdim
+                  çatışmazlıqların və təsdiq imzalarının ümumi xülasəsini təqdim
                   edir.
                 </p>
               </div>
@@ -569,7 +569,7 @@ if (isViewLocked && !canManageLock) {
             <section className={(findings || []).length > 0 ? 'report-page-break-before' : ''}>
               <div className="mb-4">
                 <h2 className="text-xl font-extrabold text-slate-900">
-                  Tapıntılar
+                  Çatışmazlıqlar
                 </h2>
                 <p className="text-sm text-slate-500">
                   Risklər, izahlar və icra statusları
@@ -578,7 +578,7 @@ if (isViewLocked && !canManageLock) {
 
               {(findings || []).length === 0 ? (
                 <p className="rounded-xl border border-slate-200 p-4 text-slate-500">
-                  Tapıntı yoxdur.
+                  Çatışmazlıq yoxdur.
                 </p>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
@@ -590,7 +590,7 @@ if (isViewLocked && !canManageLock) {
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between print:flex-row">
                         <div>
                           <p className="text-xs font-bold uppercase text-slate-400">
-                            Tapıntı #{index + 1}
+                            Çatışmazlıq #{index + 1}
                           </p>
                           <h3 className="mt-1 text-lg font-extrabold text-slate-900">
                             {finding.title}

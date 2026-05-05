@@ -55,7 +55,7 @@ export default function FindingDeleteButton({
     if (isDeleting) return
 
     if (!findingId || !planId) {
-      setError('Tapıntı ID və ya Plan ID tapılmadı.')
+      setError('Çatışmazlıq ID və ya Plan ID tapılmadı.')
       return
     }
 
@@ -75,7 +75,7 @@ export default function FindingDeleteButton({
 setIsDeleting(false)
 onDeleted?.()
     } catch (err: any) {
-      setError(err?.message || 'Tapıntı silinərkən gözlənilməz xəta baş verdi.')
+      setError(err?.message || 'Çatışmazlıq silinərkən gözlənilməz xəta baş verdi.')
       setIsDeleting(false)
     }
   }
@@ -108,15 +108,15 @@ onDeleted?.()
 
                   <div>
                     <p className="text-xs font-black uppercase tracking-wide text-red-500">
-                      Tapıntı silmə
+                      Çatışmazlıq silmə
                     </p>
 
                     <h3 className="mt-1 text-xl font-black text-slate-950">
-                      Tapıntı silinsin?
+                      Çatışmazlıq silinsin?
                     </h3>
 
                     <p className="mt-2 text-sm leading-6 text-slate-500">
-                      Bu tapıntı və ona əlavə edilmiş fayllar silinə bilər. Bu
+                      Bu çatışmazlıq və ona əlavə edilmiş fayllar silinə bilər. Bu
                       əməliyyatı geri qaytarmaq mümkün olmayacaq.
                     </p>
                   </div>

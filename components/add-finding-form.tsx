@@ -62,7 +62,7 @@ export default function AddFindingForm({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-xl font-extrabold text-slate-900">
-              Yeni Tapıntı
+              Yeni Çatışmazlıq
             </h3>
             <p className="mt-1 text-sm text-slate-500">
               Problemli cavab üçün risk, təsvir və cavabdeh şəxs əlavə edin.
@@ -87,7 +87,7 @@ export default function AddFindingForm({
 
       {state.success && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-          Tapıntı uğurla əlavə edildi. Pəncərə bağlanır...
+          Çatışmazlıq uğurla əlavə edildi. Pəncərə bağlanır...
         </div>
       )}
 
@@ -165,7 +165,7 @@ export default function AddFindingForm({
           </select>
 
           <p className="mt-1 text-xs text-slate-500">
-            Tapıntının icrasına məsul şəxsi seçmək üçündür. Boş saxlaya bilərsiniz.
+            Çatışmazlıqnın icrasına məsul şəxsi seçmək üçündür. Boş saxlaya bilərsiniz.
           </p>
         </div>
 
@@ -216,7 +216,7 @@ export default function AddFindingForm({
           disabled={pending || state.success}
           className="inline-flex w-full justify-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300 sm:w-auto"
         >
-          {pending ? 'Əlavə edilir...' : state.success ? 'Əlavə edildi' : 'Tapıntını Əlavə Et'}
+          {pending ? 'Əlavə edilir...' : state.success ? 'Əlavə edildi' : 'Çatışmazlığı Əlavə Et'}
         </button>
       </div>
     </form>

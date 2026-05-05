@@ -104,7 +104,7 @@ export default function AddUserForm({
               <option value="">Rol seçin...</option>
               <option value="admin">Admin</option>
               <option value="rehber">Rəhbər</option>
-              {/* <option value="muavin">Müavin</option> */}
+              <option value="musahideci">Müşahidəçi</option>
               <option value="audit_muavini">Audit müavini</option>
               <option value="auditor">Auditor</option>
             </select>

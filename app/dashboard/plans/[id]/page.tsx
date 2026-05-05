@@ -111,14 +111,17 @@ export default async function AuditDetailPage({ params }: PageProps) {
     .eq('id', user.id)
     .maybeSingle()
 
-  const isAdmin = profile?.role === 'admin'
-  const isCreator = plan.created_by === user.id
-  const canManageLock = isAdmin || isCreator
+  const role = String(profile?.role || '').toLowerCase()
+const isAdmin = role === 'admin'
+const isMusahideci = role === 'musahideci'
+const isCreator = plan.created_by === user.id
+const canManageLock = isAdmin || isCreator
+const canEditAudit = !isMusahideci
 
   const isViewLocked = Boolean(plan.locked_view)
   const isEditLocked = Boolean(plan.locked_edit)
 
-  if (isViewLocked && !canManageLock) {
+ if (isViewLocked && !canManageLock && !isMusahideci) {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700 shadow-sm">
@@ -289,18 +292,18 @@ export default async function AuditDetailPage({ params }: PageProps) {
           </span>
 
           <div className="flex flex-col gap-2 sm:flex-row">
-            {isEditLocked ? (
-              <span className="inline-flex w-full justify-center rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm font-semibold text-yellow-700 sm:w-auto">
-                Redaktə kilidlidir
-              </span>
-            ) : (
-              <Link
-                href={`/dashboard/plans/${id}/fill`}
-                className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
-              >
-                Auditi redaktə et
-              </Link>
-            )}
+           {!canEditAudit ? null : isEditLocked ? (
+  <span className="inline-flex w-full justify-center rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm font-semibold text-yellow-700 sm:w-auto">
+    Redaktə kilidlidir
+  </span>
+) : (
+  <Link
+    href={`/dashboard/plans/${id}/fill`}
+    className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
+  >
+    Auditi redaktə et
+  </Link>
+)}
 
             {hasAnswers ? (
               <>
@@ -595,19 +598,19 @@ export default async function AuditDetailPage({ params }: PageProps) {
               <div>
                 <h2 className="text-lg font-bold text-slate-900">Findings</h2>
                 <p className="text-sm text-slate-500">
-                  Tapıntılar, risklər və icra statusları
+                  Çatışmazlıqlar, risklər və icra statusları
                 </p>
               </div>
 
               <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                {findings?.length || 0} tapıntı
+                {findings?.length || 0} Çatışmazlıq
               </span>
             </div>
 
             <div className="mt-4 space-y-3">
               {(findings || []).length === 0 && (
                 <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-                  Tapıntı yoxdur.
+                  Çatışmazlıq yoxdur.
                 </p>
               )}
 
@@ -619,7 +622,7 @@ export default async function AuditDetailPage({ params }: PageProps) {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-xs font-bold uppercase text-slate-400">
-                        Tapıntı #{index + 1}
+                        Çatışmazlıq #{index + 1}
                       </p>
 
                       <h3 className="mt-1 font-bold text-slate-900">
@@ -645,11 +648,17 @@ export default async function AuditDetailPage({ params }: PageProps) {
                       <p className="mb-1 text-xs font-semibold uppercase text-slate-500">
                         Status
                       </p>
-                      <FindingStatusSelect
-                        findingId={finding.id}
-                        planId={id}
-                        currentStatus={finding.status}
-                      />
+                     {canEditAudit ? (
+  <FindingStatusSelect
+    findingId={finding.id}
+    planId={id}
+    currentStatus={finding.status}
+  />
+) : (
+  <p className="mt-1 font-bold text-slate-900">
+    {finding.status || '-'}
+  </p>
+)}
                     </div>
 
 

@@ -460,7 +460,7 @@ const overviewRows = [
     ['Bəli', yesCount, '#DCFCE7'],
     ['Xeyr / Problem', noCount, '#FEE2E2'],
     ['N/A', naCount, '#F1F5F9'],
-    ['Tapıntılar', findingCount, '#FEF3C7'],
+    ['Çatışmazlıqlar', findingCount, '#FEF3C7'],
     ['High risk', highFindings, '#FEE2E2'],
     ['Medium risk', mediumFindings, '#FEF3C7'],
     ['Low risk', lowFindings, '#DCFCE7'],
@@ -504,7 +504,7 @@ overviewSheet.getCell(`F${rowNumber}`).font = {
 
   const summarySheet = workbook.addWorksheet('Summary')
   setupWorksheet(summarySheet)
-  applyTitle(summarySheet, 'Audit Summary', 'Cavab, risk və tapıntı statistikası', 'C')
+  applyTitle(summarySheet, 'Audit Summary', 'Cavab, risk və çatışmazlıq statistikası', 'C')
 
   summarySheet.columns = [
     { header: 'Metrik', key: 'metric', width: 30 },
@@ -520,10 +520,10 @@ overviewSheet.getCell(`F${rowNumber}`).font = {
     ['Bəli', yesCount, 'Uyğun cavablar'],
     ['Xeyr / Problem', noCount, 'Problemli cavablar'],
     ['N/A', naCount, 'Qiymətləndirməyə daxil edilməyən cavablar'],
-    ['Tapıntılar', findingCount, 'Audit üzrə yaradılmış tapıntılar'],
-    ['High risk', highFindings, 'Yüksək riskli tapıntılar'],
-    ['Medium risk', mediumFindings, 'Orta riskli tapıntılar'],
-    ['Low risk', lowFindings, 'Aşağı riskli tapıntılar'],
+    ['Çatışmazlıqlar', findingCount, 'Audit üzrə yaradılmış çatışmazlıqlar'],
+    ['High risk', highFindings, 'Yüksək riskli çatışmazlıqlar'],
+    ['Medium risk', mediumFindings, 'Orta riskli çatışmazlıqlar'],
+    ['Low risk', lowFindings, 'Aşağı riskli çatışmazlıqlar'],
     ['Final score', `${plan.score ?? 0}%`, statusLabel(plan.status)],
   ]
 
@@ -613,7 +613,7 @@ overviewSheet.getCell(`F${rowNumber}`).font = {
   setupWorksheet(findingsSheet)
   applyTitle(
     findingsSheet,
-    'Tapıntılar',
+    'Çatışmazlıqlar',
     'Risklər, statuslar, cavabdeh şəxslər, son tarix və fayl məlumatları',
     'H'
   )

@@ -20,7 +20,33 @@ function sanitizeFilename(filename: string): string {
     .replace(/[^a-z0-9._-]/gi, "")
     .toLowerCase();
 }
+async function getCurrentProfileRole(supabase: any, userId: string) {
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
 
+  if (error) {
+    return { role: null, error: error.message }
+  }
+
+  return {
+    role: String(profile?.role || '').toLowerCase(),
+    error: null,
+  }
+}
+
+function isObserverRole(role: string | null) {
+  return role === 'musahideci'
+}
+
+function observerReadOnlyError(): ActionState {
+  return {
+    error: 'Müşahidəçi yalnız baxış icazəsinə malikdir.',
+    success: false,
+  }
+}
 // --- 1. Audit Planı Yaratma ---
 export async function createAuditPlan(
   prevState: ActionState | null,
@@ -33,7 +59,15 @@ export async function createAuditPlan(
   } = await supabase.auth.getUser()
 
   if (!user) return { error: 'İstifadəçi tapılmadı', success: false }
+const currentRole = await getCurrentProfileRole(supabase, user.id)
 
+if (currentRole.error) {
+  return { error: currentRole.error, success: false }
+}
+
+if (isObserverRole(currentRole.role)) {
+  return observerReadOnlyError()
+}
   const title = String(formData.get('title') || '').trim()
   const companyId = String(formData.get('company_id') || '')
   const templateIds = formData.getAll('template_ids') as string[]
@@ -205,7 +239,7 @@ export async function createAuditPlan(
   }
 }
 
-// --- 2. Tapıntı (Finding) Əlavə Etmə ---
+// --- 2. çatışmazlıq (Finding) Əlavə Etmə ---
 export async function addFinding(
   prevState: ActionState | null,
   formData: FormData
@@ -219,7 +253,15 @@ export async function addFinding(
   if (!user) {
     return { error: 'İstifadəçi tapılmadı', success: false }
   }
+const currentRole = await getCurrentProfileRole(supabase, user.id)
 
+if (currentRole.error) {
+  return { error: currentRole.error, success: false }
+}
+
+if (isObserverRole(currentRole.role)) {
+  return observerReadOnlyError()
+}
   const planId = String(formData.get('plan_id') || '')
   const questionId = String(formData.get('question_id') || '')
   const questionType = String(formData.get('question_type') || 'template')
@@ -330,7 +372,15 @@ export async function addCustomQuestion(
   if (!user) {
     return { error: 'İstifadəçi tapılmadı.', success: false }
   }
+const currentRole = await getCurrentProfileRole(supabase, user.id)
 
+if (currentRole.error) {
+  return { error: currentRole.error, success: false }
+}
+
+if (isObserverRole(currentRole.role)) {
+  return observerReadOnlyError()
+}
   const planId = String(formData.get('plan_id') || '').trim()
   const questionText = String(formData.get('question_text') || '').trim()
   const rawMaxScore = String(formData.get('max_score') || '10').trim()
@@ -400,8 +450,27 @@ export async function saveAuditAnswers(
   prevState: ActionState | null,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = await createClient()
-  const plan_id = formData.get('plan_id') as string
+const supabase = await createClient()
+
+const {
+  data: { user },
+} = await supabase.auth.getUser()
+
+if (!user) {
+  return { error: 'İstifadəçi tapılmadı.', success: false }
+}
+
+const currentRole = await getCurrentProfileRole(supabase, user.id)
+
+if (currentRole.error) {
+  return { error: currentRole.error, success: false }
+}
+
+if (isObserverRole(currentRole.role)) {
+  return observerReadOnlyError()
+}
+
+const plan_id = formData.get('plan_id') as string
 
   if (!plan_id) {
     return { error: 'Plan ID tapılmadı.', success: false }
@@ -702,7 +771,23 @@ export async function saveAuditAnswers(
 // --- 4. Auditi Tamamla ---
 export async function completeAudit(planId: string): Promise<ActionState> {
   const supabase = await createClient()
+const {
+  data: { user },
+} = await supabase.auth.getUser()
 
+if (!user) {
+  return { error: 'İstifadəçi tapılmadı.', success: false }
+}
+
+const currentRole = await getCurrentProfileRole(supabase, user.id)
+
+if (currentRole.error) {
+  return { error: currentRole.error, success: false }
+}
+
+if (isObserverRole(currentRole.role)) {
+  return observerReadOnlyError()
+}
   if (!planId) {
     return { error: 'Plan ID tapılmadı.', success: false }
   }
@@ -763,7 +848,23 @@ export async function updateFindingStatus(
   planId: string
 ): Promise<ActionState> {
   const supabase = await createClient()
+const {
+  data: { user },
+} = await supabase.auth.getUser()
 
+if (!user) {
+  return { error: 'İstifadəçi tapılmadı.', success: false }
+}
+
+const currentRole = await getCurrentProfileRole(supabase, user.id)
+
+if (currentRole.error) {
+  return { error: currentRole.error, success: false }
+}
+
+if (isObserverRole(currentRole.role)) {
+  return observerReadOnlyError()
+}
   if (!findingId) {
     return { error: 'Finding ID tapılmadı.', success: false }
   }
@@ -779,7 +880,7 @@ export async function updateFindingStatus(
 
   if (error) {
     return {
-      error: 'Tapıntı statusu yenilənmədi: ' + error.message,
+      error: 'Çatışmazlıq statusu yenilənmədi: ' + error.message,
       success: false,
     }
   }
@@ -907,7 +1008,9 @@ export async function updateAuditPlanLock(
   if (profileError) {
     return { error: profileError.message, success: false }
   }
-
+if (String(profile?.role || '').toLowerCase() === 'musahideci') {
+  return observerReadOnlyError()
+}
   if (planError) {
     return { error: planError.message, success: false }
   }
@@ -999,7 +1102,9 @@ export async function addPlanViewer(
     .maybeSingle()
 
   if (profileError) return { error: profileError.message, success: false }
-
+if (String(profile?.role || '').toLowerCase() === 'musahideci') {
+  return observerReadOnlyError()
+}
   const isAdmin = profile?.role === 'admin'
   const isCreator = plan.created_by === user.id
 
@@ -1067,7 +1172,9 @@ export async function removePlanViewer(
     .maybeSingle()
 
   if (profileError) return { error: profileError.message, success: false }
-
+if (String(profile?.role || '').toLowerCase() === 'musahideci') {
+  return observerReadOnlyError()
+}
   const isAdmin = profile?.role === 'admin'
   const isCreator = plan.created_by === user.id
 
@@ -1104,7 +1211,7 @@ export async function deleteFinding(
   const supabase = await createClient()
 
   if (!findingId) {
-    return { error: 'Tapıntı ID tapılmadı.', success: false }
+    return { error: 'Çatışmazlıq ID tapılmadı.', success: false }
   }
 
   if (!planId) {
@@ -1135,7 +1242,7 @@ export async function deleteFinding(
 
   if (plan.locked_edit || plan.locked_view) {
     return {
-      error: 'Bu plan kilidlidir. Tapıntı silmək mümkün deyil.',
+      error: 'Bu plan kilidlidir. çatışmazlıq silmək mümkün deyil.',
       success: false,
     }
   }
@@ -1152,7 +1259,7 @@ export async function deleteFinding(
   }
 
   if (!finding) {
-    return { error: 'Tapıntı tapılmadı.', success: false }
+    return { error: 'Çatışmazlıq tapılmadı.', success: false }
   }
 
 const { data: deletedRows, error: deleteError } = await supabase
@@ -1164,7 +1271,7 @@ const { data: deletedRows, error: deleteError } = await supabase
 
 if (deleteError) {
   return {
-    error: 'Tapıntı silinmədi: ' + deleteError.message,
+    error: 'çatışmazlıq silinmədi: ' + deleteError.message,
     success: false,
   }
 }
@@ -1172,7 +1279,7 @@ if (deleteError) {
 if (!deletedRows || deletedRows.length === 0) {
   return {
     error:
-      'Tapıntı database-dən silinmədi. Böyük ehtimalla Supabase RLS DELETE icazəsi yoxdur.',
+      'Çatışmazlıq database-dən silinmədi. Böyük ehtimalla Supabase RLS DELETE icazəsi yoxdur.',
     success: false,
   }
 }
@@ -1189,7 +1296,7 @@ if (!deletedRows || deletedRows.length === 0) {
       .remove(filePaths)
       .then(({ error }) => {
         if (error) {
-          console.error('Tapıntı faylları storage-dən silinmədi:', error.message)
+          console.error('Çatışmazlıq faylları storage-dən silinmədi:', error.message)
         }
       })
   }
@@ -1212,7 +1319,7 @@ export async function deleteFindingFile(
   const supabase = await createClient()
 
   if (!findingId) {
-    return { error: 'Tapıntı ID tapılmadı.', success: false }
+    return { error: 'Çatışmazlıq ID tapılmadı.', success: false }
   }
 
   if (!planId) {
@@ -1264,7 +1371,7 @@ export async function deleteFindingFile(
   }
 
   if (!finding) {
-    return { error: 'Tapıntı tapılmadı.', success: false }
+    return { error: 'Çatışmazlıq tapılmadı.', success: false }
   }
 
   const oldFiles = Array.isArray((finding as any).files)
@@ -1274,7 +1381,7 @@ export async function deleteFindingFile(
   const fileExists = oldFiles.some((file: any) => file?.path === filePath)
 
   if (!fileExists) {
-    return { error: 'Fayl tapıntıda tapılmadı.', success: false }
+    return { error: 'Fayl çatışmazlıqda tapılmadı.', success: false }
   }
 
   const nextFiles = oldFiles.filter((file: any) => file?.path !== filePath)
@@ -1287,7 +1394,7 @@ export async function deleteFindingFile(
 
   if (updateError) {
     return {
-      error: 'Tapıntı fayl siyahısı yenilənmədi: ' + updateError.message,
+      error: 'Çatışmazlıq fayl siyahısı yenilənmədi: ' + updateError.message,
       success: false,
     }
   }
@@ -1297,7 +1404,7 @@ export async function deleteFindingFile(
     .remove([filePath])
     .then(({ error }) => {
       if (error) {
-        console.error('Tapıntı faylı storage-dən silinmədi:', error.message)
+        console.error('Çatışmazlıq faylı storage-dən silinmədi:', error.message)
       }
     })
 
@@ -1308,4 +1415,284 @@ export async function deleteFindingFile(
   revalidatePath('/dashboard/plans')
 
   return { error: null, success: true }
+}
+
+export async function updateAuditPlan(
+  planId: string,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = await createClient()
+
+  if (!planId) {
+    return { error: 'Plan ID tapılmadı.', success: false }
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'İstifadəçi tapılmadı.', success: false }
+  }
+
+  const { data: plan, error: planError } = await supabase
+    .from('audit_plans')
+    .select('id, created_by, file_url, locked_edit, locked_view')
+    .eq('id', planId)
+    .maybeSingle()
+
+  if (planError) {
+    return { error: planError.message, success: false }
+  }
+
+  if (!plan) {
+    return { error: 'Audit planı tapılmadı.', success: false }
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (profileError) {
+    return { error: profileError.message, success: false }
+  }
+if (String(profile?.role || '').toLowerCase() === 'musahideci') {
+  return observerReadOnlyError()
+}
+  const isAdmin = profile?.role === 'admin'
+  const isCreator = plan.created_by === user.id
+
+  if (!isAdmin && !isCreator) {
+    return {
+      error: 'Bu audit planını yalnız admin və ya planı yaradan redaktə edə bilər.',
+      success: false,
+    }
+  }
+
+  if (plan.locked_view) {
+    return {
+      error: 'Bu plan baxışa kilidlidir. Plan məlumatlarını redaktə etmək mümkün deyil.',
+      success: false,
+    }
+  }
+
+  const title = String(formData.get('title') || '').trim()
+  const companyId = String(formData.get('company_id') || '').trim()
+  const department = String(formData.get('department') || '').trim()
+  const startDate = String(formData.get('start_date') || '').trim()
+  const dueDate = String(formData.get('due_date') || '').trim()
+  const notes = String(formData.get('notes') || '').trim()
+  const templateIds = formData.getAll('template_ids') as string[]
+  const selectedSectionIds = formData.getAll('template_section_ids') as string[]
+  const assignedIds = formData.getAll('assigned_to') as string[]
+
+  const validStartDate =
+    !startDate || /^\d{4}-\d{2}-\d{2}$/.test(startDate)
+
+  const validDueDate =
+    !dueDate || /^\d{4}-\d{2}-\d{2}$/.test(dueDate)
+
+  if (!title) {
+    return { error: 'Plan başlığı daxil edilməlidir.', success: false }
+  }
+
+  if (!companyId) {
+    return { error: 'Şirkət seçilməlidir.', success: false }
+  }
+
+  if (!validStartDate) {
+    return { error: 'Başlama tarixi düzgün formatda deyil.', success: false }
+  }
+
+  if (!validDueDate) {
+    return { error: 'Son tarix düzgün formatda deyil.', success: false }
+  }
+
+  if (startDate && dueDate && startDate > dueDate) {
+    return {
+      error: 'Başlama tarixi son tarixdən sonra ola bilməz.',
+      success: false,
+    }
+  }
+
+  if (templateIds.length === 0) {
+    return { error: 'Ən azı 1 audit şablonu seçilməlidir.', success: false }
+  }
+
+  if (selectedSectionIds.length === 0) {
+    return { error: 'Ən azı 1 şablon bölməsi seçilməlidir.', success: false }
+  }
+
+  const { data: existingAnswers, error: answersError } = await supabase
+    .from('audit_answers')
+    .select('id')
+    .eq('plan_id', planId)
+    .limit(1)
+
+  if (answersError) {
+    return {
+      error: 'Plan cavabları yoxlanarkən xəta: ' + answersError.message,
+      success: false,
+    }
+  }
+
+  const hasAnswers = Boolean(existingAnswers && existingAnswers.length > 0)
+
+  let nextFileUrl: string | null = plan.file_url || null
+  let uploadedFilePath: string | null = null
+  const file = formData.get('file') as File | null
+
+  try {
+    if (file && file.size > 0) {
+      const safeName = sanitizeFilename(file.name)
+      const fileName = `${Date.now()}_${safeName}`
+      const filePath = `plans/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('audit-docs')
+        .upload(filePath, file)
+
+      if (uploadError) {
+        return {
+          error: 'Fayl yüklənərkən xəta: ' + uploadError.message,
+          success: false,
+        }
+      }
+
+      uploadedFilePath = filePath
+      nextFileUrl = filePath
+    }
+
+    const uniqueTemplateIds = Array.from(new Set(templateIds.filter(Boolean)))
+    const templateId = uniqueTemplateIds[0] || ''
+
+    const updatePayload: any = {
+      title,
+      company_id: companyId,
+      department: department || null,
+      start_date: startDate || null,
+      due_date: dueDate || null,
+      notes,
+      file_url: nextFileUrl,
+    }
+
+    if (!hasAnswers) {
+      updatePayload.template_id = templateId
+    }
+
+    const { error: updateError } = await supabase
+      .from('audit_plans')
+      .update(updatePayload)
+      .eq('id', planId)
+
+    if (updateError) throw updateError
+
+    const assignments = Array.from(new Set(assignedIds.filter(Boolean))).map(
+      (id) => ({
+        plan_id: planId,
+        user_id: id,
+      })
+    )
+
+    const { error: deleteAssignmentsError } = await supabase
+      .from('plan_assignments')
+      .delete()
+      .eq('plan_id', planId)
+
+    if (deleteAssignmentsError) throw deleteAssignmentsError
+
+    if (assignments.length > 0) {
+      const { error: insertAssignmentsError } = await supabase
+        .from('plan_assignments')
+        .insert(assignments)
+
+      if (insertAssignmentsError) throw insertAssignmentsError
+    }
+
+    if (!hasAnswers) {
+      const planTemplates = uniqueTemplateIds.map((id) => ({
+        plan_id: planId,
+        template_id: id,
+      }))
+
+      const uniqueSectionPairs = Array.from(
+        new Set(selectedSectionIds.filter(Boolean))
+      )
+
+      const planTemplateSections = uniqueSectionPairs
+        .map((value) => {
+          const [template_id, section_id] = String(value).split(':')
+
+          if (!template_id || !section_id) return null
+          if (!uniqueTemplateIds.includes(template_id)) return null
+
+          return {
+            plan_id: planId,
+            template_id,
+            section_id,
+          }
+        })
+        .filter(Boolean)
+
+      if (planTemplateSections.length === 0) {
+        throw new Error('Seçilmiş bölmələr tapılmadı.')
+      }
+
+      const { error: deletePlanTemplatesError } = await supabase
+        .from('audit_plan_templates')
+        .delete()
+        .eq('plan_id', planId)
+
+      if (deletePlanTemplatesError) throw deletePlanTemplatesError
+
+      const { error: deletePlanSectionsError } = await supabase
+        .from('audit_plan_template_sections')
+        .delete()
+        .eq('plan_id', planId)
+
+      if (deletePlanSectionsError) throw deletePlanSectionsError
+
+      const { error: insertPlanTemplatesError } = await supabase
+        .from('audit_plan_templates')
+        .insert(planTemplates)
+
+      if (insertPlanTemplatesError) throw insertPlanTemplatesError
+
+      const { error: insertPlanSectionsError } = await supabase
+        .from('audit_plan_template_sections')
+        .insert(planTemplateSections)
+
+      if (insertPlanSectionsError) throw insertPlanSectionsError
+    }
+
+    if (uploadedFilePath && plan.file_url) {
+      supabase.storage
+        .from('audit-docs')
+        .remove([plan.file_url])
+        .then(({ error }) => {
+          if (error) {
+            console.error('Köhnə plan faylı storage-dən silinmədi:', error.message)
+          }
+        })
+    }
+
+    revalidatePath('/dashboard/plans')
+    revalidatePath(`/dashboard/plans/${planId}`)
+    revalidatePath(`/dashboard/plans/${planId}/fill`)
+    revalidatePath(`/dashboard/plans/${planId}/report`)
+    revalidatePath('/dashboard')
+
+    return { error: null, success: true }
+  } catch (err: any) {
+    if (uploadedFilePath) {
+      await supabase.storage.from('audit-docs').remove([uploadedFilePath])
+    }
+
+    return {
+      error: err.message || 'Audit planı redaktə edilərkən xəta baş verdi.',
+      success: false,
+    }
+  }
 }

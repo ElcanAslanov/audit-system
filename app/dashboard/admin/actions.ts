@@ -6,13 +6,27 @@ import { revalidatePath } from 'next/cache'
 function cleanString(value: FormDataEntryValue | null) {
   return String(value || '').trim()
 }
+const ALLOWED_ROLES = new Set([
+  'admin',
+  'rehber',
+  'musahideci',
+  'audit_muavini',
+  'auditor',
+])
 
+function normalizeRole(value: FormDataEntryValue | string | null) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function validateRole(role: string) {
+  return ALLOWED_ROLES.has(role)
+}
 // Yeni istifadəçi yaratma
 export async function createUser(prevState: any, formData: FormData) {
   const email = cleanString(formData.get('email')).toLowerCase()
   const password = cleanString(formData.get('password'))
   const full_name = cleanString(formData.get('full_name'))
-  const role = cleanString(formData.get('role'))
+  const role = normalizeRole(formData.get('role'))
   const company_id = cleanString(formData.get('company_id'))
 
   if (!full_name) {
@@ -30,7 +44,9 @@ export async function createUser(prevState: any, formData: FormData) {
   if (!role) {
     return { error: 'Rol seçilməlidir.' }
   }
-
+if (!validateRole(role)) {
+  return { error: 'Yanlış rol seçilib.' }
+}
   // 1. Auth-da istifadəçini yarat
   const { data, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
@@ -81,7 +97,7 @@ export async function updateUserProfile(
 ) {
   const full_name = String(data.full_name || '').trim()
   const email = String(data.email || '').trim().toLowerCase()
-  const role = String(data.role || '').trim()
+ const role = normalizeRole(data.role)
   const company_id = String(data.company_id || '').trim()
   const password = String(data.password || '').trim()
 
@@ -100,7 +116,9 @@ export async function updateUserProfile(
   if (!role) {
     return { error: 'Rol seçilməlidir.' }
   }
-
+if (!validateRole(role)) {
+  return { error: 'Yanlış rol seçilib.' }
+}
   // 1. Auth email və metadata yenilə
  const authUpdatePayload: {
   email: string
@@ -176,7 +194,7 @@ export async function deleteUser(userId: string) {
 
 // Rol yeniləmə
 export async function updateUserRole(userId: string, newRole: string) {
-  const role = String(newRole || '').trim()
+  const role = normalizeRole(newRole)
 
   if (!userId) {
     return { error: 'İstifadəçi ID tapılmadı.' }
@@ -185,7 +203,9 @@ export async function updateUserRole(userId: string, newRole: string) {
   if (!role) {
     return { error: 'Rol seçilməlidir.' }
   }
-
+if (!validateRole(role)) {
+  return { error: 'Yanlış rol seçilib.' }
+}
   const { error } = await supabaseAdmin
     .from('profiles')
     .update({ role })

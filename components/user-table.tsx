@@ -16,9 +16,9 @@ import EditUserModal from './edit-user-modal'
 function roleLabel(role?: string | null) {
   if (role === 'admin') return 'Admin'
   if (role === 'rehber') return 'Rəhbər'
-  if (role === 'muavin') return 'Müavin'
   if (role === 'audit_muavini') return 'Audit müavini'
   if (role === 'auditor') return 'Auditor'
+  if (role === 'musahideci') return 'Müşahidəçi'
   return role || '-'
 }
 
@@ -26,6 +26,7 @@ function roleClass(role?: string | null) {
   if (role === 'admin') return 'border-blue-200 bg-blue-50 text-blue-700'
   if (role === 'rehber') return 'border-purple-200 bg-purple-50 text-purple-700'
   if (role === 'muavin') return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+  if (role === 'musahideci') return 'border-cyan-200 bg-cyan-50 text-cyan-700'
   if (role === 'audit_muavini') {
     return 'border-indigo-200 bg-indigo-50 text-indigo-700'
   }
@@ -218,7 +219,7 @@ export default function UserTable({
                           >
                             <option value="auditor">Auditor</option>
                             <option value="audit_muavini">Audit müavini</option>
-                            {/* <option value="muavin">Müavin</option> */}
+                            <option value="musahideci">Müşahidəçi</option>
                             <option value="rehber">Rəhbər</option>
                             <option value="admin">Admin</option>
                           </select>
@@ -319,7 +320,7 @@ export default function UserTable({
                       >
                         <option value="auditor">Auditor</option>
                         <option value="audit_muavini">Audit müavini</option>
-                        {/* <option value="muavin">Müavin</option> */}
+                        <option value="musahideci">Müşahidəçi</option>
                         <option value="rehber">Rəhbər</option>
                         <option value="admin">Admin</option>
                       </select>

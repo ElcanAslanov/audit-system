@@ -358,7 +358,7 @@ export default async function FillAuditPage({ params }: PageProps) {
   if (findingsError) {
     return (
       <div className="p-4 text-red-600 sm:p-6 lg:p-8">
-        Tapıntılar yüklənərkən xəta: {findingsError.message}
+        Çatışmazlıqlar yüklənərkən xəta: {findingsError.message}
       </div>
     )
   }
@@ -484,7 +484,7 @@ export default async function FillAuditPage({ params }: PageProps) {
             Checklist cavabları
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Sualları cavablandırın, şərh əlavə edin və problem olduqda tapıntı
+            Sualları cavablandırın, şərh əlavə edin və problem olduqda çatışmazlıq
             yaradın.
           </p>
         </div>

@@ -39,13 +39,17 @@ export default async function TemplatesPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile || !['admin', 'rehber', 'audit_muavini'].includes(profile.role)) {
-    return (
-      <div className="p-4 text-red-600 sm:p-6 lg:p-8">
-        Bu səhifəyə giriş icazəniz yoxdur.
-      </div>
-    )
-  }
+ const role = String(profile?.role || '').toLowerCase()
+const canViewTemplates = ['admin', 'rehber', 'audit_muavini', 'musahideci'].includes(role)
+const canManageTemplates = ['admin', 'rehber', 'audit_muavini'].includes(role)
+
+if (!profile || !canViewTemplates) {
+  return (
+    <div className="p-4 text-red-600 sm:p-6 lg:p-8">
+      Bu səhifəyə giriş icazəniz yoxdur.
+    </div>
+  )
+}
 
   const { data: templates, error } = await supabase
     .from('audit_templates')
@@ -115,7 +119,7 @@ export default async function TemplatesPage() {
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row">
-              <TemplateCreateModal />
+             {canManageTemplates && <TemplateCreateModal />}
 
               <Link
                 href="/dashboard/plans"
@@ -258,7 +262,7 @@ export default async function TemplatesPage() {
                         Bax
                       </Link>
 
-                      <TemplateDeleteButton templateId={template.id} />
+                    {canManageTemplates && <TemplateDeleteButton templateId={template.id} />}
                     </div>
                   </div>
                 </article>

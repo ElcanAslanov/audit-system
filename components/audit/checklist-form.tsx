@@ -143,42 +143,42 @@ export default function ChecklistForm({
 
   const supabase = useMemo(() => createClient(), []);
 
- const [openFindingIds, setOpenFindingIds] = useState<Record<string, boolean>>({});
-const [deletedFindingIds, setDeletedFindingIds] = useState<string[]>([]);
-const [localFindings, setLocalFindings] = useState<Finding[]>(initialFindings);
+  const [openFindingIds, setOpenFindingIds] = useState<Record<string, boolean>>({});
+  const [deletedFindingIds, setDeletedFindingIds] = useState<string[]>([]);
+  const [localFindings, setLocalFindings] = useState<Finding[]>(initialFindings);
 
-useEffect(() => {
-  setLocalFindings(
-    initialFindings.filter(
-      (finding) => !deletedFindingIds.includes(finding.id)
-    )
-  );
-}, [initialFindings, deletedFindingIds]);
+  useEffect(() => {
+    setLocalFindings(
+      initialFindings.filter(
+        (finding) => !deletedFindingIds.includes(finding.id)
+      )
+    );
+  }, [initialFindings, deletedFindingIds]);
 
-const answerMap = useMemo(() => {
-  return new Map(
-    initialAnswers.map((answer) => [
-      answer.custom_question_id || answer.question_id || '',
-      answer,
-    ])
-  );
-}, [initialAnswers]);
+  const answerMap = useMemo(() => {
+    return new Map(
+      initialAnswers.map((answer) => [
+        answer.custom_question_id || answer.question_id || '',
+        answer,
+      ])
+    );
+  }, [initialAnswers]);
 
-const findingsByQuestion = useMemo(() => {
-  const map = new Map<string, Finding[]>();
+  const findingsByQuestion = useMemo(() => {
+    const map = new Map<string, Finding[]>();
 
-  localFindings.forEach((finding) => {
-    const findingQuestionKey = finding.custom_question_id || finding.question_id;
+    localFindings.forEach((finding) => {
+      const findingQuestionKey = finding.custom_question_id || finding.question_id;
 
-    if (!findingQuestionKey) return;
+      if (!findingQuestionKey) return;
 
-    const current = map.get(findingQuestionKey) || [];
-    current.push(finding);
-    map.set(findingQuestionKey, current);
-  });
+      const current = map.get(findingQuestionKey) || [];
+      current.push(finding);
+      map.set(findingQuestionKey, current);
+    });
 
-  return map;
-}, [localFindings]);
+    return map;
+  }, [localFindings]);
 
   const toggleFinding = (findingId: string) => {
     setOpenFindingIds((prev) => ({
@@ -668,10 +668,10 @@ const findingsByQuestion = useMemo(() => {
                     <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm font-black text-slate-900">
-                          Bu sual üzrə tapıntılar
+                          Bu sual üzrə çatışmazlıqlar
                         </p>
                         <p className="text-xs text-slate-500">
-                          {questionFindings.length} tapıntı əlavə olunub.
+                          {questionFindings.length} Çatışmazlıq əlavə olunub.
                         </p>
                       </div>
                     </div>
@@ -688,7 +688,7 @@ const findingsByQuestion = useMemo(() => {
                             <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                               <div>
                                 <p className="font-bold text-slate-900">
-                                  {finding.title || 'Tapıntı'}
+                                  {finding.title || 'Çatışmazlıq'}
                                 </p>
 
                                 <div className="mt-2 flex flex-wrap gap-2">
@@ -719,30 +719,30 @@ const findingsByQuestion = useMemo(() => {
                                   {isOpen ? 'Bağla' : 'Ətraflı bax'}
                                 </button>
 
-                            <FindingDeleteButton
-  findingId={finding.id}
-  planId={planId}
- onDeleted={() => {
-  setDeletedFindingIds((prev) =>
-    prev.includes(finding.id) ? prev : [...prev, finding.id]
-  );
+                                <FindingDeleteButton
+                                  findingId={finding.id}
+                                  planId={planId}
+                                  onDeleted={() => {
+                                    setDeletedFindingIds((prev) =>
+                                      prev.includes(finding.id) ? prev : [...prev, finding.id]
+                                    );
 
-  setLocalFindings((prev) =>
-    prev.filter((item) => item.id !== finding.id)
-  );
+                                    setLocalFindings((prev) =>
+                                      prev.filter((item) => item.id !== finding.id)
+                                    );
 
-  setOpenFindingIds((prev) => {
-    const next = { ...prev };
-    delete next[finding.id];
-    return next;
-  });
+                                    setOpenFindingIds((prev) => {
+                                      const next = { ...prev };
+                                      delete next[finding.id];
+                                      return next;
+                                    });
 
-  setToast({
-    type: 'success',
-    message: 'Tapıntı silindi.',
-  });
-}}
-/>
+                                    setToast({
+                                      type: 'success',
+                                      message: 'Çatışmazlıq silindi.',
+                                    });
+                                  }}
+                                />
                               </div>
                             </div>
 
@@ -848,7 +848,7 @@ const findingsByQuestion = useMemo(() => {
                     }
                     className="inline-flex w-full justify-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 sm:w-auto"
                   >
-                    + Tapıntı əlavə et
+                    + Çatışmazlıq əlavə et
                   </button>
 
                   {savedAnswer?.score !== undefined && (

@@ -31,7 +31,13 @@ type MenuItem = {
   badge?: string
 }
 
-const allRoles = ['admin', 'rehber', 'muavin', 'audit_muavini', 'auditor']
+const allRoles = [
+  'admin',
+  'rehber',
+  'audit_muavini',
+  'auditor',
+  'musahideci',
+]
 
 const mainItems: MenuItem[] = [
   {
@@ -49,18 +55,18 @@ const managementItems: MenuItem[] = [
     roles: allRoles,
     icon: ClipboardCheck,
   },
-  {
-    label: 'Audit Müqayisəsi',
-    href: '/dashboard/compare',
-    roles: ['admin', 'rehber', 'muavin', 'audit_muavini'],
-    icon: BarChart3,
-  },
-  {
-    label: 'Audit Şablonları',
-    href: '/dashboard/admin/templates',
-    roles: ['admin', 'rehber', 'audit_muavini'],
-    icon: ListChecks,
-  },
+ {
+  label: 'Audit Müqayisəsi',
+  href: '/dashboard/compare',
+  roles: ['admin', 'rehber', 'audit_muavini', 'musahideci'],
+  icon: BarChart3,
+},
+{
+  label: 'Audit Şablonları',
+  href: '/dashboard/admin/templates',
+  roles: ['admin', 'rehber', 'audit_muavini', 'musahideci'],
+  icon: ListChecks,
+},
   {
     label: 'İdarəetmə',
     href: '/dashboard/admin',
@@ -84,7 +90,7 @@ const managementItems: MenuItem[] = [
 
 const activityItems: MenuItem[] = [
   {
-    label: 'Tapıntılar',
+    label: 'Çatışmazlıqlar',
     href: '/dashboard/findings',
     roles: allRoles,
     icon: ShieldAlert,
@@ -99,7 +105,7 @@ function canSee(item: MenuItem, role: string) {
 function roleLabel(role: string) {
   if (role === 'admin') return 'Administrator'
   if (role === 'rehber') return 'Rəhbər'
-  if (role === 'muavin') return 'Müavin'
+  if (role === 'musahideci') return 'Müşahidəçi'
   if (role === 'audit_muavini') return 'Audit müavini'
   if (role === 'auditor') return 'Auditor'
   return role || '-'
