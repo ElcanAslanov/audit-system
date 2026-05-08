@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
-import { createPortal } from 'react-dom'
-import { useRouter } from 'next/navigation'
-import { updateAuditPlan } from '@/app/dashboard/plans/actions'
+import {useEffect, useMemo, useState, useTransition} from 'react'
+import {createPortal} from 'react-dom'
+import {useRouter} from 'next/navigation'
+import {updateAuditPlan} from '@/app/[locale]/dashboard/plans/actions'
 import {
   AlertTriangle,
   Building2,
@@ -16,6 +16,7 @@ import {
   Users,
   X,
 } from 'lucide-react'
+import {useLocale, useTranslations} from 'next-intl'
 
 function formatDateInput(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 8)
@@ -41,7 +42,7 @@ function isoToDisplayDate(value?: string | null) {
 function displayDateToIso(value: string) {
   const [day, month, year] = value.split('/')
 
-  if (!day || !month || !year || year.length !== 4) return ''
+  if (!day || !month || year.length !== 4) return ''
 
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
 }
@@ -61,6 +62,8 @@ export default function PlanEditButton({
   templates: any[]
   compact?: boolean
 }) {
+  const t = useTranslations('planEdit')
+  const locale = useLocale()
   const router = useRouter()
 
   const [mounted, setMounted] = useState(false)
@@ -125,6 +128,7 @@ export default function PlanEditButton({
   useEffect(() => {
     if (!open) return
     resetFromPlan()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   useEffect(() => {
@@ -146,14 +150,14 @@ export default function PlanEditButton({
   }, [open, isPending])
 
   const filteredAuditors = useMemo(() => {
-    return auditors.filter((a) =>
-      (a.full_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    return auditors.filter((auditor) =>
+      (auditor.full_name || '').toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [auditors, searchTerm])
 
   const filteredTemplates = useMemo(() => {
-    return templates.filter((t) =>
-      (t.title || '').toLowerCase().includes(templateSearch.toLowerCase())
+    return templates.filter((template) =>
+      (template.title || '').toLowerCase().includes(templateSearch.toLowerCase())
     )
   }, [templates, templateSearch])
 
@@ -191,7 +195,7 @@ export default function PlanEditButton({
     setSelectedTemplateIds((prev) => prev.filter((id) => id !== templateId))
 
     setSelectedSectionIds((prev) => {
-      const next = { ...prev }
+      const next = {...prev}
       delete next[templateId]
       return next
     })
@@ -232,6 +236,7 @@ export default function PlanEditButton({
     setSuccess(null)
 
     const formData = new FormData(event.currentTarget)
+    formData.set('locale', locale)
 
     selectedTemplateIds.forEach((id) => {
       formData.append('template_ids', id)
@@ -255,7 +260,7 @@ export default function PlanEditButton({
         return
       }
 
-      setSuccess('Audit planı uğurla redaktə edildi.')
+      setSuccess(t('success'))
       router.refresh()
 
       window.setTimeout(() => {
@@ -289,15 +294,15 @@ export default function PlanEditButton({
 
                     <div className="min-w-0">
                       <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-200">
-                        Audit planı redaktəsi
+                        {t('modalLabel')}
                       </p>
 
                       <h2 className="mt-1 truncate text-2xl font-black tracking-tight text-white sm:text-3xl">
-                        {title || 'Planı redaktə et'}
+                        {title || t('fallbackTitle')}
                       </h2>
 
                       <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-                        Planın əsas məlumatlarını, auditorları, faylı və şablon tərkibini yeniləyin.
+                        {t('subtitle')}
                       </p>
                     </div>
                   </div>
@@ -307,13 +312,18 @@ export default function PlanEditButton({
                     onClick={closeModal}
                     disabled={isPending}
                     className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label={t('cancel')}
+                    title={t('cancel')}
                   >
                     <X size={18} />
                   </button>
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <form
+                onSubmit={handleSubmit}
+                className="flex min-h-0 flex-1 flex-col overflow-hidden"
+              >
                 <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 p-4 sm:p-6 [scrollbar-width:thin] [scrollbar-color:#94a3b8_transparent]">
                   <div className="space-y-5">
                     {error && (
@@ -332,11 +342,8 @@ export default function PlanEditButton({
                       <div className="flex gap-3 rounded-3xl border border-yellow-200 bg-yellow-50 p-4 text-sm font-semibold leading-6 text-yellow-800 shadow-sm">
                         <AlertTriangle size={20} className="mt-0.5 shrink-0" />
                         <div>
-                          <p className="font-black">Plan artıq doldurulub</p>
-                          <p className="mt-1">
-                            Şablon və bölmə tərkibi qorunur. Əsas məlumatlar,
-                            fayl və auditorlar redaktə oluna bilər.
-                          </p>
+                          <p className="font-black">{t('alreadyFilledTitle')}</p>
+                          <p className="mt-1">{t('alreadyFilledDescription')}</p>
                         </div>
                       </div>
                     )}
@@ -350,10 +357,10 @@ export default function PlanEditButton({
 
                           <div>
                             <h3 className="font-black text-slate-950">
-                              Əsas məlumatlar
+                              {t('basicInfo')}
                             </h3>
                             <p className="text-xs font-semibold text-slate-500">
-                              Plan adı, şirkət, departament və tarixlər
+                              {t('basicInfoDescription')}
                             </p>
                           </div>
                         </div>
@@ -361,14 +368,14 @@ export default function PlanEditButton({
                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                           <div className="sm:col-span-2">
                             <label className="mb-1 block text-sm font-bold text-slate-700">
-                              Planın başlığı
+                              {t('titleLabel')}
                             </label>
                             <input
                               name="title"
                               required
                               value={title}
-                              onChange={(e) => setTitle(e.target.value)}
-                              placeholder="Məs: 2026 İllik İT Auditi"
+                              onChange={(event) => setTitle(event.target.value)}
+                              placeholder={t('titlePlaceholder')}
                               className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                             />
                           </div>
@@ -376,7 +383,7 @@ export default function PlanEditButton({
                           <div>
                             <label className="mb-1 flex items-center gap-1 text-sm font-bold text-slate-700">
                               <CalendarDays size={15} />
-                              Başlama tarixi
+                              {t('startDate')}
                             </label>
 
                             <input
@@ -389,11 +396,11 @@ export default function PlanEditButton({
                               type="text"
                               inputMode="numeric"
                               value={startDateDisplay}
-                              onChange={(e) =>
-                                setStartDateDisplay(formatDateInput(e.target.value))
+                              onChange={(event) =>
+                                setStartDateDisplay(formatDateInput(event.target.value))
                               }
                               maxLength={10}
-                              placeholder="GG/AA/İİİİ"
+                              placeholder={t('datePlaceholder')}
                               className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                             />
                           </div>
@@ -401,7 +408,7 @@ export default function PlanEditButton({
                           <div>
                             <label className="mb-1 flex items-center gap-1 text-sm font-bold text-slate-700">
                               <CalendarDays size={15} />
-                              Son tarix
+                              {t('dueDate')}
                             </label>
 
                             <input
@@ -414,10 +421,10 @@ export default function PlanEditButton({
                               type="text"
                               inputMode="numeric"
                               value={dueDateDisplay}
-                              onChange={(e) =>
-                                setDueDateDisplay(formatDateInput(e.target.value))
+                              onChange={(event) =>
+                                setDueDateDisplay(formatDateInput(event.target.value))
                               }
-                              placeholder="GG/AA/İİİİ"
+                              placeholder={t('datePlaceholder')}
                               maxLength={10}
                               className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                             />
@@ -425,22 +432,22 @@ export default function PlanEditButton({
 
                           <div>
                             <label className="mb-1 block text-sm font-bold text-slate-700">
-                              Şirkət
+                              {t('company')}
                             </label>
                             <select
                               name="company_id"
                               required
                               value={selectedCompanyId}
-                              onChange={(e) => {
-                                setSelectedCompanyId(e.target.value)
+                              onChange={(event) => {
+                                setSelectedCompanyId(event.target.value)
                                 setSelectedDepartmentName('')
                               }}
                               className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                             >
-                              <option value="">Şirkət seçin...</option>
-                              {companies.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                  {c.name}
+                              <option value="">{t('selectCompany')}</option>
+                              {companies.map((company) => (
+                                <option key={company.id} value={company.id}>
+                                  {company.name}
                                 </option>
                               ))}
                             </select>
@@ -448,9 +455,9 @@ export default function PlanEditButton({
 
                           <div>
                             <label className="mb-1 block text-sm font-bold text-slate-700">
-                              Departament{' '}
+                              {t('department')}{' '}
                               <span className="font-semibold text-slate-400">
-                                (istəyə bağlı)
+                                ({t('optional')})
                               </span>
                             </label>
 
@@ -458,13 +465,15 @@ export default function PlanEditButton({
                               name="department"
                               disabled={!selectedCompanyId}
                               value={selectedDepartmentName}
-                              onChange={(e) => setSelectedDepartmentName(e.target.value)}
+                              onChange={(event) =>
+                                setSelectedDepartmentName(event.target.value)
+                              }
                               className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               <option value="">
                                 {selectedCompanyId
-                                  ? 'Departament seçin'
-                                  : 'Əvvəl şirkət seçin...'}
+                                  ? t('selectDepartment')
+                                  : t('selectCompanyFirst')}
                               </option>
 
                               {filteredDepartments.map((department: any) => (
@@ -477,14 +486,14 @@ export default function PlanEditButton({
 
                           <div className="sm:col-span-2">
                             <label className="mb-1 block text-sm font-bold text-slate-700">
-                              Qeydlər
+                              {t('notes')}
                             </label>
                             <textarea
                               name="notes"
                               rows={4}
                               value={notes}
-                              onChange={(e) => setNotes(e.target.value)}
-                              placeholder="Audit haqqında əlavə məlumat..."
+                              onChange={(event) => setNotes(event.target.value)}
+                              placeholder={t('notesPlaceholder')}
                               className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                             />
                           </div>
@@ -499,10 +508,10 @@ export default function PlanEditButton({
                             </div>
                             <div>
                               <h3 className="font-black text-slate-950">
-                                Auditorlar
+                                {t('auditors')}
                               </h3>
                               <p className="text-xs font-semibold text-slate-500">
-                                Plana təyin olunacaq şəxslər
+                                {t('auditorsDescription')}
                               </p>
                             </div>
                           </div>
@@ -514,22 +523,22 @@ export default function PlanEditButton({
                             />
                             <input
                               type="text"
-                              placeholder="Auditor axtar..."
+                              placeholder={t('auditorSearchPlaceholder')}
                               className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-9 pr-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                               value={searchTerm}
-                              onChange={(e) => setSearchTerm(e.target.value)}
+                              onChange={(event) => setSearchTerm(event.target.value)}
                             />
                           </div>
 
                           <div className="mt-3 max-h-[320px] overflow-y-auto overflow-x-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2 [scrollbar-width:thin] [scrollbar-color:#94a3b8_transparent]">
                             {filteredAuditors.length > 0 ? (
-                              filteredAuditors.map((a) => {
-                                const auditorId = String(a.id)
+                              filteredAuditors.map((auditor) => {
+                                const auditorId = String(auditor.id)
                                 const checked = selectedAuditorIds.includes(auditorId)
 
                                 return (
                                   <label
-                                    key={a.id}
+                                    key={auditor.id}
                                     className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-3 transition ${
                                       checked
                                         ? 'border-blue-200 bg-blue-50'
@@ -539,18 +548,21 @@ export default function PlanEditButton({
                                     <input
                                       type="checkbox"
                                       checked={checked}
-                                      onChange={(e) =>
-                                        toggleAuditor(auditorId, e.target.checked)
+                                      onChange={(event) =>
+                                        toggleAuditor(
+                                          auditorId,
+                                          event.target.checked
+                                        )
                                       }
                                       className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                     />
 
                                     <div className="min-w-0">
                                       <p className="truncate text-sm font-black text-slate-800">
-                                        {a.full_name}
+                                        {auditor.full_name}
                                       </p>
                                       <p className="truncate text-xs font-semibold text-slate-500">
-                                        {a.role || 'İstifadəçi'}
+                                        {auditor.role || t('defaultUserRole')}
                                       </p>
                                     </div>
                                   </label>
@@ -559,7 +571,7 @@ export default function PlanEditButton({
                             ) : (
                               <div className="flex h-40 items-center justify-center text-center">
                                 <p className="text-sm italic text-slate-400">
-                                  İstifadəçi tapılmadı
+                                  {t('noUsers')}
                                 </p>
                               </div>
                             )}
@@ -573,18 +585,17 @@ export default function PlanEditButton({
                             </div>
                             <div>
                               <h3 className="font-black text-slate-950">
-                                Plan faylı
+                                {t('planFile')}
                               </h3>
                               <p className="text-xs font-semibold text-slate-500">
-                                Yeni fayl seçsən, köhnəsi əvəz olunacaq
+                                {t('planFileDescription')}
                               </p>
                             </div>
                           </div>
 
                           {plan.file_url && (
                             <p className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs font-semibold leading-5 text-slate-500">
-                              Mövcud fayl saxlanılıb. Yeni fayl seçməsən,
-                              olduğu kimi qalacaq.
+                              {t('existingFileNotice')}
                             </p>
                           )}
 
@@ -601,15 +612,17 @@ export default function PlanEditButton({
                       <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <h3 className="font-black text-slate-950">
-                            Şablon və bölmələr
+                            {t('templatesAndSections')}
                           </h3>
                           <p className="mt-1 text-xs font-semibold text-slate-500">
-                            Planın audit tərkibini seçin
+                            {t('templatesAndSectionsDescription')}
                           </p>
                         </div>
 
                         <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
-                          {selectedTemplateIds.length} şablon seçili
+                          {t('selectedTemplates', {
+                            count: selectedTemplateIds.length,
+                          })}
                         </span>
                       </div>
 
@@ -621,8 +634,8 @@ export default function PlanEditButton({
                         <input
                           type="text"
                           value={templateSearch}
-                          placeholder="Şablon adı ilə axtar..."
-                          onChange={(e) => setTemplateSearch(e.target.value)}
+                          placeholder={t('templateSearchPlaceholder')}
+                          onChange={(event) => setTemplateSearch(event.target.value)}
                           disabled={hasAnswers}
                           className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-9 pr-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
                         />
@@ -631,23 +644,23 @@ export default function PlanEditButton({
                       <div className="grid max-h-[420px] grid-cols-1 gap-3 overflow-y-auto overflow-x-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 xl:grid-cols-2 [scrollbar-width:thin] [scrollbar-color:#94a3b8_transparent]">
                         {filteredTemplates.length === 0 && (
                           <p className="rounded-2xl bg-white p-4 text-sm text-slate-500">
-                            Şablon tapılmadı.
+                            {t('noTemplates')}
                           </p>
                         )}
 
-                        {filteredTemplates.map((t) => {
-                          const templateId = String(t.id)
+                        {filteredTemplates.map((template) => {
+                          const templateId = String(template.id)
                           const isTemplateSelected =
                             selectedTemplateIds.includes(templateId)
 
-                          const sections = [...(t.template_sections || [])].sort(
+                          const sections = [...(template.template_sections || [])].sort(
                             (a: any, b: any) =>
                               (a.sort_order || 0) - (b.sort_order || 0)
                           )
 
                           return (
                             <div
-                              key={t.id}
+                              key={template.id}
                               className={`rounded-3xl border p-3 transition ${
                                 isTemplateSelected
                                   ? 'border-blue-200 bg-white shadow-sm'
@@ -659,16 +672,21 @@ export default function PlanEditButton({
                                   type="checkbox"
                                   checked={isTemplateSelected}
                                   disabled={hasAnswers}
-                                  onChange={(e) => toggleTemplate(t, e.target.checked)}
+                                  onChange={(event) =>
+                                    toggleTemplate(
+                                      template,
+                                      event.target.checked
+                                    )
+                                  }
                                   className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
                                 />
 
                                 <div className="min-w-0 flex-1">
                                   <p className="line-clamp-2 text-sm font-black text-slate-800">
-                                    {t.title}
+                                    {template.title}
                                   </p>
                                   <p className="mt-1 text-xs font-semibold text-slate-500">
-                                    {sections.length} bölmə
+                                    {t('sectionsCount', {count: sections.length})}
                                   </p>
                                 </div>
                               </label>
@@ -677,18 +695,21 @@ export default function PlanEditButton({
                                 <div className="mt-3 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2">
                                   <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-2">
                                     <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                                      Bölmələr
+                                      {t('sections')}
                                     </p>
 
                                     <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-slate-500">
-                                      {selectedSectionIds[templateId]?.length || 0}
-                                      /{sections.length}
+                                      {t('selectedSectionsCount', {
+                                        selected:
+                                          selectedSectionIds[templateId]?.length || 0,
+                                        total: sections.length,
+                                      })}
                                     </span>
                                   </div>
 
                                   {sections.length === 0 ? (
                                     <p className="rounded-xl bg-white p-2 text-xs text-slate-400">
-                                      Bu şablonda bölmə yoxdur.
+                                      {t('noSections')}
                                     </p>
                                   ) : (
                                     sections.map((section: any) => {
@@ -711,18 +732,18 @@ export default function PlanEditButton({
                                             type="checkbox"
                                             checked={isSectionSelected}
                                             disabled={hasAnswers}
-                                            onChange={(e) =>
+                                            onChange={(event) =>
                                               toggleSection(
                                                 templateId,
                                                 sectionId,
-                                                e.target.checked
+                                                event.target.checked
                                               )
                                             }
                                             className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
                                           />
 
                                           <span className="font-bold">
-                                            {section.title || 'Adsız bölmə'}
+                                            {section.title || t('untitledSection')}
                                           </span>
                                         </label>
                                       )
@@ -745,7 +766,7 @@ export default function PlanEditButton({
                     disabled={isPending}
                     className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                   >
-                    Ləğv et
+                    {t('cancel')}
                   </button>
 
                   <button
@@ -758,7 +779,7 @@ export default function PlanEditButton({
                     ) : (
                       <Save size={18} />
                     )}
-                    {isPending ? 'Yadda saxlanılır...' : 'Yadda saxla'}
+                    {isPending ? t('saving') : t('save')}
                   </button>
                 </div>
               </form>
@@ -772,7 +793,7 @@ export default function PlanEditButton({
     <>
       <button
         type="button"
-        title="Planı redaktə et"
+        title={t('buttonTitle')}
         onClick={(event) => {
           event.preventDefault()
           event.stopPropagation()
@@ -785,7 +806,7 @@ export default function PlanEditButton({
         }
       >
         <Pencil size={compact ? 15 : 16} />
-        {!compact && 'Planı redaktə et'}
+        {!compact && t('buttonTitle')}
       </button>
 
       {modal}

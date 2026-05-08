@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { updateUserRole, deleteUser } from '@/app/dashboard/admin/actions'
+import { updateUserRole, deleteUser } from '@/app/[locale]/dashboard/admin/actions'
 import { Trash2, UserCog } from 'lucide-react'
 
 export default function UserTable({ users }: { users: any[] }) {

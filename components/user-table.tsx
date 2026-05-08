@@ -1,8 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { updateUserRole, deleteUser } from '@/app/dashboard/admin/actions'
+import {useMemo, useState} from 'react'
+import {updateUserRole, deleteUser} from '@/app/[locale]/dashboard/admin/actions'
 import {
+  AlertTriangle,
   Building2,
   Edit2,
   Loader2,
@@ -10,17 +11,10 @@ import {
   ShieldCheck,
   Trash2,
   User,
+  X,
 } from 'lucide-react'
 import EditUserModal from './edit-user-modal'
-
-function roleLabel(role?: string | null) {
-  if (role === 'admin') return 'Admin'
-  if (role === 'rehber') return 'Rəhbər'
-  if (role === 'audit_muavini') return 'Audit müavini'
-  if (role === 'auditor') return 'Auditor'
-  if (role === 'musahideci') return 'Müşahidəçi'
-  return role || '-'
-}
+import {useLocale, useTranslations} from 'next-intl'
 
 function roleClass(role?: string | null) {
   if (role === 'admin') return 'border-blue-200 bg-blue-50 text-blue-700'
@@ -41,10 +35,24 @@ export default function UserTable({
   users: any[]
   companies: any[]
 }) {
+  const t = useTranslations('userTable')
+  const rolesT = useTranslations('roles')
+  const locale = useLocale()
+
+  const roleLabel = (role?: string | null) => {
+    if (role === 'admin') return rolesT('admin')
+    if (role === 'rehber') return rolesT('rehber')
+    if (role === 'audit_muavini') return rolesT('audit_muavini')
+    if (role === 'auditor') return rolesT('auditor')
+    if (role === 'musahideci') return rolesT('musahideci')
+    return role || '-'
+  }
+
   const [search, setSearch] = useState('')
   const [loadingId, setLoadingId] = useState<string | null>(null)
-  const [editingUser, setEditingUser] = useState<any>(null)
-  const [error, setError] = useState<string | null>(null)
+const [editingUser, setEditingUser] = useState<any>(null)
+const [deleteTarget, setDeleteTarget] = useState<any>(null)
+const [error, setError] = useState<string | null>(null)
 
   const companyMap = useMemo(() => {
     return new Map(companies.map((company: any) => [company.id, company.name]))
@@ -72,7 +80,7 @@ export default function UserTable({
     setError(null)
     setLoadingId(id)
 
-    const result = await updateUserRole(id, role)
+    const result = await updateUserRole(id, role, locale)
 
     if (result?.error) {
       setError(result.error)
@@ -81,35 +89,43 @@ export default function UserTable({
     setLoadingId(null)
   }
 
-  const handleDelete = async (id: string, fullName?: string | null) => {
-    setError(null)
+ const openDeleteModal = (userItem: any) => {
+  setError(null)
+  setDeleteTarget(userItem)
+}
 
-    const confirmed = window.confirm(
-      `"${fullName || 'Adsız istifadəçi'}" istifadəçisini silmək istədiyinizə əminsiniz?`
-    )
+const closeDeleteModal = () => {
+  if (loadingId) return
+  setDeleteTarget(null)
+}
 
-    if (!confirmed) return
+const handleDeleteConfirm = async () => {
+  if (!deleteTarget?.id) return
 
-    setLoadingId(id)
+  setError(null)
+  setLoadingId(deleteTarget.id)
 
-    const result = await deleteUser(id)
+  const result = await deleteUser(deleteTarget.id, locale)
 
-    if (result?.error) {
-      setError(result.error)
-    }
-
+  if (result?.error) {
+    setError(result.error)
     setLoadingId(null)
+    return
   }
+
+  setLoadingId(null)
+  setDeleteTarget(null)
+}
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="mb-5 flex flex-col gap-4 border-b border-slate-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-lg font-black text-slate-950">
-            İstifadəçilər
+            {t('title')}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            {filteredUsers.length} istifadəçi göstərilir.
+            {t('showing', {count: filteredUsers.length})}
           </p>
         </div>
 
@@ -120,9 +136,9 @@ export default function UserTable({
           />
           <input
             value={search}
-            placeholder="Ad, rol və ya şirkət üzrə axtar..."
+            placeholder={t('searchPlaceholder')}
             className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(event) => setSearch(event.target.value)}
           />
         </div>
       </div>
@@ -139,30 +155,29 @@ export default function UserTable({
             <User size={22} />
           </div>
           <h3 className="mt-4 font-black text-slate-900">
-            İstifadəçi tapılmadı
+            {t('emptyTitle')}
           </h3>
           <p className="mt-1 text-sm text-slate-500">
-            Axtarış şərtinə uyğun istifadəçi yoxdur.
+            {t('emptyDescription')}
           </p>
         </div>
       ) : (
         <>
-          {/* Desktop table */}
           <div className="hidden overflow-hidden rounded-3xl border border-slate-200 lg:block">
             <table className="w-full text-left">
               <thead className="border-b border-slate-200 bg-slate-50">
                 <tr>
                   <th className="p-4 text-xs font-black uppercase tracking-wide text-slate-500">
-                    İstifadəçi
+                    {t('user')}
                   </th>
                   <th className="p-4 text-xs font-black uppercase tracking-wide text-slate-500">
-                    Şirkət
+                    {t('company')}
                   </th>
                   <th className="p-4 text-xs font-black uppercase tracking-wide text-slate-500">
-                    Rol
+                    {t('role')}
                   </th>
                   <th className="p-4 text-right text-xs font-black uppercase tracking-wide text-slate-500">
-                    Əməliyyatlar
+                    {t('actions')}
                   </th>
                 </tr>
               </thead>
@@ -170,7 +185,7 @@ export default function UserTable({
               <tbody className="divide-y divide-slate-100 bg-white">
                 {filteredUsers.map((userItem) => {
                   const companyName =
-                    companyMap.get(userItem.company_id) || 'Şirkət seçilməyib'
+                    companyMap.get(userItem.company_id) || t('noCompany')
 
                   return (
                     <tr
@@ -185,9 +200,8 @@ export default function UserTable({
 
                           <div className="min-w-0">
                             <p className="truncate font-black text-slate-950">
-                              {userItem.full_name || 'Adsız istifadəçi'}
+                              {userItem.full_name || t('anonymousUser')}
                             </p>
-                            
                           </div>
                         </div>
                       </td>
@@ -212,16 +226,20 @@ export default function UserTable({
                           <select
                             disabled={loadingId === userItem.id}
                             defaultValue={userItem.role}
-                            onChange={(e) =>
-                              handleRoleChange(userItem.id, e.target.value)
+                            onChange={(event) =>
+                              handleRoleChange(userItem.id, event.target.value)
                             }
                             className="w-full max-w-[190px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            <option value="auditor">Auditor</option>
-                            <option value="audit_muavini">Audit müavini</option>
-                            <option value="musahideci">Müşahidəçi</option>
-                            <option value="rehber">Rəhbər</option>
-                            <option value="admin">Admin</option>
+                            <option value="auditor">{rolesT('auditor')}</option>
+                            <option value="audit_muavini">
+                              {rolesT('audit_muavini')}
+                            </option>
+                            <option value="musahideci">
+                              {rolesT('musahideci')}
+                            </option>
+                            <option value="rehber">{rolesT('rehber')}</option>
+                            <option value="admin">{rolesT('admin')}</option>
                           </select>
                         </div>
                       </td>
@@ -234,14 +252,12 @@ export default function UserTable({
                             className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
                           >
                             <Edit2 size={16} />
-                            Redaktə
+                            {t('edit')}
                           </button>
 
                           <button
                             type="button"
-                            onClick={() =>
-                              handleDelete(userItem.id, userItem.full_name)
-                            }
+                            onClick={() => openDeleteModal(userItem)}
                             disabled={loadingId === userItem.id}
                             className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                           >
@@ -250,7 +266,7 @@ export default function UserTable({
                             ) : (
                               <Trash2 size={16} />
                             )}
-                            Sil
+                            {t('delete')}
                           </button>
                         </div>
                       </td>
@@ -261,11 +277,10 @@ export default function UserTable({
             </table>
           </div>
 
-          {/* Mobile cards */}
           <div className="grid grid-cols-1 gap-4 lg:hidden">
             {filteredUsers.map((userItem) => {
               const companyName =
-                companyMap.get(userItem.company_id) || 'Şirkət seçilməyib'
+                companyMap.get(userItem.company_id) || t('noCompany')
 
               return (
                 <article
@@ -284,7 +299,7 @@ export default function UserTable({
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
                             <h3 className="truncate text-lg font-black text-slate-950">
-                              {userItem.full_name || 'Adsız istifadəçi'}
+                              {userItem.full_name || t('anonymousUser')}
                             </h3>
 
                             <p className="mt-1 flex items-center gap-2 text-sm text-slate-500">
@@ -307,22 +322,26 @@ export default function UserTable({
                     <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-3">
                       <p className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase text-slate-500">
                         <ShieldCheck size={13} />
-                        Rol
+                        {t('role')}
                       </p>
 
                       <select
                         disabled={loadingId === userItem.id}
                         defaultValue={userItem.role}
-                        onChange={(e) =>
-                          handleRoleChange(userItem.id, e.target.value)
+                        onChange={(event) =>
+                          handleRoleChange(userItem.id, event.target.value)
                         }
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <option value="auditor">Auditor</option>
-                        <option value="audit_muavini">Audit müavini</option>
-                        <option value="musahideci">Müşahidəçi</option>
-                        <option value="rehber">Rəhbər</option>
-                        <option value="admin">Admin</option>
+                        <option value="auditor">{rolesT('auditor')}</option>
+                        <option value="audit_muavini">
+                          {rolesT('audit_muavini')}
+                        </option>
+                        <option value="musahideci">
+                          {rolesT('musahideci')}
+                        </option>
+                        <option value="rehber">{rolesT('rehber')}</option>
+                        <option value="admin">{rolesT('admin')}</option>
                       </select>
                     </div>
 
@@ -333,14 +352,12 @@ export default function UserTable({
                         className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
                       >
                         <Edit2 size={16} />
-                        Redaktə
+                        {t('edit')}
                       </button>
 
                       <button
                         type="button"
-                        onClick={() =>
-                          handleDelete(userItem.id, userItem.full_name)
-                        }
+                        onClick={() => openDeleteModal(userItem)}
                         disabled={loadingId === userItem.id}
                         className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white px-3 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                       >
@@ -349,7 +366,7 @@ export default function UserTable({
                         ) : (
                           <Trash2 size={16} />
                         )}
-                        Sil
+                        {t('delete')}
                       </button>
                     </div>
                   </div>
@@ -359,6 +376,81 @@ export default function UserTable({
           </div>
         </>
       )}
+
+      {deleteTarget && (
+  <div
+    className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+    onClick={closeDeleteModal}
+  >
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={(event) => event.stopPropagation()}
+      className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+    >
+      <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
+        <div className="flex items-start gap-3">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-red-50 text-red-600">
+            <AlertTriangle size={22} />
+          </div>
+
+          <div>
+            <p className="text-xs font-black uppercase tracking-wide text-red-500">
+              {t('delete')}
+            </p>
+
+            <h3 className="mt-1 text-xl font-black text-slate-950">
+              {t('deleteConfirm', {
+                name: deleteTarget.full_name || t('anonymousUser'),
+              })}
+            </h3>
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              {t('deleteModalDescription')}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={closeDeleteModal}
+          disabled={loadingId === deleteTarget.id}
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label={t('cancel')}
+          title={t('cancel')}
+        >
+          <X size={17} />
+        </button>
+      </div>
+
+      <div className="flex flex-col-reverse gap-2 bg-slate-50 p-5 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          onClick={closeDeleteModal}
+          disabled={loadingId === deleteTarget.id}
+          className="inline-flex justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {t('cancel')}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleDeleteConfirm}
+          disabled={loadingId === deleteTarget.id}
+          className="inline-flex justify-center gap-2 rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-400"
+        >
+          {loadingId === deleteTarget.id ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <Trash2 size={16} />
+          )}
+
+          {loadingId === deleteTarget.id ? t('deleting') : t('confirmDelete')}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {editingUser && (
         <EditUserModal

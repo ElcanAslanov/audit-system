@@ -1,9 +1,10 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
-import { updateTemplate } from '@/app/dashboard/admin/templates/actions'
-import { Loader2, Plus, Save, Trash2 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import {useMemo, useState, useTransition} from 'react'
+import {updateTemplate} from '@/app/[locale]/dashboard/admin/templates/actions'
+import {Loader2, Plus, Save, Trash2} from 'lucide-react'
+import {useRouter} from 'next/navigation'
+import {useTranslations} from 'next-intl'
 
 type QuestionItem = {
   id: string
@@ -39,6 +40,7 @@ export default function TemplateEditForm({
 }: {
   template: TemplateData
 }) {
+  const t = useTranslations('templateEditForm')
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [title, setTitle] = useState(template.title || '')
@@ -81,15 +83,12 @@ export default function TemplateEditForm({
     setError(null)
 
     if (sections.length === 1) {
-      setError('Ən azı 1 bölmə qalmalıdır.')
+      setError(t('minSectionError'))
       return
     }
 
     const section = sections[sectionIndex]
-
-    const confirmed = window.confirm(
-      'Bu bölməni silmək istədiyinizə əminsiniz? Bölməyə aid suallar da silinəcək.'
-    )
+    const confirmed = window.confirm(t('deleteSectionConfirm'))
 
     if (!confirmed) return
 
@@ -133,15 +132,12 @@ export default function TemplateEditForm({
     const questions = section.questions || []
 
     if (questions.length === 1) {
-      setError('Hər bölmədə ən azı 1 sual qalmalıdır.')
+      setError(t('minQuestionError'))
       return
     }
 
     const question = questions[questionIndex]
-
-    const confirmed = window.confirm(
-      'Bu sualı silmək istədiyinizə əminsiniz?'
-    )
+    const confirmed = window.confirm(t('deleteQuestionConfirm'))
 
     if (!confirmed) return
 
@@ -203,17 +199,17 @@ export default function TemplateEditForm({
 
   const validate = () => {
     if (!title.trim()) {
-      return 'Şablon adı boş ola bilməz.'
+      return t('templateNameRequired')
     }
 
     for (const section of sections) {
       if (!section.title.trim()) {
-        return 'Bölmə adı boş ola bilməz.'
+        return t('sectionNameRequired')
       }
 
       for (const question of section.questions || []) {
         if (!question.question_text.trim()) {
-          return 'Sual mətni boş ola bilməz.'
+          return t('questionTextRequired')
         }
       }
     }
@@ -252,11 +248,11 @@ export default function TemplateEditForm({
       const result = await updateTemplate(null, formData)
 
       if (!result.success) {
-        setError(result.error || 'Şablon yenilənmədi.')
+        setError(result.error || t('fallbackError'))
         return
       }
 
-      setMessage('Şablon uğurla yeniləndi.')
+      setMessage(t('success'))
       setDeletedSectionIds([])
       setDeletedQuestionIds([])
       router.refresh()
@@ -281,11 +277,11 @@ export default function TemplateEditForm({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
           <div className="lg:col-span-8">
             <label className="mb-1 block text-sm font-semibold text-slate-700">
-              Şablon adı
+              {t('templateName')}
             </label>
             <input
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(event) => setTitle(event.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -293,7 +289,7 @@ export default function TemplateEditForm({
           <div className="grid grid-cols-2 gap-3 lg:col-span-4">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs font-medium uppercase text-slate-500">
-                Bölmə
+                {t('section')}
               </p>
               <p className="mt-1 text-2xl font-black text-slate-900">
                 {sections.length}
@@ -302,7 +298,7 @@ export default function TemplateEditForm({
 
             <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
               <p className="text-xs font-medium uppercase text-blue-700">
-                Sual
+                {t('question')}
               </p>
               <p className="mt-1 text-2xl font-black text-blue-700">
                 {totalQuestions}
@@ -321,15 +317,15 @@ export default function TemplateEditForm({
             <div className="flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="flex-1">
                 <label className="mb-1 block text-sm font-semibold text-slate-700">
-                  Bölmə #{sectionIndex + 1}
+                  {t('sectionNumber', {number: sectionIndex + 1})}
                 </label>
 
                 <input
                   value={section.title || ''}
-                  onChange={(e) =>
-                    updateSection(sectionIndex, 'title', e.target.value)
+                  onChange={(event) =>
+                    updateSection(sectionIndex, 'title', event.target.value)
                   }
-                  placeholder="Bölmə adı"
+                  placeholder={t('sectionNamePlaceholder')}
                   className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -341,7 +337,7 @@ export default function TemplateEditForm({
                   className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 sm:w-auto"
                 >
                   <Plus size={16} />
-                  Sual əlavə et
+                  {t('addQuestion')}
                 </button>
 
                 <button
@@ -350,7 +346,7 @@ export default function TemplateEditForm({
                   className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 sm:w-auto"
                 >
                   <Trash2 size={16} />
-                  Bölməni sil
+                  {t('deleteSection')}
                 </button>
               </div>
             </div>
@@ -364,62 +360,62 @@ export default function TemplateEditForm({
                   <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
                     <div className="lg:col-span-5">
                       <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">
-                        Sual #{questionIndex + 1}
+                        {t('questionNumber', {number: questionIndex + 1})}
                       </label>
 
                       <input
                         value={question.question_text || ''}
-                        onChange={(e) =>
+                        onChange={(event) =>
                           updateQuestion(
                             sectionIndex,
                             questionIndex,
                             'question_text',
-                            e.target.value
+                            event.target.value
                           )
                         }
-                        placeholder="Sual mətni"
+                        placeholder={t('questionTextPlaceholder')}
                         className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
 
                     <div className="lg:col-span-3">
                       <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">
-                        Cavab tipi
+                        {t('answerType')}
                       </label>
 
                       <select
                         value={question.input_type || 'yes_no'}
-                        onChange={(e) =>
+                        onChange={(event) =>
                           updateQuestion(
                             sectionIndex,
                             questionIndex,
                             'input_type',
-                            e.target.value
+                            event.target.value
                           )
                         }
                         className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value="yes_no">Yes / No / N/A</option>
-                        <option value="score">Score</option>
-                        <option value="text">Text</option>
+                        <option value="yes_no">{t('yesNoNa')}</option>
+                        <option value="score">{t('score')}</option>
+                        <option value="text">{t('text')}</option>
                       </select>
                     </div>
 
                     <div className="lg:col-span-2">
                       <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">
-                        Max score
+                        {t('maxScore')}
                       </label>
 
                       <input
                         type="number"
                         min={1}
                         value={question.max_score ?? 10}
-                        onChange={(e) =>
+                        onChange={(event) =>
                           updateQuestion(
                             sectionIndex,
                             questionIndex,
                             'max_score',
-                            Number(e.target.value)
+                            Number(event.target.value)
                           )
                         }
                         className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500"
@@ -435,7 +431,7 @@ export default function TemplateEditForm({
                         className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50"
                       >
                         <Trash2 size={16} />
-                        Sil
+                        {t('delete')}
                       </button>
                     </div>
                   </div>
@@ -453,7 +449,7 @@ export default function TemplateEditForm({
           className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
         >
           <Plus size={16} />
-          Bölmə əlavə et
+          {t('addSection')}
         </button>
 
         <button
@@ -462,8 +458,12 @@ export default function TemplateEditForm({
           onClick={handleSave}
           className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-green-300 sm:w-auto"
         >
-          {isPending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-          {isPending ? 'Yadda saxlanılır...' : 'Dəyişiklikləri Yadda Saxla'}
+          {isPending ? (
+            <Loader2 className="animate-spin" size={18} />
+          ) : (
+            <Save size={18} />
+          )}
+          {isPending ? t('saving') : t('save')}
         </button>
       </div>
     </div>

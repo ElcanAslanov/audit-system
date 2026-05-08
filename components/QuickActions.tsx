@@ -1,4 +1,6 @@
-import Link from 'next/link'
+'use client'
+
+import {Link} from '@/i18n/routing'
 import {
   ArrowRight,
   BarChart3,
@@ -7,57 +9,60 @@ import {
   ListChecks,
   Zap,
 } from 'lucide-react'
-
-const actions = [
-  {
-    title: 'Audit planları',
-    description: 'Bütün audit planlarına bax',
-    href: '/dashboard/plans',
-    icon: ClipboardCheck,
-    tone: 'from-blue-600 to-cyan-500',
-    soft: 'bg-blue-50 text-blue-700',
-  },
-  {
-    title: 'Yeni audit yarat',
-    description: 'Yeni audit planı əlavə et',
-    href: '/dashboard/plans',
-    icon: FilePlus2,
-    tone: 'from-emerald-600 to-teal-500',
-    soft: 'bg-emerald-50 text-emerald-700',
-  },
-  {
-    title: 'Şablonlar',
-    description: 'Audit checklist şablonlarını idarə et',
-    href: '/dashboard/admin/templates',
-    icon: ListChecks,
-    tone: 'from-indigo-600 to-violet-500',
-    soft: 'bg-indigo-50 text-indigo-700',
-  },
-  {
-    title: 'Audit müqayisəsi',
-    description: 'İki audit nəticəsini müqayisə et',
-    href: '/dashboard/compare',
-    icon: BarChart3,
-    tone: 'from-slate-800 to-slate-600',
-    soft: 'bg-slate-100 text-slate-700',
-  },
-]
+import {useTranslations} from 'next-intl'
 
 export default function QuickActions() {
+  const t = useTranslations('quickActions')
+
+  const actions = [
+    {
+      title: t('auditPlansTitle'),
+      description: t('auditPlansDescription'),
+      href: '/dashboard/plans',
+      icon: ClipboardCheck,
+      tone: 'from-blue-600 to-cyan-500',
+      soft: 'bg-blue-50 text-blue-700',
+    },
+    {
+      title: t('newAuditTitle'),
+      description: t('newAuditDescription'),
+      href: '/dashboard/plans',
+      icon: FilePlus2,
+      tone: 'from-emerald-600 to-teal-500',
+      soft: 'bg-emerald-50 text-emerald-700',
+    },
+    {
+      title: t('templatesTitle'),
+      description: t('templatesDescription'),
+      href: '/dashboard/admin/templates',
+      icon: ListChecks,
+      tone: 'from-indigo-600 to-violet-500',
+      soft: 'bg-indigo-50 text-indigo-700',
+    },
+    {
+      title: t('compareTitle'),
+      description: t('compareDescription'),
+      href: '/dashboard/compare',
+      icon: BarChart3,
+      tone: 'from-slate-800 to-slate-600',
+      soft: 'bg-slate-100 text-slate-700',
+    },
+  ]
+
   return (
     <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 p-5 shadow-sm backdrop-blur">
       <div className="flex flex-col gap-3 border-b border-slate-100 pb-5">
         <div className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-blue-700">
           <Zap size={14} />
-          Sürətli keçidlər
+          {t('badge')}
         </div>
 
         <div>
           <h2 className="text-xl font-black text-slate-950">
-            Əməliyyatlar
+            {t('title')}
           </h2>
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Ən çox istifadə olunan audit əməliyyatlarına tez keçid
+            {t('subtitle')}
           </p>
         </div>
       </div>

@@ -1,8 +1,9 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import { createTemplate } from '@/app/dashboard/admin/templates/actions'
-import { Loader2, Plus, Save, Trash2 } from 'lucide-react'
+import {useRef, useState} from 'react'
+import {createTemplate} from '@/app/[locale]/dashboard/admin/templates/actions'
+import {Loader2, Plus, Save, Trash2} from 'lucide-react'
+import {useTranslations} from 'next-intl'
 
 type QuestionItem = {
   text: string
@@ -16,12 +17,13 @@ type SectionItem = {
 }
 
 export default function TemplateBuilder() {
+  const t = useTranslations('templateBuilder')
   const formRef = useRef<HTMLFormElement | null>(null)
 
   const [sections, setSections] = useState<SectionItem[]>([
     {
       title: '',
-      questions: [{ text: '', type: 'yes_no', max_score: 10 }],
+      questions: [{text: '', type: 'yes_no', max_score: 10}],
     },
   ])
 
@@ -35,7 +37,7 @@ export default function TemplateBuilder() {
       ...sections,
       {
         title: '',
-        questions: [{ text: '', type: 'yes_no', max_score: 10 }],
+        questions: [{text: '', type: 'yes_no', max_score: 10}],
       },
     ])
   }
@@ -44,7 +46,7 @@ export default function TemplateBuilder() {
     setError(null)
 
     if (sections.length === 1) {
-      setError('Ən azı 1 bölmə qalmalıdır.')
+      setError(t('minSectionError'))
       return
     }
 
@@ -75,7 +77,7 @@ export default function TemplateBuilder() {
     const next = [...sections]
 
     if (next[sectionIndex].questions.length === 1) {
-      setError('Hər bölmədə ən azı 1 sual qalmalıdır.')
+      setError(t('minQuestionError'))
       return
     }
 
@@ -102,24 +104,24 @@ export default function TemplateBuilder() {
     setSections(next)
   }
 
-const resetForm = () => {
-  formRef.current?.reset()
+  const resetForm = () => {
+    formRef.current?.reset()
 
-  setSections([
-    {
-      title: '',
-      questions: [{ text: '', type: 'yes_no', max_score: 10 }],
-    },
-  ])
-}
+    setSections([
+      {
+        title: '',
+        questions: [{text: '', type: 'yes_no', max_score: 10}],
+      },
+    ])
+  }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
     setPending(true)
     setMessage(null)
     setError(null)
 
-    const formData = new FormData(e.currentTarget)
+    const formData = new FormData(event.currentTarget)
     formData.append('sections', JSON.stringify(sections))
 
     const res = await createTemplate(null, formData)
@@ -127,12 +129,12 @@ const resetForm = () => {
     setPending(false)
 
     if (res.success) {
-      setMessage('Şablon uğurla yaradıldı.')
+      setMessage(t('success'))
       resetForm()
       return
     }
 
-    setError(res.error || 'Şablon yaradılarkən xəta baş verdi.')
+    setError(res.error || t('fallbackError'))
   }
 
   const totalQuestions = sections.reduce(
@@ -140,8 +142,8 @@ const resetForm = () => {
     0
   )
 
-return (
-  <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
+  return (
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
       {message && (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
           {message}
@@ -157,11 +159,11 @@ return (
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-8">
           <label className="mb-1 block text-sm font-bold text-slate-700">
-            Şablon adı
+            {t('templateName')}
           </label>
           <input
             name="title"
-            placeholder="Məs: Maliyyə Audit Şablonu"
+            placeholder={t('templateNamePlaceholder')}
             className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
             required
           />
@@ -169,14 +171,18 @@ return (
 
         <div className="grid grid-cols-2 gap-3 lg:col-span-4">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs font-bold uppercase text-slate-500">Bölmə</p>
+            <p className="text-xs font-bold uppercase text-slate-500">
+              {t('section')}
+            </p>
             <p className="mt-1 text-2xl font-black text-slate-950">
               {sections.length}
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs font-bold uppercase text-slate-500">Sual</p>
+            <p className="text-xs font-bold uppercase text-slate-500">
+              {t('question')}
+            </p>
             <p className="mt-1 text-2xl font-black text-slate-950">
               {totalQuestions}
             </p>
@@ -193,14 +199,14 @@ return (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex-1">
                 <label className="mb-1 block text-sm font-bold text-slate-700">
-                  Bölmə #{sectionIndex + 1}
+                  {t('sectionNumber', {number: sectionIndex + 1})}
                 </label>
 
                 <input
-                  placeholder="Bölmə adı"
+                  placeholder={t('sectionNamePlaceholder')}
                   value={section.title}
-                  onChange={(e) =>
-                    updateSectionTitle(sectionIndex, e.target.value)
+                  onChange={(event) =>
+                    updateSectionTitle(sectionIndex, event.target.value)
                   }
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                   required
@@ -213,7 +219,7 @@ return (
                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-50 sm:w-auto"
               >
                 <Trash2 size={16} />
-                Bölməni sil
+                {t('deleteSection')}
               </button>
             </div>
 
@@ -225,7 +231,7 @@ return (
                 >
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                      Sual #{questionIndex + 1}
+                      {t('questionNumber', {number: questionIndex + 1})}
                     </p>
 
                     <button
@@ -234,24 +240,24 @@ return (
                       className="inline-flex items-center gap-1 rounded-xl border border-red-200 bg-white px-2.5 py-1 text-xs font-bold text-red-600 transition hover:bg-red-50"
                     >
                       <Trash2 size={13} />
-                      Sil
+                      {t('delete')}
                     </button>
                   </div>
 
                   <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
                     <div className="lg:col-span-7">
                       <label className="mb-1 block text-xs font-bold uppercase text-slate-500">
-                        Sual mətni
+                        {t('questionText')}
                       </label>
                       <input
-                        placeholder="Sual mətni"
+                        placeholder={t('questionTextPlaceholder')}
                         value={question.text}
-                        onChange={(e) =>
+                        onChange={(event) =>
                           updateQuestion(
                             sectionIndex,
                             questionIndex,
                             'text',
-                            e.target.value
+                            event.target.value
                           )
                         }
                         className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
@@ -261,40 +267,40 @@ return (
 
                     <div className="lg:col-span-3">
                       <label className="mb-1 block text-xs font-bold uppercase text-slate-500">
-                        Cavab tipi
+                        {t('answerType')}
                       </label>
                       <select
                         value={question.type}
-                        onChange={(e) =>
+                        onChange={(event) =>
                           updateQuestion(
                             sectionIndex,
                             questionIndex,
                             'type',
-                            e.target.value
+                            event.target.value
                           )
                         }
                         className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                       >
-                        <option value="yes_no">Bəli / Xeyr / N/A</option>
-                        <option value="score">Score</option>
-                        <option value="text">Text</option>
+                        <option value="yes_no">{t('yesNoNa')}</option>
+                        <option value="score">{t('score')}</option>
+                        <option value="text">{t('text')}</option>
                       </select>
                     </div>
 
                     <div className="lg:col-span-2">
                       <label className="mb-1 block text-xs font-bold uppercase text-slate-500">
-                        Max bal
+                        {t('maxScore')}
                       </label>
                       <input
                         type="number"
                         min={1}
                         value={question.max_score}
-                        onChange={(e) =>
+                        onChange={(event) =>
                           updateQuestion(
                             sectionIndex,
                             questionIndex,
                             'max_score',
-                            Number(e.target.value)
+                            Number(event.target.value)
                           )
                         }
                         className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
@@ -311,7 +317,7 @@ return (
               className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-bold text-blue-600 transition hover:bg-blue-50 sm:w-auto"
             >
               <Plus size={16} />
-              Sual əlavə et
+              {t('addQuestion')}
             </button>
           </section>
         ))}
@@ -324,7 +330,7 @@ return (
           className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
         >
           <Plus size={16} />
-          Bölmə əlavə et
+          {t('addSection')}
         </button>
 
         <button
@@ -337,7 +343,7 @@ return (
           ) : (
             <Save size={18} />
           )}
-          {pending ? 'Yadda saxlanılır...' : 'Şablonu yadda saxla'}
+          {pending ? t('saving') : t('save')}
         </button>
       </div>
     </form>

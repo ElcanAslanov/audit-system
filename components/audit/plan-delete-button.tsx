@@ -1,11 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { deleteAuditPlan } from '@/app/dashboard/plans/actions'
-import { AlertTriangle, Loader2, Trash2, X } from 'lucide-react'
+import {useState} from 'react'
+import {useRouter} from 'next/navigation'
+import {deleteAuditPlan} from '@/app/[locale]/dashboard/plans/actions'
+import {AlertTriangle, Loader2, Trash2, X} from 'lucide-react'
+import {useLocale, useTranslations} from 'next-intl'
 
-export default function PlanDeleteButton({ planId }: { planId: string }) {
+export default function PlanDeleteButton({planId}: {planId: string}) {
+  const t = useTranslations('planDelete')
+  const locale = useLocale()
   const router = useRouter()
 
   const [open, setOpen] = useState(false)
@@ -24,7 +27,7 @@ export default function PlanDeleteButton({ planId }: { planId: string }) {
     setIsDeleting(true)
     setIsHidden(true)
 
-    const result = await deleteAuditPlan(planId)
+    const result = await deleteAuditPlan(planId, locale)
 
     if (result.error) {
       setIsHidden(false)
@@ -41,7 +44,7 @@ export default function PlanDeleteButton({ planId }: { planId: string }) {
     return (
       <div className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-400 sm:w-auto">
         <Loader2 size={16} className="animate-spin" />
-        Silinir...
+        {t('deleting')}
       </div>
     )
   }
@@ -60,7 +63,7 @@ export default function PlanDeleteButton({ planId }: { planId: string }) {
           className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
           <Trash2 size={16} />
-          Sil
+          {t('delete')}
         </button>
 
         {error && (
@@ -87,15 +90,13 @@ export default function PlanDeleteButton({ planId }: { planId: string }) {
 
                 <div>
                   <p className="text-xs font-black uppercase tracking-wide text-red-500">
-                    Silmə təsdiqi
+                    {t('confirmLabel')}
                   </p>
                   <h3 className="mt-1 text-xl font-black text-slate-950">
-                    Audit planı silinsin?
+                    {t('confirmTitle')}
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Bu əməliyyat plana aid cavabları, çatışmazlıqları, təyinatları
-                    və əlavə edilmiş faylı silə bilər. Əməliyyatı geri qaytarmaq
-                    mümkün olmayacaq.
+                    {t('confirmDescription')}
                   </p>
                 </div>
               </div>
@@ -105,6 +106,8 @@ export default function PlanDeleteButton({ planId }: { planId: string }) {
                 onClick={closeModal}
                 disabled={isDeleting}
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label={t('cancel')}
+                title={t('cancel')}
               >
                 <X size={17} />
               </button>
@@ -123,7 +126,7 @@ export default function PlanDeleteButton({ planId }: { planId: string }) {
                 disabled={isDeleting}
                 className="inline-flex justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Ləğv et
+                {t('cancel')}
               </button>
 
               <button
@@ -137,7 +140,7 @@ export default function PlanDeleteButton({ planId }: { planId: string }) {
                 ) : (
                   <Trash2 size={16} />
                 )}
-                {isDeleting ? 'Silinir...' : 'Bəli, sil'}
+                {isDeleting ? t('deleting') : t('confirmDelete')}
               </button>
             </div>
           </div>

@@ -1,11 +1,48 @@
-// middleware.ts
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import {createServerClient} from '@supabase/ssr'
+import createIntlMiddleware from 'next-intl/middleware'
+import {NextResponse, type NextRequest} from 'next/server'
+import {routing} from './i18n/routing'
+
+const intlMiddleware = createIntlMiddleware(routing)
+
+function getLocaleFromPath(pathname: string) {
+  const segment = pathname.split('/')[1]
+
+  if (routing.locales.includes(segment as any)) {
+    return segment
+  }
+
+  return routing.defaultLocale
+}
+
+function stripLocale(pathname: string) {
+  const locale = getLocaleFromPath(pathname)
+
+  if (pathname === `/${locale}`) {
+    return '/'
+  }
+
+  if (pathname.startsWith(`/${locale}/`)) {
+    return pathname.replace(`/${locale}`, '') || '/'
+  }
+
+  return pathname
+}
+
+function localizedPath(pathname: string, locale: string) {
+  if (pathname === '/') return `/${locale}`
+  return `/${locale}${pathname}`
+}
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+  const pathname = request.nextUrl.pathname
 
-  let response = NextResponse.next({
+  const intlResponse = intlMiddleware(request)
+
+  const locale = getLocaleFromPath(pathname)
+  const pathWithoutLocale = stripLocale(pathname)
+
+  let response = intlResponse || NextResponse.next({
     request: {
       headers: request.headers,
     },
@@ -25,7 +62,7 @@ export async function middleware(request: NextRequest) {
         return request.cookies.getAll()
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => {
+        cookiesToSet.forEach(({name, value}) => {
           request.cookies.set(name, value)
         })
 
@@ -35,7 +72,7 @@ export async function middleware(request: NextRequest) {
           },
         })
 
-        cookiesToSet.forEach(({ name, value, options }) => {
+        cookiesToSet.forEach(({name, value, options}) => {
           response.cookies.set(name, value, options)
         })
       },
@@ -44,7 +81,7 @@ export async function middleware(request: NextRequest) {
 
   try {
     const {
-      data: { user },
+      data: {user},
       error,
     } = await supabase.auth.getUser()
 
@@ -52,25 +89,25 @@ export async function middleware(request: NextRequest) {
       console.error('Supabase getUser error in middleware:', error.message)
     }
 
-    if (!user && pathname.startsWith('/dashboard')) {
+    if (!user && pathWithoutLocale.startsWith('/dashboard')) {
       const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/login'
+      redirectUrl.pathname = localizedPath('/login', locale)
       redirectUrl.searchParams.set('redirectedFrom', pathname)
       return NextResponse.redirect(redirectUrl)
     }
 
-    if (user && pathname === '/login') {
+    if (user && pathWithoutLocale === '/login') {
       const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/dashboard'
+      redirectUrl.pathname = localizedPath('/dashboard', locale)
       redirectUrl.search = ''
       return NextResponse.redirect(redirectUrl)
     }
   } catch (error) {
     console.error('Middleware failed:', error)
 
-    if (pathname.startsWith('/dashboard')) {
+    if (pathWithoutLocale.startsWith('/dashboard')) {
       const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/login'
+      redirectUrl.pathname = localizedPath('/login', locale)
       redirectUrl.search = ''
       return NextResponse.redirect(redirectUrl)
     }
@@ -80,5 +117,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: [
+    '/',
+    '/(az|ru|en)/:path*',
+    '/((?!api|_next|_vercel|.*\\..*).*)',
+  ],
 }

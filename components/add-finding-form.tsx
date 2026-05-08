@@ -1,9 +1,9 @@
 'use client'
 
-import { useActionState, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { addFinding, ActionState } from '@/app/dashboard/plans/actions'
-
+import {useActionState, useEffect, useState} from 'react'
+import {useRouter} from 'next/navigation'
+import {useLocale, useTranslations} from 'next-intl'
+import {addFinding, ActionState} from '@/app/[locale]/dashboard/plans/actions'
 
 function formatDateInput(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 8)
@@ -35,8 +35,10 @@ export default function AddFindingForm({
   users: any[]
   onClose: () => void
 }) {
+  const t = useTranslations('addFindingForm')
+  const locale = useLocale()
   const router = useRouter()
-  const initialState: ActionState = { error: null, success: false }
+  const initialState: ActionState = {error: null, success: false}
   const [state, formAction, pending] = useActionState(addFinding, initialState)
 
   const [deadlineDisplay, setDeadlineDisplay] = useState('')
@@ -54,6 +56,7 @@ export default function AddFindingForm({
 
   return (
     <form action={formAction} className="space-y-5">
+      <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="plan_id" value={planId} />
       <input type="hidden" name="question_id" value={questionId} />
       <input type="hidden" name="question_type" value={questionType} />
@@ -62,11 +65,9 @@ export default function AddFindingForm({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-xl font-extrabold text-slate-900">
-              Yeni Çatışmazlıq
+              {t('title')}
             </h3>
-            <p className="mt-1 text-sm text-slate-500">
-              Problemli cavab üçün risk, təsvir və cavabdeh şəxs əlavə edin.
-            </p>
+            <p className="mt-1 text-sm text-slate-500">{t('subtitle')}</p>
           </div>
 
           <button
@@ -74,7 +75,7 @@ export default function AddFindingForm({
             onClick={onClose}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
           >
-            Bağla
+            {t('close')}
           </button>
         </div>
       </div>
@@ -87,42 +88,42 @@ export default function AddFindingForm({
 
       {state.success && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-          Çatışmazlıq uğurla əlavə edildi. Pəncərə bağlanır...
+          {t('success')}
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className="mb-1 block text-sm font-semibold text-slate-700">
-            Problem başlığı
+            {t('problemTitle')}
           </label>
           <input
             name="title"
             required
             disabled={pending || state.success}
-            placeholder="Məs: Sənədləşmə natamamdır"
+            placeholder={t('problemTitlePlaceholder')}
             className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           />
         </div>
 
         <div>
           <label className="mb-1 block text-sm font-semibold text-slate-700">
-            Risk səviyyəsi
+            {t('severity')}
           </label>
           <select
             name="severity"
             disabled={pending || state.success}
             className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           >
-            <option value="low">Low Risk</option>
-            <option value="medium">Medium Risk</option>
-            <option value="high">High Risk</option>
+            <option value="low">{t('lowRisk')}</option>
+            <option value="medium">{t('mediumRisk')}</option>
+            <option value="high">{t('highRisk')}</option>
           </select>
         </div>
 
         <div>
           <label className="mb-1 block text-sm font-semibold text-slate-700">
-            Deadline
+            {t('deadline')}
           </label>
 
           <input
@@ -135,49 +136,48 @@ export default function AddFindingForm({
             type="text"
             inputMode="numeric"
             value={deadlineDisplay}
-            onChange={(e) => setDeadlineDisplay(formatDateInput(e.target.value))}
+            onChange={(event) =>
+              setDeadlineDisplay(formatDateInput(event.target.value))
+            }
             maxLength={10}
-            placeholder="GG/AA/İİİİ"
+            placeholder={t('datePlaceholder')}
             disabled={pending || state.success}
             className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           />
 
-          <p className="mt-1 text-xs text-slate-500">
-            Məsələn: 31/12/2026
-          </p>
+          <p className="mt-1 text-xs text-slate-500">{t('dateExample')}</p>
         </div>
 
         <div className="sm:col-span-2">
           <label className="mb-1 block text-sm font-semibold text-slate-700">
-            Cavabdeh şəxs <span className="text-slate-400">(istəyə bağlı)</span>
+            {t('responsiblePerson')}{' '}
+            <span className="text-slate-400">({t('optional')})</span>
           </label>
           <select
             name="assigned_to"
             disabled={pending || state.success}
             className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           >
-            <option value="">Seçilməyib</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.full_name}
+            <option value="">{t('notSelected')}</option>
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.full_name}
               </option>
             ))}
           </select>
 
-          <p className="mt-1 text-xs text-slate-500">
-            Çatışmazlıqnın icrasına məsul şəxsi seçmək üçündür. Boş saxlaya bilərsiniz.
-          </p>
+          <p className="mt-1 text-xs text-slate-500">{t('responsibleHelp')}</p>
         </div>
 
         <div className="sm:col-span-2">
           <label className="mb-1 block text-sm font-semibold text-slate-700">
-            Təsvir
+            {t('description')}
           </label>
           <textarea
             name="description"
             rows={4}
             disabled={pending || state.success}
-            placeholder="Problemin detallı təsvirini yazın..."
+            placeholder={t('descriptionPlaceholder')}
             className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           />
         </div>
@@ -185,7 +185,8 @@ export default function AddFindingForm({
 
       <div className="sm:col-span-2">
         <label className="mb-1 block text-sm font-semibold text-slate-700">
-          Fayllar <span className="text-slate-400">(istəyə bağlı)</span>
+          {t('files')}{' '}
+          <span className="text-slate-400">({t('optional')})</span>
         </label>
 
         <input
@@ -196,9 +197,7 @@ export default function AddFindingForm({
           className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-100"
         />
 
-        <p className="mt-1 text-xs text-slate-500">
-          Şəkil, PDF və ya sənəd əlavə edə bilərsiniz.
-        </p>
+        <p className="mt-1 text-xs text-slate-500">{t('filesHelp')}</p>
       </div>
 
       <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-end">
@@ -208,7 +207,7 @@ export default function AddFindingForm({
           disabled={pending}
           className="inline-flex w-full justify-center rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
-          Bağla
+          {t('close')}
         </button>
 
         <button
@@ -216,7 +215,7 @@ export default function AddFindingForm({
           disabled={pending || state.success}
           className="inline-flex w-full justify-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300 sm:w-auto"
         >
-          {pending ? 'Əlavə edilir...' : state.success ? 'Əlavə edildi' : 'Çatışmazlığı Əlavə Et'}
+          {pending ? t('adding') : state.success ? t('added') : t('submit')}
         </button>
       </div>
     </form>

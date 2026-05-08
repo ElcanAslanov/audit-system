@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
+import { useTranslations } from 'next-intl'
 import PlanCard from '@/components/audit/plan-card'
 import PlanAccessButton from '@/components/audit/plan-access-button'
 import PlanLockButton from '@/components/audit/plan-lock-button'
@@ -9,18 +10,7 @@ import PlanDeleteButton from '@/components/audit/plan-delete-button'
 import PlanEditButton from '@/components/audit/plan-edit-button'
 import { ClipboardCheck } from 'lucide-react'
 
-function statusLabel(value?: string | null) {
-  if (value === 'tamamlandi') return 'Tamamlandı'
-  if (value === 'needs_attention') return 'Diqqət tələb edir'
-  if (value === 'planlanan') return 'Planlanan'
-  return value || '-'
-}
 
-function lockLabel(plan: any) {
-  if (plan.locked_view) return 'Baxış və redaktə kilidli'
-  if (plan.locked_edit) return 'Redaktə kilidli'
-  return 'Kilidsiz'
-}
 
 function lockClass(plan: any) {
   if (plan.locked_view) return 'bg-red-50 text-red-700'
@@ -52,7 +42,7 @@ type Props = {
   canCreatePlan: boolean
   currentUserId: string
   currentUserRole?: string | null
-   isReadOnlyObserver?: boolean
+  isReadOnlyObserver?: boolean
 }
 
 export default function PlansViewSwitcher({
@@ -65,9 +55,24 @@ export default function PlansViewSwitcher({
   canCreatePlan,
   currentUserId,
   currentUserRole,
-    isReadOnlyObserver = false,
+  isReadOnlyObserver = false,
 
 }: Props) {
+  const t = useTranslations('plans')
+
+  const statusLabel = (value?: string | null) => {
+    if (value === 'tamamlandi') return t('completed')
+    if (value === 'needs_attention') return t('needsAttention')
+    if (value === 'planlanan') return t('planned')
+    return value || '-'
+  }
+
+  const lockLabel = (plan: any) => {
+    if (plan.locked_view) return t('viewAndEditLocked')
+    if (plan.locked_edit) return t('editLocked')
+    return t('unlocked')
+  }
+
   const [view, setView] = useState<'cards' | 'table'>('cards')
 
   useEffect(() => {
@@ -83,15 +88,15 @@ export default function PlansViewSwitcher({
     window.localStorage.setItem('plans-view-mode', nextView)
   }
   const safeCurrentUserRole = currentUserRole || undefined
-const isObserver =
-  isReadOnlyObserver || String(safeCurrentUserRole || '').toLowerCase() === 'musahideci'
+  const isObserver =
+    isReadOnlyObserver || String(safeCurrentUserRole || '').toLowerCase() === 'musahideci'
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-lg font-black text-slate-950">Cari Planlar</h2>
+          <h2 className="text-lg font-black text-slate-950">{t('currentPlans')}</h2>
           <p className="mt-1 text-sm text-slate-500">
-            {plans.length} audit planı göstərilir.
+            {t('plansShown', { count: plans.length })}
           </p>
         </div>
 
@@ -104,7 +109,7 @@ const isObserver =
               : 'text-slate-600 hover:bg-white'
               }`}
           >
-            Kart
+            {t('cardView')}
           </button>
 
           <button
@@ -115,7 +120,7 @@ const isObserver =
               : 'text-slate-600 hover:bg-white'
               }`}
           >
-            Tablo
+            {t('tableView')}
           </button>
         </div>
       </div>
@@ -127,11 +132,11 @@ const isObserver =
           </div>
 
           <h3 className="mt-4 font-black text-slate-900">
-            Audit planı tapılmadı
+            {t('noPlans')}
           </h3>
 
           <p className="mt-1 text-sm text-slate-500">
-            Seçilmiş filterlərə uyğun nəticə yoxdur.
+            {t('noPlansDescription')}
           </p>
         </div>
       )}
@@ -150,7 +155,7 @@ const isObserver =
               canCreatePlan={canCreatePlan}
               currentUserId={currentUserId}
               currentUserRole={safeCurrentUserRole}
-                isReadOnlyObserver={isObserver}
+              isReadOnlyObserver={isObserver}
 
             />
           ))}
@@ -164,45 +169,45 @@ const isObserver =
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-4 py-3 text-left font-black text-slate-600">
-                    Plan
+                    {t('plan')}
                   </th>
                   <th className="px-4 py-3 text-left font-black text-slate-600">
-                    Şirkət
+                    {t('company')}
                   </th>
                   <th className="px-4 py-3 text-left font-black text-slate-600">
-                    Departament
+                    {t('department')}
                   </th>
                   <th className="px-4 py-3 text-left font-black text-slate-600">
-                    Status
+                    {t('status')}
                   </th>
                   <th className="px-4 py-3 text-left font-black text-slate-600">
-                    Kilid
+                    {t('locked')}
                   </th>
                   <th className="px-4 py-3 text-left font-black text-slate-600">
-                    Score
+                    {t('score')}
                   </th>
                   <th className="px-4 py-3 text-left font-black text-slate-600">
-                    Başlama
+                    {t('startDate')}
                   </th>
                   <th className="px-4 py-3 text-left font-black text-slate-600">
-                    Deadline
+                    {t('deadline')}
                   </th>
                   <th className="min-w-[360px] px-4 py-3 text-right font-black text-slate-600">
-                    Əməliyyat
+                    {t('actions')}
                   </th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-slate-100 bg-white">
                 {plans.map((plan: any) => {
-                 const isAdmin = safeCurrentUserRole === 'admin'
-const isCreator = plan.created_by === currentUserId
+                  const isAdmin = safeCurrentUserRole === 'admin'
+                  const isCreator = plan.created_by === currentUserId
 
-const canManageLock = !isObserver && (isAdmin || isCreator)
-const canManageAccess = !isObserver && (isAdmin || isCreator)
-const canManagePlan = !isObserver && (isAdmin || isCreator)
-const canFillPlan = !isObserver && !plan.locked_edit
-const canDeletePlan = !isObserver && canCreatePlan
+                  const canManageLock = !isObserver && (isAdmin || isCreator)
+                  const canManageAccess = !isObserver && (isAdmin || isCreator)
+                  const canManagePlan = !isObserver && (isAdmin || isCreator)
+                  const canFillPlan = !isObserver && !plan.locked_edit
+                  const canDeletePlan = !isObserver && canCreatePlan
 
                   return (
                     <tr key={plan.id} className="transition hover:bg-slate-50">
@@ -216,7 +221,7 @@ const canDeletePlan = !isObserver && canCreatePlan
                         </Link>
 
                         <p className="mt-1 text-xs text-slate-500">
-                          {plan.audit_answers?.length || 0} cavab
+                          {t('answersCount', { count: plan.audit_answers?.length || 0 })}
                         </p>
                       </td>
 
@@ -253,7 +258,7 @@ const canDeletePlan = !isObserver && canCreatePlan
                       </td>
 
                       <td className="px-4 py-3 align-top text-slate-700">
-                        {formatDate(plan.due_date)}
+                        {plan.due_date ? formatDate(plan.due_date) : t('noDeadline')}
                       </td>
 
                       <td className="px-4 py-3 align-top">
@@ -297,18 +302,18 @@ const canDeletePlan = !isObserver && canCreatePlan
                             onClick={(event) => event.stopPropagation()}
                             className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
                           >
-                            Bax
+                            {t('view')}
                           </Link>
 
-                         {canFillPlan && (
-  <Link
-    href={`/dashboard/plans/${plan.id}/fill`}
-    onClick={(event) => event.stopPropagation()}
-    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700"
-  >
-    Doldur
-  </Link>
-)}
+                          {canFillPlan && (
+                            <Link
+                              href={`/dashboard/plans/${plan.id}/fill`}
+                              onClick={(event) => event.stopPropagation()}
+                              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700"
+                            >
+                              {t('fill')}
+                            </Link>
+                          )}
 
                           {canManageLock && (
                             <div
@@ -326,16 +331,16 @@ const canDeletePlan = !isObserver && canCreatePlan
                             </div>
                           )}
 
-                         {canDeletePlan && (
-  <div
-    onClick={(event) => {
-      event.preventDefault()
-      event.stopPropagation()
-    }}
-  >
-    <PlanDeleteButton planId={plan.id} />
-  </div>
-)}
+                          {canDeletePlan && (
+                            <div
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                              }}
+                            >
+                              <PlanDeleteButton planId={plan.id} />
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>

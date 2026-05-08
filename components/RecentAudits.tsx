@@ -1,4 +1,6 @@
-import Link from 'next/link'
+'use client'
+
+import {Link} from '@/i18n/routing'
 import {
   AlertTriangle,
   ArrowRight,
@@ -7,13 +9,7 @@ import {
   ClipboardCheck,
   Clock3,
 } from 'lucide-react'
-
-function statusLabel(value?: string | null) {
-  if (value === 'tamamlandi') return 'Tamamlandı'
-  if (value === 'needs_attention') return 'Diqqət tələb edir'
-  if (value === 'planlanan') return 'Planlanan'
-  return value || '-'
-}
+import {useTranslations} from 'next-intl'
 
 function statusTone(value?: string | null) {
   if (value === 'tamamlandi') {
@@ -48,31 +44,53 @@ function scoreTone(score: number) {
 function formatDate(value?: string | null) {
   if (!value) return '-'
 
-  const date = new Date(value)
+  const raw = String(value).trim()
 
-  if (Number.isNaN(date.getTime())) {
-    return value
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
+
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch
+    return `${day}.${month}.${year}`
   }
 
-  return date.toLocaleDateString('az-AZ')
+  const date = new Date(raw)
+
+  if (Number.isNaN(date.getTime())) {
+    return raw
+  }
+
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const year = date.getUTCFullYear()
+
+  return `${day}.${month}.${year}`
 }
 
-export default function RecentAudits({ audits }: { audits: any[] }) {
+export default function RecentAudits({audits}: {audits: any[]}) {
+  const t = useTranslations('recentAudits')
+
+  const statusLabel = (value?: string | null) => {
+    if (value === 'tamamlandi') return t('completed')
+    if (value === 'needs_attention') return t('needsAttention')
+    if (value === 'planlanan') return t('planned')
+    return value || '-'
+  }
+
   return (
     <div className="p-5 sm:p-6">
       <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-indigo-700">
             <ClipboardCheck size={14} />
-            Son fəaliyyət
+            {t('badge')}
           </div>
 
           <h2 className="mt-3 text-xl font-black text-slate-950">
-            Son auditlər
+            {t('title')}
           </h2>
 
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Sistemdə yaradılmış və yenilənmiş son audit planları
+            {t('subtitle')}
           </p>
         </div>
 
@@ -80,7 +98,7 @@ export default function RecentAudits({ audits }: { audits: any[] }) {
           href="/dashboard/plans"
           className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 sm:w-auto"
         >
-          Hamısına bax
+          {t('viewAll')}
           <ArrowRight size={16} />
         </Link>
       </div>
@@ -93,11 +111,11 @@ export default function RecentAudits({ audits }: { audits: any[] }) {
             </div>
 
             <h3 className="mt-4 font-black text-slate-900">
-              Hələ audit yoxdur
+              {t('emptyTitle')}
             </h3>
 
             <p className="mt-1 text-sm leading-6 text-slate-500">
-              Yeni audit planı yaradıldıqdan sonra burada görünəcək.
+              {t('emptyDescription')}
             </p>
           </div>
         )}

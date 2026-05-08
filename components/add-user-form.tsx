@@ -1,8 +1,9 @@
 'use client'
 
-import { useActionState, useEffect, useRef } from 'react'
-import { createUser } from '@/app/dashboard/admin/actions'
-import { Building2, Loader2, Mail, Plus, ShieldCheck, User } from 'lucide-react'
+import {useActionState, useEffect, useRef} from 'react'
+import {createUser} from '@/app/[locale]/dashboard/admin/actions'
+import {Building2, Loader2, Mail, Plus, ShieldCheck, User} from 'lucide-react'
+import {useLocale, useTranslations} from 'next-intl'
 
 export default function AddUserForm({
   companies,
@@ -11,6 +12,9 @@ export default function AddUserForm({
   companies: any[]
   onSuccess?: () => void
 }) {
+  const t = useTranslations('addUser')
+  const rolesT = useTranslations('roles')
+  const locale = useLocale()
   const formRef = useRef<HTMLFormElement | null>(null)
   const [state, action, pending] = useActionState(createUser, null)
 
@@ -23,6 +27,8 @@ export default function AddUserForm({
 
   return (
     <form ref={formRef} action={action} className="space-y-4">
+      <input type="hidden" name="locale" value={locale} />
+
       {state?.error && (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
           {state.error}
@@ -31,14 +37,14 @@ export default function AddUserForm({
 
       {state?.success && (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
-          İstifadəçi uğurla yaradıldı.
+          {t('success')}
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className="mb-1 block text-sm font-bold text-slate-700">
-            Ad soyad
+            {t('fullName')}
           </label>
           <div className="relative">
             <User
@@ -48,7 +54,7 @@ export default function AddUserForm({
             <input
               name="full_name"
               required
-              placeholder="Məs: Elcan Cahan"
+              placeholder={t('fullNamePlaceholder')}
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
             />
           </div>
@@ -56,7 +62,7 @@ export default function AddUserForm({
 
         <div>
           <label className="mb-1 block text-sm font-bold text-slate-700">
-            Email
+            {t('email')}
           </label>
           <div className="relative">
             <Mail
@@ -75,21 +81,21 @@ export default function AddUserForm({
 
         <div>
           <label className="mb-1 block text-sm font-bold text-slate-700">
-            Şifrə
+            {t('password')}
           </label>
           <input
             type="password"
             name="password"
             required
             minLength={6}
-            placeholder="Minimum 6 simvol"
+            placeholder={t('passwordPlaceholder')}
             className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
           />
         </div>
 
         <div>
           <label className="mb-1 block text-sm font-bold text-slate-700">
-            Rol
+            {t('role')}
           </label>
           <div className="relative">
             <ShieldCheck
@@ -101,19 +107,19 @@ export default function AddUserForm({
               required
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
             >
-              <option value="">Rol seçin...</option>
-              <option value="admin">Admin</option>
-              <option value="rehber">Rəhbər</option>
-              <option value="musahideci">Müşahidəçi</option>
-              <option value="audit_muavini">Audit müavini</option>
-              <option value="auditor">Auditor</option>
+              <option value="">{t('selectRole')}</option>
+              <option value="admin">{rolesT('admin')}</option>
+              <option value="rehber">{rolesT('rehber')}</option>
+              <option value="musahideci">{rolesT('musahideci')}</option>
+              <option value="audit_muavini">{rolesT('audit_muavini')}</option>
+              <option value="auditor">{rolesT('auditor')}</option>
             </select>
           </div>
         </div>
 
         <div>
           <label className="mb-1 block text-sm font-bold text-slate-700">
-            Şirkət
+            {t('company')}
           </label>
           <div className="relative">
             <Building2
@@ -124,7 +130,7 @@ export default function AddUserForm({
               name="company_id"
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
             >
-              <option value="">Şirkət seçilməyib</option>
+              <option value="">{t('noCompany')}</option>
               {companies.map((company: any) => (
                 <option key={company.id} value={company.id}>
                   {company.name}
@@ -145,7 +151,7 @@ export default function AddUserForm({
           ) : (
             <Plus size={18} />
           )}
-          {pending ? 'Yaradılır...' : 'İstifadəçi yarat'}
+          {pending ? t('creating') : t('submit')}
         </button>
       </div>
     </form>

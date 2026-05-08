@@ -1,4 +1,7 @@
-import { AlertTriangle, CheckCircle2, Gauge } from 'lucide-react'
+'use client'
+
+import {AlertTriangle, CheckCircle2, Gauge} from 'lucide-react'
+import {useTranslations} from 'next-intl'
 
 type Stats = {
   averageScore: string | number
@@ -10,10 +13,10 @@ function clampScore(value: number) {
   return Math.max(0, Math.min(100, value))
 }
 
-function scoreTone(score: number) {
+function scoreTone(score: number, t: ReturnType<typeof useTranslations>) {
   if (score >= 80) {
     return {
-      label: 'Yüksək performans',
+      label: t('highPerformance'),
       text: 'text-emerald-700',
       bg: 'bg-emerald-500',
       soft: 'bg-emerald-50',
@@ -23,7 +26,7 @@ function scoreTone(score: number) {
 
   if (score >= 50) {
     return {
-      label: 'Orta performans',
+      label: t('mediumPerformance'),
       text: 'text-yellow-700',
       bg: 'bg-yellow-500',
       soft: 'bg-yellow-50',
@@ -32,7 +35,7 @@ function scoreTone(score: number) {
   }
 
   return {
-    label: 'Aşağı performans',
+    label: t('lowPerformance'),
     text: 'text-red-700',
     bg: 'bg-red-500',
     soft: 'bg-red-50',
@@ -40,13 +43,16 @@ function scoreTone(score: number) {
   }
 }
 
-export default function DashboardStats({ stats }: { stats: Stats }) {
+export default function DashboardStats({stats}: {stats: Stats}) {
+  const t = useTranslations('dashboardStats')
   const averageScore = clampScore(Number(stats?.averageScore || 0))
-  const tone = scoreTone(averageScore)
+  const tone = scoreTone(averageScore, t)
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <div className={`group relative overflow-hidden rounded-3xl border ${tone.border} ${tone.soft} p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md`}>
+      <div
+        className={`group relative overflow-hidden rounded-3xl border ${tone.border} ${tone.soft} p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md`}
+      >
         <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/60 blur-2xl transition group-hover:scale-125" />
 
         <div className="relative flex items-start justify-between gap-4">
@@ -56,7 +62,7 @@ export default function DashboardStats({ stats }: { stats: Stats }) {
             </div>
 
             <h3 className={`mt-4 text-sm font-black ${tone.text}`}>
-              Ümumi Performans
+              {t('overallPerformance')}
             </h3>
 
             <p className="mt-2 text-4xl font-black tracking-tight text-slate-950">
@@ -69,14 +75,14 @@ export default function DashboardStats({ stats }: { stats: Stats }) {
           </div>
 
           <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-black text-slate-600 shadow-sm">
-            Score
+            {t('score')}
           </span>
         </div>
 
         <div className="relative mt-5 h-3 overflow-hidden rounded-full bg-white/80">
           <div
             className={`h-full rounded-full ${tone.bg} transition-all duration-700`}
-            style={{ width: `${averageScore}%` }}
+            style={{width: `${averageScore}%`}}
           />
         </div>
       </div>
@@ -91,7 +97,7 @@ export default function DashboardStats({ stats }: { stats: Stats }) {
             </div>
 
             <h3 className="mt-4 text-sm font-black text-red-700">
-              Açıq Risklər
+              {t('openRisks')}
             </h3>
 
             <p className="mt-2 text-4xl font-black tracking-tight text-slate-950">
@@ -99,18 +105,18 @@ export default function DashboardStats({ stats }: { stats: Stats }) {
             </p>
 
             <p className="mt-1 text-xs font-bold text-red-700">
-              Diqqət tələb edən auditlər
+              {t('risksNeedAttention')}
             </p>
           </div>
 
           <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-black text-red-700 shadow-sm">
-            Risk
+            {t('risk')}
           </span>
         </div>
 
         <div className="relative mt-5 rounded-2xl border border-red-100 bg-white/70 p-3">
           <p className="text-xs leading-5 text-red-700">
-            Kritik və aşağı score-lu auditlər prioritet olaraq izlənməlidir.
+            {t('riskDescription')}
           </p>
         </div>
       </div>
@@ -125,7 +131,7 @@ export default function DashboardStats({ stats }: { stats: Stats }) {
             </div>
 
             <h3 className="mt-4 text-sm font-black text-emerald-700">
-              Tamamlanmış Auditlər
+              {t('completedAudits')}
             </h3>
 
             <p className="mt-2 text-4xl font-black tracking-tight text-slate-950">
@@ -133,18 +139,18 @@ export default function DashboardStats({ stats }: { stats: Stats }) {
             </p>
 
             <p className="mt-1 text-xs font-bold text-emerald-700">
-              Hesabatlı audit sayı
+              {t('reportedAuditCount')}
             </p>
           </div>
 
           <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-black text-emerald-700 shadow-sm">
-            Done
+            {t('done')}
           </span>
         </div>
 
         <div className="relative mt-5 rounded-2xl border border-emerald-100 bg-white/70 p-3">
           <p className="text-xs leading-5 text-emerald-700">
-            Tamamlanmış auditlər performans trendində və hesabatlarda görünür.
+            {t('completedDescription')}
           </p>
         </div>
       </div>

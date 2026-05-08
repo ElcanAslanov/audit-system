@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import type { ReactNode } from 'react'
+import {useEffect, useMemo, useState} from 'react'
+import type {ReactNode} from 'react'
+import {useTranslations} from 'next-intl'
 import {
   Area,
   AreaChart,
@@ -18,15 +19,15 @@ import {
 } from 'recharts'
 
 type ChartData = {
-  yearly: { year: string; count: number }[]
-  monthly: { key: string; month: string; count: number }[]
-  monthlyScore: { key: string; month: string; score: number }[]
-  status: { name: string; value: number }[]
+  yearly: {year: string; count: number}[]
+  monthly: {key: string; month: string; count: number}[]
+  monthlyScore: {key: string; month: string; score: number}[]
+  status: {name: string; value: number}[]
 }
 
 const pieColors = ['#2563eb', '#16a34a', '#dc2626', '#64748b']
 
-function ChartBox({ children }: { children: ReactNode }) {
+function ChartBox({children}: {children: ReactNode}) {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -50,16 +51,50 @@ function ChartBox({ children }: { children: ReactNode }) {
   )
 }
 
-export default function DashboardCharts({ data }: { data: ChartData }) {
+export default function DashboardCharts({data}: {data: ChartData}) {
+  const t = useTranslations('dashboardCharts')
+
+  const localizedStatus = useMemo(() => {
+    return (data.status || []).map((item) => {
+      const raw = String(item.name || '').toLowerCase()
+
+      let name = item.name
+
+      if (
+        raw === 'tamamlandi' ||
+        raw === 'tamamlandı' ||
+        raw === 'completed'
+      ) {
+        name = t('completed')
+      } else if (
+        raw === 'needs_attention' ||
+        raw === 'diqqət tələb edir' ||
+        raw === 'needs attention'
+      ) {
+        name = t('needsAttention')
+      } else if (
+        raw === 'planlanan' ||
+        raw === 'planned'
+      ) {
+        name = t('planned')
+      }
+
+      return {
+        ...item,
+        name,
+      }
+    })
+  }, [data.status, t])
+
   return (
     <div className="grid w-full min-w-0 grid-cols-1 gap-6 xl:grid-cols-2">
       <section className="w-full min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-5">
           <h2 className="text-lg font-black text-slate-950">
-            İllər üzrə audit sayı
+            {t('yearlyAuditCount')}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Hər il yaradılmış audit planlarının sayı
+            {t('yearlyAuditCountSubtitle')}
           </p>
         </div>
 
@@ -77,10 +112,10 @@ export default function DashboardCharts({ data }: { data: ChartData }) {
       <section className="w-full min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-5">
           <h2 className="text-lg font-black text-slate-950">
-            Aylar üzrə audit sayı
+            {t('monthlyAuditCount')}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Aylıq yaradılmış audit planlarının sayı
+            {t('monthlyAuditCountSubtitle')}
           </p>
         </div>
 
@@ -91,7 +126,7 @@ export default function DashboardCharts({ data }: { data: ChartData }) {
               dataKey="month"
               tickLine={false}
               axisLine={false}
-              tick={{ fontSize: 11 }}
+              tick={{fontSize: 11}}
             />
             <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
             <Tooltip />
@@ -109,10 +144,10 @@ export default function DashboardCharts({ data }: { data: ChartData }) {
       <section className="w-full min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-5">
           <h2 className="text-lg font-black text-slate-950">
-            Aylar üzrə orta score
+            {t('monthlyAverageScore')}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Tamamlanmış auditlərin aylıq orta performansı
+            {t('monthlyAverageScoreSubtitle')}
           </p>
         </div>
 
@@ -123,7 +158,7 @@ export default function DashboardCharts({ data }: { data: ChartData }) {
               dataKey="month"
               tickLine={false}
               axisLine={false}
-              tick={{ fontSize: 11 }}
+              tick={{fontSize: 11}}
             />
             <YAxis domain={[0, 100]} tickLine={false} axisLine={false} />
             <Tooltip />
@@ -141,23 +176,23 @@ export default function DashboardCharts({ data }: { data: ChartData }) {
       <section className="w-full min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-5">
           <h2 className="text-lg font-black text-slate-950">
-            Status bölgüsü
+            {t('statusDistribution')}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Audit planlarının statuslara görə bölgüsü
+            {t('statusDistributionSubtitle')}
           </p>
         </div>
 
         <ChartBox>
           <PieChart>
             <Pie
-              data={data.status}
+              data={localizedStatus}
               dataKey="value"
               nameKey="name"
               outerRadius={95}
               label
             >
-              {data.status.map((_, index) => (
+              {localizedStatus.map((_, index) => (
                 <Cell
                   key={`cell-${index}`}
                   fill={pieColors[index % pieColors.length]}

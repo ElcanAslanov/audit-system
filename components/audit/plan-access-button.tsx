@@ -15,7 +15,8 @@ import {
 import {
     addPlanViewer,
     removePlanViewer,
-} from '@/app/dashboard/plans/actions'
+} from '@/app/[locale]/dashboard/plans/actions'
+import {useLocale, useTranslations} from 'next-intl'
 
 type UserItem = {
     id: string
@@ -43,40 +44,44 @@ function normalizeProfile(value: any) {
     return Array.isArray(value) ? value[0] || null : value || null
 }
 
-function normalizeAssignments(plan: any): ViewerItem[] {
-    return (plan.plan_assignments || [])
-        .map((item: any) => {
-            const profile = normalizeProfile(item.profiles)
+function normalizeAssignments(plan: any, assignedAuditorType: string): ViewerItem[] {
+  const result: ViewerItem[] = []
 
-            return profile?.full_name
-                ? {
-                    id: String(item.user_id || profile.id || profile.full_name),
-                    full_name: profile.full_name,
-                    email: profile.email || null,
-                    role: profile.role || null,
-                    type: 'Auditor',
-                }
-                : null
-        })
-        .filter(Boolean)
+  for (const item of plan.plan_assignments || []) {
+    const profile = normalizeProfile(item.profiles)
+
+    if (!profile?.full_name) continue
+
+    result.push({
+      id: String(item.user_id || profile.id || profile.full_name),
+      full_name: String(profile.full_name),
+      email: profile.email || null,
+      role: profile.role || null,
+      type: assignedAuditorType,
+    })
+  }
+
+  return result
 }
 
-function normalizeViewers(plan: any): ViewerItem[] {
-    return (plan.audit_plan_viewers || [])
-        .map((item: any) => {
-            const profile = normalizeProfile(item.profiles)
+function normalizeViewers(plan: any, extraViewerType: string): ViewerItem[] {
+  const result: ViewerItem[] = []
 
-            return profile?.full_name
-                ? {
-                    id: String(item.user_id || profile.id || profile.full_name),
-                    full_name: profile.full_name,
-                    email: profile.email || null,
-                    role: profile.role || null,
-                    type: 'Əlavə baxış',
-                }
-                : null
-        })
-        .filter(Boolean)
+  for (const item of plan.audit_plan_viewers || []) {
+    const profile = normalizeProfile(item.profiles)
+
+    if (!profile?.full_name) continue
+
+    result.push({
+      id: String(item.user_id || profile.id || profile.full_name),
+      full_name: String(profile.full_name),
+      email: profile.email || null,
+      role: profile.role || null,
+      type: extraViewerType,
+    })
+  }
+
+  return result
 }
 
 function initials(name?: string | null, fallback?: string | null) {
@@ -90,12 +95,14 @@ function initials(name?: string | null, fallback?: string | null) {
     return text.charAt(0).toUpperCase()
 }
 
-function roleLabel(role?: string | null) {
-    if (role === 'admin') return 'Admin'
-    if (role === 'auditor') return 'Auditor'
-    if (role === 'audit_muavini') return 'Audit müavini'
-    if (role === 'rehber') return 'Rəhbər'
-    return role || 'İstifadəçi'
+function roleLabel(role: string | null | undefined, tRoles: any, fallback: string) {
+    if (!role) return fallback
+
+    try {
+        return tRoles(role)
+    } catch {
+        return role || fallback
+    }
 }
 
 function PersonCard({
@@ -104,12 +111,20 @@ function PersonCard({
     removable = false,
     loading = false,
     onRemove,
+    tRoles,
+    defaultUserRole,
+    unnamedUser,
+    removePermission,
 }: {
     user: ViewerItem
     tone?: 'slate' | 'blue' | 'emerald'
     removable?: boolean
     loading?: boolean
     onRemove?: () => void
+    tRoles: any
+    defaultUserRole: string
+    unnamedUser: string
+    removePermission: string
 }) {
     const toneClass =
         tone === 'blue'
@@ -128,7 +143,7 @@ function PersonCard({
 
             <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-black text-slate-900">
-                    {user.full_name || 'Adsız istifadəçi'}
+                    {user.full_name || unnamedUser}
                 </p>
 
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -138,7 +153,7 @@ function PersonCard({
 
                     {user.role && (
                         <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">
-                            {roleLabel(user.role)}
+                            {roleLabel(user.role, tRoles, defaultUserRole)}
                         </span>
                     )}
                 </div>
@@ -150,7 +165,7 @@ function PersonCard({
                     disabled={loading}
                     onClick={onRemove}
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-red-200 bg-red-50 text-red-600 opacity-80 transition hover:bg-red-100 hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
-                    title="İcazəni sil"
+                    title={removePermission}
                 >
                     {loading ? (
                         <Loader2 size={15} className="animate-spin" />
@@ -169,11 +184,14 @@ export default function PlanAccessButton({
     currentUserId,
     currentUserRole,
 }: Props) {
+    const t = useTranslations('planAccess')
+const tRoles = useTranslations('roles')
+const locale = useLocale()
     const [open, setOpen] = useState(false)
     const [mounted, setMounted] = useState(false)
     const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
     const [localExtraViewers, setLocalExtraViewers] = useState<ViewerItem[]>(() =>
-        normalizeViewers(plan)
+        normalizeViewers(plan, t('extraViewerType'))
     )
     const [removingUserId, setRemovingUserId] = useState<string | null>(null)
     const [isAdding, setIsAdding] = useState(false)
@@ -185,8 +203,8 @@ export default function PlanAccessButton({
     }, [])
 
     useEffect(() => {
-        setLocalExtraViewers(normalizeViewers(plan))
-    }, [plan])
+        setLocalExtraViewers(normalizeViewers(plan, t('extraViewerType')))
+    }, [plan, t])
 
     useEffect(() => {
         if (!open) return
@@ -208,7 +226,10 @@ export default function PlanAccessButton({
     const isCreator = plan.created_by === currentUserId
     const canManage = isAdmin || isCreator
 
-    const assignedUsers = useMemo(() => normalizeAssignments(plan), [plan])
+    const assignedUsers = useMemo(
+        () => normalizeAssignments(plan, t('assignedAuditorType')),
+        [plan, t]
+    )
 
     const selectedViewerIds = useMemo(() => {
         return new Set(localExtraViewers.map((item) => String(item.id)))
@@ -270,7 +291,7 @@ export default function PlanAccessButton({
 
     const handleAddViewer = async () => {
         if (selectedUserIds.length === 0) {
-            setMessage('Ən azı 1 istifadəçi seçilməlidir.')
+            setMessage(t('selectAtLeastOne'))
             return
         }
 
@@ -279,14 +300,14 @@ export default function PlanAccessButton({
             full_name: user.full_name || user.email || String(user.id),
             email: user.email || null,
             role: user.role || null,
-            type: 'Əlavə baxış',
+            type: t('extraViewerType'),
         }))
 
         setIsAdding(true)
         setMessage(null)
 
         for (const user of usersToAdd) {
-            const result = await addPlanViewer(plan.id, user.id)
+            const result = await addPlanViewer(plan.id, user.id, locale)
 
             if (result.error) {
                 setMessage(result.error)
@@ -317,7 +338,7 @@ export default function PlanAccessButton({
         setRemovingUserId(userId)
         setMessage(null)
 
-        const result = await removePlanViewer(plan.id, userId)
+        const result = await removePlanViewer(plan.id, userId, locale)
 
         if (result.error) {
             setMessage(result.error)
@@ -350,11 +371,11 @@ export default function PlanAccessButton({
                         <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-white p-5 sm:p-6">
                             <div className="min-w-0">
                                 <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                                    Plan baxış icazəsi
+                                    {t('title')}
                                 </p>
 
                                 <h3 className="mt-1 text-xl font-black text-slate-950">
-                                    Kimlər görə bilir?
+                                    {t('whoCanView')}
                                 </h3>
 
                                 <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">
@@ -385,10 +406,10 @@ export default function PlanAccessButton({
                                         <Eye size={16} className="text-slate-500" />
                                         <div>
                                             <h4 className="font-black text-slate-900">
-                                                Təyin olunan auditorlar
+                                                {t('assignedAuditors')}
                                             </h4>
                                             <p className="text-xs font-semibold text-slate-400">
-                                                Auditi doldura bilən istifadəçilər
+                                                {t('assignedAuditorsDescription')}
                                             </p>
                                         </div>
                                     </div>
@@ -396,7 +417,7 @@ export default function PlanAccessButton({
                                     <div className="space-y-2">
                                         {assignedUsers.length === 0 && (
                                             <p className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
-                                                Auditor təyin olunmayıb.
+                                                {t('noAssignedAuditors')}
                                             </p>
                                         )}
 
@@ -405,6 +426,10 @@ export default function PlanAccessButton({
                                                 key={`${user.id}-${user.full_name}`}
                                                 user={user}
                                                 tone="blue"
+                                                tRoles={tRoles}
+                                                defaultUserRole={t('defaultUserRole')}
+                                                unnamedUser={t('unnamedUser')}
+                                                removePermission={t('removePermission')}
                                             />
                                         ))}
                                     </div>
@@ -414,10 +439,10 @@ export default function PlanAccessButton({
                                     <div className="mb-3 flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
                                         <div>
                                             <h4 className="font-black text-slate-900">
-                                                Əlavə baxış icazəsi
+                                                {t('extraViewPermission')}
                                             </h4>
                                             <p className="text-xs font-semibold text-slate-400">
-                                                Yalnız plana baxa bilən şəxslər
+                                                {t('extraViewPermissionDescription')}
                                             </p>
                                         </div>
 
@@ -429,7 +454,7 @@ export default function PlanAccessButton({
                                     <div className="space-y-2">
                                         {localExtraViewers.length === 0 && (
                                             <p className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
-                                                Əlavə baxış icazəsi verilməyib.
+                                                {t('noExtraViewers')}
                                             </p>
                                         )}
 
@@ -441,6 +466,10 @@ export default function PlanAccessButton({
                                                 removable={canManage}
                                                 loading={removingUserId === user.id}
                                                 onRemove={() => handleRemoveViewer(user.id)}
+                                                tRoles={tRoles}
+                                                defaultUserRole={t('defaultUserRole')}
+                                                unnamedUser={t('unnamedUser')}
+                                                removePermission={t('removePermission')}
                                             />
                                         ))}
                                     </div>
@@ -452,11 +481,10 @@ export default function PlanAccessButton({
                                     <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                         <div>
                                             <h4 className="text-sm font-black text-slate-900">
-                                                Əlavə baxış icazəsi ver
+                                                {t('giveExtraViewPermission')}
                                             </h4>
                                             <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-                                                Axtarın, bir neçə istifadəçi seçin və icazəni bir
-                                                kliklə əlavə edin.
+                                                {t('giveExtraViewPermissionDescription')}
                                             </p>
                                         </div>
 
@@ -467,7 +495,7 @@ export default function PlanAccessButton({
                                                 disabled={isAdding}
                                                 className="w-fit rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                                             >
-                                                Seçimi təmizlə
+                                                {t('clearSelection')}
                                             </button>
                                         )}
                                     </div>
@@ -487,7 +515,7 @@ export default function PlanAccessButton({
                                                             setUserSearch(event.target.value)
                                                         }
                                                         disabled={isAdding}
-                                                        placeholder="Ad, email və ya rol üzrə axtar..."
+                                                        placeholder={t('searchPlaceholder')}
                                                         className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold text-slate-700 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
                                                     />
                                                 </div>
@@ -503,7 +531,7 @@ export default function PlanAccessButton({
                                                                 }
                                                                 disabled={isAdding}
                                                                 className="inline-flex max-w-full items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-black text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                                                title="Seçimdən çıxar"
+                                                                title={t('removeFromSelection')}
                                                             >
                                                                 <span className="max-w-[180px] truncate">
                                                                     {user.full_name || user.email || user.id}
@@ -518,11 +546,10 @@ export default function PlanAccessButton({
                                                     {availableUsers.length === 0 && (
                                                         <div className="rounded-2xl bg-slate-50 p-4 text-center">
                                                             <p className="text-sm font-bold text-slate-700">
-                                                                Əlavə ediləcək istifadəçi yoxdur
+                                                                {t('noUsersToAdd')}
                                                             </p>
                                                             <p className="mt-1 text-xs leading-5 text-slate-500">
-                                                                Təyin olunan auditorlar və artıq icazəsi olan
-                                                                istifadəçilər siyahıdan çıxarılıb.
+                                                                {t('noUsersToAddDescription')}
                                                             </p>
                                                         </div>
                                                     )}
@@ -531,10 +558,10 @@ export default function PlanAccessButton({
                                                         filteredAvailableUsers.length === 0 && (
                                                             <div className="rounded-2xl bg-slate-50 p-4 text-center">
                                                                 <p className="text-sm font-bold text-slate-700">
-                                                                    Nəticə tapılmadı
+                                                                    {t('noResults')}
                                                                 </p>
                                                                 <p className="mt-1 text-xs text-slate-500">
-                                                                    Axtarış sözünü dəyişib yenidən yoxlayın.
+                                                                    {t('noResultsDescription')}
                                                                 </p>
                                                             </div>
                                                         )}
@@ -554,22 +581,22 @@ export default function PlanAccessButton({
                                                                 onClick={() => toggleUserSelection(userId)}
                                                                 disabled={isAdding}
                                                                 className={`group flex w-full items-center gap-3 rounded-3xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${checked
-                                                                        ? 'border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 shadow-sm'
-                                                                        : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-blue-200 hover:bg-slate-50 hover:shadow-sm'
+                                                                    ? 'border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 shadow-sm'
+                                                                    : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-blue-200 hover:bg-slate-50 hover:shadow-sm'
                                                                     }`}
                                                             >
                                                                 <span
                                                                     className={`relative grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-sm font-black shadow-sm transition ${checked
-                                                                            ? 'bg-gradient-to-br from-blue-600 to-cyan-500 text-white'
-                                                                            : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700 group-hover:from-blue-100 group-hover:to-cyan-100 group-hover:text-blue-700'
+                                                                        ? 'bg-gradient-to-br from-blue-600 to-cyan-500 text-white'
+                                                                        : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700 group-hover:from-blue-100 group-hover:to-cyan-100 group-hover:text-blue-700'
                                                                         }`}
                                                                 >
                                                                     {checked ? <Check size={17} /> : initial}
 
                                                                     <span
                                                                         className={`absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full border text-[10px] transition ${checked
-                                                                                ? 'border-white bg-blue-600 text-white'
-                                                                                : 'border-white bg-white text-slate-300 group-hover:text-blue-500'
+                                                                            ? 'border-white bg-blue-600 text-white'
+                                                                            : 'border-white bg-white text-slate-300 group-hover:text-blue-500'
                                                                             }`}
                                                                     >
                                                                         {checked ? <Check size={11} /> : '+'}
@@ -578,7 +605,7 @@ export default function PlanAccessButton({
 
                                                                 <span className="min-w-0 flex-1">
                                                                     <span className="block truncate text-sm font-black text-slate-950">
-                                                                        {user.full_name || 'Adsız istifadəçi'}
+                                                                        {user.full_name || t('unnamedUser')}
                                                                     </span>
 
                                                                     <span className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -590,7 +617,7 @@ export default function PlanAccessButton({
 
                                                                         {user.role && (
                                                                             <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-black text-slate-500">
-                                                                                {roleLabel(user.role)}
+                                                                                {roleLabel(user.role, tRoles, t('defaultUserRole'))}
                                                                             </span>
                                                                         )}
                                                                     </span>
@@ -598,8 +625,8 @@ export default function PlanAccessButton({
 
                                                                 <span
                                                                     className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border transition ${checked
-                                                                            ? 'border-blue-600 bg-blue-600 text-white'
-                                                                            : 'border-slate-300 bg-white text-transparent group-hover:border-blue-300 group-hover:text-blue-500'
+                                                                        ? 'border-blue-600 bg-blue-600 text-white'
+                                                                        : 'border-slate-300 bg-white text-transparent group-hover:border-blue-300 group-hover:text-blue-500'
                                                                         }`}
                                                                 >
                                                                     <Check size={13} />
@@ -610,7 +637,7 @@ export default function PlanAccessButton({
                                                 </div>
 
                                                 <p className="mt-2 text-xs font-semibold text-slate-500">
-                                                    Seçilən: {selectedUserIds.length}
+                                                    {t('selected', { count: selectedUserIds.length })}
                                                 </p>
                                             </div>
                                         </div>
@@ -632,18 +659,17 @@ export default function PlanAccessButton({
 
                                             <span>
                                                 {isAdding
-                                                    ? 'Əlavə edilir...'
+                                                    ? t('adding')
                                                     : selectedUserIds.length > 0
-                                                        ? `${selectedUserIds.length} nəfəri əlavə et`
-                                                        : 'Əlavə et'}
+                                                        ? t('addSelected', { count: selectedUserIds.length })
+                                                        : t('add')}
                                             </span>
                                         </button>
                                     </div>
                                 </section>
                             ) : (
                                 <p className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-500">
-                                    Baxış icazəsini yalnız admin və ya planı yaradan istifadəçi
-                                    dəyişə bilər.
+                                    {t('cannotManage')}
                                 </p>
                             )}
                         </div>
@@ -663,7 +689,7 @@ export default function PlanAccessButton({
                     setOpen(true)
                 }}
                 className="grid h-9 w-9 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-                title="Planı kimlər görə bilir?"
+                title={t('buttonTitle')}
             >
                 <Users size={16} />
             </button>

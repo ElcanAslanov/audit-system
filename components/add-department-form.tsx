@@ -1,9 +1,10 @@
 'use client'
 
-import { useActionState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import { createDepartment } from '@/app/dashboard/departments/actions'
-import { Loader2, Plus } from 'lucide-react'
+import {useActionState, useEffect, useRef} from 'react'
+import {useRouter} from 'next/navigation'
+import {createDepartment} from '@/app/[locale]/dashboard/departments/actions'
+import {Loader2, Plus} from 'lucide-react'
+import {useLocale, useTranslations} from 'next-intl'
 
 export default function AddDepartmentForm({
   companies,
@@ -12,6 +13,8 @@ export default function AddDepartmentForm({
   companies: any[]
   onSuccess?: () => void
 }) {
+  const t = useTranslations('addDepartment')
+  const locale = useLocale()
   const router = useRouter()
   const formRef = useRef<HTMLFormElement | null>(null)
   const [state, action, pending] = useActionState(createDepartment, null)
@@ -26,6 +29,8 @@ export default function AddDepartmentForm({
 
   return (
     <form ref={formRef} action={action} className="space-y-4">
+      <input type="hidden" name="locale" value={locale} />
+
       {state?.error && (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
           {state.error}
@@ -34,20 +39,20 @@ export default function AddDepartmentForm({
 
       {state?.success && (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
-          Departament uğurla əlavə olundu.
+          {t('success')}
         </div>
       )}
 
       <div>
         <label className="mb-1 block text-sm font-bold text-slate-700">
-          Şirkət
+          {t('company')}
         </label>
         <select
           name="company_id"
           required
           className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
         >
-          <option value="">Şirkət seçin...</option>
+          <option value="">{t('selectCompany')}</option>
           {companies.map((company: any) => (
             <option key={company.id} value={company.id}>
               {company.name}
@@ -58,12 +63,12 @@ export default function AddDepartmentForm({
 
       <div>
         <label className="mb-1 block text-sm font-bold text-slate-700">
-          Departament adı
+          {t('departmentName')}
         </label>
         <input
           name="name"
           required
-          placeholder="Məs: Maliyyə Departamenti"
+          placeholder={t('departmentPlaceholder')}
           className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
         />
       </div>
@@ -78,7 +83,7 @@ export default function AddDepartmentForm({
           ) : (
             <Plus size={18} />
           )}
-          {pending ? 'Əlavə olunur...' : 'Departament əlavə et'}
+          {pending ? t('adding') : t('submit')}
         </button>
       </div>
     </form>

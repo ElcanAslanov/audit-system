@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { AlertTriangle, Loader2, Trash2, X } from 'lucide-react'
-import { deleteFindingFile } from '@/app/dashboard/plans/actions'
+import {useState} from 'react'
+import {AlertTriangle, Loader2, Trash2, X} from 'lucide-react'
+import {useLocale, useTranslations} from 'next-intl'
+import {deleteFindingFile} from '@/app/[locale]/dashboard/plans/actions'
 
 export default function FindingFileDeleteButton({
   findingId,
@@ -15,6 +16,9 @@ export default function FindingFileDeleteButton({
   filePath: string
   fileName?: string | null
 }) {
+  const t = useTranslations('findingFileDelete')
+const locale = useLocale()
+
   const [open, setOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isHidden, setIsHidden] = useState(false)
@@ -31,7 +35,7 @@ export default function FindingFileDeleteButton({
     setIsDeleting(true)
     setIsHidden(true)
 
-    const result = await deleteFindingFile(findingId, planId, filePath)
+    const result = await deleteFindingFile(findingId, planId, filePath, locale)
 
     if (result.error) {
       setIsHidden(false)
@@ -48,7 +52,7 @@ export default function FindingFileDeleteButton({
     return (
       <span className="inline-flex items-center justify-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-400">
         <Loader2 size={13} className="animate-spin" />
-        Silinir...
+        {t('deleting')}
       </span>
     )
   }
@@ -60,7 +64,7 @@ export default function FindingFileDeleteButton({
         onClick={() => setOpen(true)}
         className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50"
       >
-        Sil
+        {t('delete')}
       </button>
 
       {open && (
@@ -80,13 +84,13 @@ export default function FindingFileDeleteButton({
 
                 <div>
                   <p className="text-xs font-black uppercase tracking-wide text-red-500">
-                    Fayl silmə
+                    {t('modalLabel')}
                   </p>
                   <h3 className="mt-1 text-xl font-black text-slate-950">
-                    Fayl silinsin?
+                    {t('modalTitle')}
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Bu fayl çatışmazlıqdan silinəcək. çatışmazlıqnın özü qalacaq.
+                    {t('modalDescription')}
                   </p>
 
                   {fileName && (
@@ -102,6 +106,8 @@ export default function FindingFileDeleteButton({
                 onClick={closeModal}
                 disabled={isDeleting}
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label={t('cancel')}
+                title={t('cancel')}
               >
                 <X size={17} />
               </button>
@@ -120,7 +126,7 @@ export default function FindingFileDeleteButton({
                 disabled={isDeleting}
                 className="inline-flex justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Ləğv et
+                {t('cancel')}
               </button>
 
               <button
@@ -134,7 +140,7 @@ export default function FindingFileDeleteButton({
                 ) : (
                   <Trash2 size={16} />
                 )}
-                {isDeleting ? 'Silinir...' : 'Bəli, sil'}
+                {isDeleting ? t('deleting') : t('confirm')}
               </button>
             </div>
           </div>

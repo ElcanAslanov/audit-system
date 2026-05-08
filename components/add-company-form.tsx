@@ -1,14 +1,17 @@
 'use client'
 
-import { useActionState, useEffect, useRef } from 'react'
-import { createCompany } from '@/app/dashboard/companies/actions'
-import { Loader2, Building2, Plus } from 'lucide-react'
+import {useActionState, useEffect, useRef} from 'react'
+import {createCompany} from '@/app/[locale]/dashboard/companies/actions'
+import {Loader2, Building2, Plus} from 'lucide-react'
+import {useLocale, useTranslations} from 'next-intl'
 
 export default function AddCompanyForm({
   onSuccess,
 }: {
   onSuccess?: () => void
 }) {
+  const t = useTranslations('addCompany')
+  const locale = useLocale()
   const formRef = useRef<HTMLFormElement | null>(null)
   const [state, action, pending] = useActionState(createCompany, null)
 
@@ -21,9 +24,11 @@ export default function AddCompanyForm({
 
   return (
     <form ref={formRef} action={action} className="space-y-3">
+      <input type="hidden" name="locale" value={locale} />
+
       <div>
         <label className="mb-1 block text-sm font-bold text-slate-700">
-          Yeni şirkət adı
+          {t('nameLabel')}
         </label>
 
         <div className="relative">
@@ -35,7 +40,7 @@ export default function AddCompanyForm({
           <input
             name="name"
             className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            placeholder="Məs: SOCAR, Azerconnect..."
+            placeholder={t('namePlaceholder')}
             required
           />
         </div>
@@ -49,7 +54,7 @@ export default function AddCompanyForm({
 
       {state?.success && (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
-          Şirkət uğurla əlavə edildi.
+          {t('success')}
         </div>
       )}
 
@@ -64,7 +69,7 @@ export default function AddCompanyForm({
             <Plus size={18} />
           )}
 
-          {pending ? 'Əlavə olunur...' : 'Əlavə et'}
+          {pending ? t('adding') : t('submit')}
         </button>
       </div>
     </form>

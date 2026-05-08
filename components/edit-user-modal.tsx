@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
-import { updateUserProfile } from '@/app/dashboard/admin/actions'
+import {useEffect, useState, useTransition} from 'react'
+import {updateUserProfile} from '@/app/[locale]/dashboard/admin/actions'
 import {
   Building2,
   Loader2,
@@ -11,15 +11,7 @@ import {
   User,
   X,
 } from 'lucide-react'
-
-function roleLabel(role?: string | null) {
-  if (role === 'admin') return 'Admin'
-  if (role === 'rehber') return 'Rəhbər'
-  if (role === 'musahideci') return 'Müşahidəçi'
-  if (role === 'audit_muavini') return 'Audit müavini'
-  if (role === 'auditor') return 'Auditor'
-  return role || '-'
-}
+import {useLocale, useTranslations} from 'next-intl'
 
 export default function EditUserModal({
   user,
@@ -30,6 +22,19 @@ export default function EditUserModal({
   companies: any[]
   onClose: () => void
 }) {
+  const t = useTranslations('editUser')
+  const rolesT = useTranslations('roles')
+  const locale = useLocale()
+
+  const roleLabel = (role?: string | null) => {
+    if (role === 'admin') return rolesT('admin')
+    if (role === 'rehber') return rolesT('rehber')
+    if (role === 'musahideci') return rolesT('musahideci')
+    if (role === 'audit_muavini') return rolesT('audit_muavini')
+    if (role === 'auditor') return rolesT('auditor')
+    return role || '-'
+  }
+
   const [mounted, setMounted] = useState(false)
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -81,12 +86,12 @@ export default function EditUserModal({
     setError(null)
 
     if (!form.full_name.trim()) {
-      setError('Ad soyad boş ola bilməz.')
+      setError(t('fullNameRequired'))
       return
     }
 
     if (!form.email.trim()) {
-      setError('Email boş ola bilməz.')
+      setError(t('emailRequired'))
       return
     }
 
@@ -97,6 +102,7 @@ export default function EditUserModal({
         role: form.role,
         company_id: form.company_id,
         password: form.password.trim(),
+        locale,
       })
 
       if (result?.error) {
@@ -114,36 +120,40 @@ export default function EditUserModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5">
       <button
         type="button"
-        aria-label="Modalı bağla"
+        aria-label={t('closeModal')}
         onClick={handleClose}
-        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'
-          }`}
+        className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
+          open ? 'opacity-100' : 'opacity-0'
+        }`}
       />
 
       <div
-        className={`relative z-10 w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-all duration-300 ease-out ${open
+        className={`relative z-10 w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-all duration-300 ease-out ${
+          open
             ? 'translate-y-0 scale-100 opacity-100'
             : 'translate-y-4 scale-95 opacity-0'
-          }`}
+        }`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-white p-5 sm:p-6">
           <div>
             <p className="text-sm font-semibold text-slate-500">
-              İstifadəçi redaktəsi
+              {t('label')}
             </p>
 
             <h2 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">
-              {form.full_name || 'İstifadəçi məlumatları'}
+              {form.full_name || t('fallbackTitle')}
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Ad soyad, email, rol və şirkət məlumatlarını yeniləyin.
+              {t('subtitle')}
             </p>
           </div>
 
           <button
             type="button"
             onClick={handleClose}
+            aria-label={t('closeModal')}
+            title={t('closeModal')}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
           >
             <X size={18} />
@@ -161,7 +171,7 @@ export default function EditUserModal({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-bold text-slate-700">
-                  Ad soyad
+                  {t('fullName')}
                 </label>
 
                 <div className="relative">
@@ -171,13 +181,13 @@ export default function EditUserModal({
                   />
                   <input
                     value={form.full_name}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       setForm((prev) => ({
                         ...prev,
-                        full_name: e.target.value,
+                        full_name: event.target.value,
                       }))
                     }
-                    placeholder="Məs: Elcan Cahan"
+                    placeholder={t('fullNamePlaceholder')}
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
@@ -185,7 +195,7 @@ export default function EditUserModal({
 
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-bold text-slate-700">
-                  Email
+                  {t('email')}
                 </label>
 
                 <div className="relative">
@@ -196,10 +206,10 @@ export default function EditUserModal({
                   <input
                     type="email"
                     value={form.email}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       setForm((prev) => ({
                         ...prev,
-                        email: e.target.value,
+                        email: event.target.value,
                       }))
                     }
                     placeholder="user@example.com"
@@ -210,30 +220,30 @@ export default function EditUserModal({
 
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-bold text-slate-700">
-                  Yeni şifrə
+                  {t('newPassword')}
                 </label>
 
                 <input
                   type="password"
                   value={form.password}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setForm((prev) => ({
                       ...prev,
-                      password: e.target.value,
+                      password: event.target.value,
                     }))
                   }
-                  placeholder="Boş saxlanılsa şifrə dəyişməyəcək"
+                  placeholder={t('newPasswordPlaceholder')}
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                 />
 
                 <p className="mt-1 text-xs text-slate-500">
-                  Şifrəni dəyişmək istəmirsinizsə, bu sahəni boş saxlayın.
+                  {t('passwordHelp')}
                 </p>
               </div>
 
               <div>
                 <label className="mb-1 block text-sm font-bold text-slate-700">
-                  Rol
+                  {t('role')}
                 </label>
 
                 <div className="relative">
@@ -244,30 +254,32 @@ export default function EditUserModal({
 
                   <select
                     value={form.role}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       setForm((prev) => ({
                         ...prev,
-                        role: e.target.value,
+                        role: event.target.value,
                       }))
                     }
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                   >
-                    <option value="auditor">Auditor</option>
-                    <option value="audit_muavini">Audit müavini</option>
-                    <option value="musahideci">Müşahidəçi</option>
-                    <option value="rehber">Rəhbər</option>
-                    <option value="admin">Admin</option>
+                    <option value="auditor">{rolesT('auditor')}</option>
+                    <option value="audit_muavini">
+                      {rolesT('audit_muavini')}
+                    </option>
+                    <option value="musahideci">{rolesT('musahideci')}</option>
+                    <option value="rehber">{rolesT('rehber')}</option>
+                    <option value="admin">{rolesT('admin')}</option>
                   </select>
                 </div>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  Hazırkı rol: {roleLabel(user.role)}
+                  {t('currentRole', {role: roleLabel(user.role)})}
                 </p>
               </div>
 
               <div>
                 <label className="mb-1 block text-sm font-bold text-slate-700">
-                  Şirkət
+                  {t('company')}
                 </label>
 
                 <div className="relative">
@@ -278,15 +290,15 @@ export default function EditUserModal({
 
                   <select
                     value={form.company_id}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       setForm((prev) => ({
                         ...prev,
-                        company_id: e.target.value,
+                        company_id: event.target.value,
                       }))
                     }
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                   >
-                    <option value="">Şirkət seçilməyib</option>
+                    <option value="">{t('noCompany')}</option>
                     {companies.map((company: any) => (
                       <option key={company.id} value={company.id}>
                         {company.name}
@@ -304,7 +316,7 @@ export default function EditUserModal({
                 disabled={isPending}
                 className="inline-flex justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Bağla
+                {t('close')}
               </button>
 
               <button
@@ -318,7 +330,7 @@ export default function EditUserModal({
                 ) : (
                   <Save size={18} />
                 )}
-                {isPending ? 'Yadda saxlanılır...' : 'Yadda saxla'}
+                {isPending ? t('saving') : t('save')}
               </button>
             </div>
           </div>

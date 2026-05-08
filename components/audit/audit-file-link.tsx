@@ -1,33 +1,35 @@
-'use client';
+'use client'
 
-import { useState, useTransition } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+import {useState, useTransition} from 'react'
+import {createBrowserClient} from '@supabase/ssr'
+import {useTranslations} from 'next-intl'
 
-export default function AuditFileLink({ filePath }: { filePath: string }) {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+export default function AuditFileLink({filePath}: {filePath: string}) {
+  const t = useTranslations('auditFile')
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
 
   const openFile = () => {
-    setError(null);
+    setError(null)
 
     startTransition(async () => {
       const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      )
 
-      const { data, error } = await supabase.storage
+      const {data, error} = await supabase.storage
         .from('audit-docs')
-        .createSignedUrl(filePath, 60 * 5);
+        .createSignedUrl(filePath, 60 * 5)
 
       if (error || !data?.signedUrl) {
-        setError(error?.message || 'Fayl linki yaradıla bilmədi.');
-        return;
+        setError(error?.message || t('signedUrlError'))
+        return
       }
 
-      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
-    });
-  };
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+    })
+  }
 
   return (
     <div className="space-y-2">
@@ -37,7 +39,7 @@ export default function AuditFileLink({ filePath }: { filePath: string }) {
         onClick={openFile}
         className="inline-flex w-full justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 sm:w-auto"
       >
-        {isPending ? 'Açılır...' : 'Faylı aç / yüklə'}
+        {isPending ? t('opening') : t('openOrDownload')}
       </button>
 
       {error && (
@@ -46,5 +48,5 @@ export default function AuditFileLink({ filePath }: { filePath: string }) {
         </p>
       )}
     </div>
-  );
+  )
 }

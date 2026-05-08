@@ -1,14 +1,16 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { deleteTemplate } from '@/app/dashboard/admin/templates/actions'
-import { AlertTriangle, Loader2, Trash2, X } from 'lucide-react'
+import {useState, useTransition} from 'react'
+import {deleteTemplate} from '@/app/[locale]/dashboard/admin/templates/actions'
+import {AlertTriangle, Loader2, Trash2, X} from 'lucide-react'
+import {useTranslations} from 'next-intl'
 
 export default function TemplateDeleteButton({
   templateId,
 }: {
   templateId: string
 }) {
+  const t = useTranslations('templateDelete')
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -26,7 +28,7 @@ export default function TemplateDeleteButton({
       const result = await deleteTemplate(templateId)
 
       if (!result.success) {
-        setError(result.error || 'Şablon silinmədi.')
+        setError(result.error || t('fallbackError'))
         return
       }
 
@@ -46,7 +48,7 @@ export default function TemplateDeleteButton({
         className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
         <Trash2 size={16} />
-        Sil
+        {t('delete')}
       </button>
 
       {open && (
@@ -68,16 +70,15 @@ export default function TemplateDeleteButton({
 
                 <div>
                   <p className="text-xs font-black uppercase tracking-wide text-red-500">
-                    Şablon silmə
+                    {t('modalLabel')}
                   </p>
 
                   <h3 className="mt-1 text-xl font-black text-slate-950">
-                    Audit şablonu silinsin?
+                    {t('modalTitle')}
                   </h3>
 
                   <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Bu əməliyyat şablona aid bölmələri və sualları da silə
-                    bilər. Əməliyyatı geri qaytarmaq mümkün olmaya bilər.
+                    {t('modalDescription')}
                   </p>
                 </div>
               </div>
@@ -86,6 +87,8 @@ export default function TemplateDeleteButton({
                 type="button"
                 onClick={closeModal}
                 disabled={isPending}
+                aria-label={t('cancel')}
+                title={t('cancel')}
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <X size={17} />
@@ -94,7 +97,7 @@ export default function TemplateDeleteButton({
 
             {error && (
               <div className="mx-5 mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold leading-6 text-red-700">
-                <p className="mb-1 font-black">Şablon silinə bilmədi</p>
+                <p className="mb-1 font-black">{t('cannotDeleteTitle')}</p>
                 <p className="whitespace-pre-wrap break-words">{error}</p>
               </div>
             )}
@@ -106,7 +109,7 @@ export default function TemplateDeleteButton({
                 disabled={isPending}
                 className="inline-flex justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Ləğv et
+                {t('cancel')}
               </button>
 
               <button
@@ -121,7 +124,7 @@ export default function TemplateDeleteButton({
                   <Trash2 size={16} />
                 )}
 
-                {isPending ? 'Silinir...' : 'Bəli, sil'}
+                {isPending ? t('deleting') : t('confirm')}
               </button>
             </div>
           </div>

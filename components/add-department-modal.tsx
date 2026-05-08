@@ -1,14 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import {useEffect, useState} from 'react'
 import AddDepartmentForm from '@/components/add-department-form'
-import { PlusCircle, X } from 'lucide-react'
+import {PlusCircle, X} from 'lucide-react'
+import {useTranslations} from 'next-intl'
 
 export default function AddDepartmentModal({
   companies,
 }: {
   companies: any[]
 }) {
+  const t = useTranslations('addDepartment')
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
 
@@ -54,14 +56,14 @@ export default function AddDepartmentModal({
         className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 sm:w-auto"
       >
         <PlusCircle size={16} />
-        Yeni departament əlavə et
+        {t('button')}
       </button>
 
       {mounted && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5">
           <button
             type="button"
-            aria-label="Modalı bağla"
+            aria-label={t('closeModal')}
             onClick={closeModal}
             className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
               open ? 'opacity-100' : 'opacity-0'
@@ -78,21 +80,23 @@ export default function AddDepartmentModal({
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5 sm:p-6">
               <div>
                 <p className="text-sm font-semibold text-slate-500">
-                  Departament idarəetməsi
+                  {t('label')}
                 </p>
 
                 <h2 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">
-                  Yeni departament əlavə et
+                  {t('title')}
                 </h2>
 
                 <p className="mt-2 text-sm leading-6 text-slate-500">
-                  Şirkəti seçin və departament adını sistemə əlavə edin.
+                  {t('subtitle')}
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={closeModal}
+                aria-label={t('closeModal')}
+                title={t('closeModal')}
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
               >
                 <X size={18} />

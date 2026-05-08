@@ -1,19 +1,15 @@
 'use client'
 
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { EyeOff, FileText, Lock, PencilLine, PencilOff, X } from 'lucide-react'
 import PlanLockButton from '@/components/audit/plan-lock-button'
 import PlanDeleteButton from '@/components/audit/plan-delete-button'
 import PlanAccessButton from '@/components/audit/plan-access-button'
 import PlanEditButton from '@/components/audit/plan-edit-button'
 
-function statusLabel(value?: string | null) {
-  if (value === 'tamamlandi') return 'Tamamlandı'
-  if (value === 'needs_attention') return 'Diqqət tələb edir'
-  if (value === 'planlanan') return 'Planlanan'
-  return value || '-'
-}
+
 
 function statusClass(value?: string | null) {
   if (value === 'tamamlandi') {
@@ -83,8 +79,16 @@ export default function PlanCard({
   currentUserRole?: string
   isReadOnlyObserver?: boolean
 }) {
+  const t = useTranslations('plans')
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
+
+  const statusLabel = (value?: string | null) => {
+    if (value === 'tamamlandi') return t('completed')
+    if (value === 'needs_attention') return t('needsAttention')
+    if (value === 'planlanan') return t('planned')
+    return value || '-'
+  }
 
   const assignedNames =
     plan.plan_assignments?.length > 0
@@ -92,27 +96,27 @@ export default function PlanCard({
         .map((a: any) => a.profiles?.full_name)
         .filter(Boolean)
         .join(', ')
-      : 'Təyin olunmayıb'
+      : t('notAssigned')
 
   const hasAnswers = (plan.audit_answers?.length || 0) > 0
-  const fillButtonLabel = hasAnswers ? 'Redaktə et' : 'Doldur'
+  const fillButtonLabel = hasAnswers ? t('edit') : t('fill')
   const answerCount = plan.audit_answers?.length || 0
 
-const role = String(currentUserRole || '').toLowerCase()
-const isAdmin = role === 'admin'
-const isObserver = isReadOnlyObserver || role === 'musahideci'
-const isCreator = plan.created_by === currentUserId
+  const role = String(currentUserRole || '').toLowerCase()
+  const isAdmin = role === 'admin'
+  const isObserver = isReadOnlyObserver || role === 'musahideci'
+  const isCreator = plan.created_by === currentUserId
 
-const canManageLock = !isObserver && (isAdmin || isCreator)
-const canManageAccess = !isObserver && (isAdmin || isCreator)
-const canManagePlan = !isObserver && (isAdmin || isCreator)
-const canDeletePlan = !isObserver && canCreatePlan
+  const canManageLock = !isObserver && (isAdmin || isCreator)
+  const canManageAccess = !isObserver && (isAdmin || isCreator)
+  const canManagePlan = !isObserver && (isAdmin || isCreator)
+  const canDeletePlan = !isObserver && canCreatePlan
 
-const isEditLocked = Boolean(plan.locked_edit)
-const isViewLocked = Boolean(plan.locked_view)
+  const isEditLocked = Boolean(plan.locked_edit)
+  const isViewLocked = Boolean(plan.locked_view)
 
-const canOpenDetail = isObserver || !isViewLocked || canManageLock
-const canOpenFill = !isObserver && !isEditLocked && (!isViewLocked || canManageLock)
+  const canOpenDetail = isObserver || !isViewLocked || canManageLock
+  const canOpenFill = !isObserver && !isEditLocked && (!isViewLocked || canManageLock)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -158,7 +162,7 @@ const canOpenFill = !isObserver && !isEditLocked && (!isViewLocked || canManageL
           <div className="mb-2 flex items-start justify-between gap-3 border-b border-slate-100 pb-2">
             <div className="min-w-0">
               <p className="text-xs font-bold uppercase text-slate-400">
-                Plan seçimi
+                {t('planSelection')}
               </p>
               <p className="mt-1 truncate text-sm font-black text-slate-900">
                 {plan.title}
@@ -181,7 +185,7 @@ const canOpenFill = !isObserver && !isEditLocked && (!isViewLocked || canManageL
                 className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
               >
                 <FileText size={16} />
-                Bax
+                {t('view')}
               </Link>
             ) : (
               <button
@@ -190,29 +194,29 @@ const canOpenFill = !isObserver && !isEditLocked && (!isViewLocked || canManageL
                 className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-bold text-red-400"
               >
                 <EyeOff size={16} />
-                Baxış kilidli
+                {t('viewLocked')}
               </button>
             )}
 
-           {!isObserver &&
-  (canOpenFill ? (
-    <Link
-      href={`/dashboard/plans/${plan.id}/fill`}
-      className="flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
-    >
-      <PencilLine size={16} />
-      {fillButtonLabel}
-    </Link>
-  ) : (
-    <button
-      type="button"
-      disabled
-      className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-100 px-3 py-2.5 text-sm font-bold text-slate-400"
-    >
-      <PencilOff size={16} />
-      Redaktə kilidli
-    </button>
-  ))}
+            {!isObserver &&
+              (canOpenFill ? (
+                <Link
+                  href={`/dashboard/plans/${plan.id}/fill`}
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
+                >
+                  <PencilLine size={16} />
+                  {fillButtonLabel}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-100 px-3 py-2.5 text-sm font-bold text-slate-400"
+                >
+                  <PencilOff size={16} />
+                  {t('editLocked')}
+                </button>
+              ))}
           </div>
         </div>
       )}
@@ -250,17 +254,17 @@ const canOpenFill = !isObserver && !isEditLocked && (!isViewLocked || canManageL
             )}
 
             {canManagePlan && (
-  <div onClick={(e) => e.stopPropagation()}>
-    <PlanEditButton
-      plan={plan}
-      companies={companies}
-      departments={departments}
-      auditors={auditors}
-      templates={templates}
-      compact
-    />
-  </div>
-)}
+              <div onClick={(e) => e.stopPropagation()}>
+                <PlanEditButton
+                  plan={plan}
+                  companies={companies}
+                  departments={departments}
+                  auditors={auditors}
+                  templates={templates}
+                  compact
+                />
+              </div>
+            )}
 
             {canManageLock && (
               <div onClick={(e) => e.stopPropagation()}>
@@ -287,33 +291,33 @@ const canOpenFill = !isObserver && !isEditLocked && (!isViewLocked || canManageL
           {isViewLocked && (
             <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700">
               <EyeOff size={12} />
-              Baxış kilidli
+              {t('viewLocked')}
             </span>
           )}
 
           {!isViewLocked && isEditLocked && (
             <span className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-2.5 py-1 text-xs font-bold text-yellow-700">
               <Lock size={12} />
-              Redaktə kilidli
+              {t('editLocked')}
             </span>
           )}
 
           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
-            {answerCount} cavab
+            {t('answersCount', { count: answerCount })}
           </span>
 
           <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
-            Başlama: {formatDate(plan.start_date)}
+            {t('startDate')}: {formatDate(plan.start_date)}
           </span>
 
           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
-            Son tarix: {formatDate(plan.due_date)}
+            {t('deadline')}: {plan.due_date ? formatDate(plan.due_date) : t('noDeadline')}
           </span>
         </div>
 
         <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3">
           <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-            Auditorlar
+            {t('auditors')}
           </p>
           <p className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-slate-700">
             {assignedNames}
@@ -321,14 +325,14 @@ const canOpenFill = !isObserver && !isEditLocked && (!isViewLocked || canManageL
         </div>
 
         <div className="mt-auto pt-4" onClick={(e) => e.stopPropagation()}>
-         <div className={`grid gap-2 ${isObserver ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+          <div className={`grid gap-2 ${isObserver ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
             {canOpenDetail ? (
               <Link
                 href={`/dashboard/plans/${plan.id}`}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
               >
                 <FileText size={16} />
-                Bax
+                {t('view')}
               </Link>
             ) : (
               <button
@@ -337,40 +341,40 @@ const canOpenFill = !isObserver && !isEditLocked && (!isViewLocked || canManageL
                 className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-bold text-red-400"
               >
                 <EyeOff size={16} />
-                Kilidli
+                {t('locked')}
               </button>
             )}
 
-           {!isObserver &&
-  (canOpenFill ? (
-    <Link
-      href={`/dashboard/plans/${plan.id}/fill`}
-      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
-    >
-      <PencilLine size={16} />
-      {fillButtonLabel}
-    </Link>
-  ) : (
-    <button
-      type="button"
-      disabled
-      className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-100 px-3 py-2.5 text-sm font-bold text-slate-400"
-    >
-      <PencilOff size={16} />
-      Redaktə kilidli
-    </button>
-  ))}
+            {!isObserver &&
+              (canOpenFill ? (
+                <Link
+                  href={`/dashboard/plans/${plan.id}/fill`}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
+                >
+                  <PencilLine size={16} />
+                  {fillButtonLabel}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-100 px-3 py-2.5 text-sm font-bold text-slate-400"
+                >
+                  <PencilOff size={16} />
+                  {t('editLocked')}
+                </button>
+              ))}
 
             {hasAnswers && canOpenDetail && (
               <Link
                 href={`/dashboard/plans/${plan.id}/report`}
                 className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800"
               >
-                PDF
+                {t('pdf')}
               </Link>
             )}
 
-           {canDeletePlan && <PlanDeleteButton planId={plan.id} />}
+            {canDeletePlan && <PlanDeleteButton planId={plan.id} />}
 
           </div>
         </div>

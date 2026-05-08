@@ -1,9 +1,10 @@
 'use client'
 
-import Link from 'next/link'
+import {Link, usePathname} from '@/i18n/routing'
+import {useTranslations} from 'next-intl'
+import LanguageSwitcher from './language-switcher'
 import LogoutButton from './logout-button'
-import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import {useEffect, useState} from 'react'
 import {
   BarChart3,
   Building2,
@@ -23,14 +24,6 @@ type SidebarProps = {
   fullName?: string | null
 }
 
-type MenuItem = {
-  label: string
-  href: string
-  roles?: string[]
-  icon: React.ElementType
-  badge?: string
-}
-
 const allRoles = [
   'admin',
   'rehber',
@@ -39,58 +32,69 @@ const allRoles = [
   'musahideci',
 ]
 
+type MenuItem = {
+  labelKey: string
+  href: string
+  roles?: string[]
+  icon: React.ElementType
+  badge?: string
+  exact?: boolean
+}
+
 const mainItems: MenuItem[] = [
   {
-    label: 'Ana Səhifə',
+    labelKey: 'dashboard',
     href: '/dashboard',
     roles: allRoles,
     icon: Home,
+    exact: true,
   },
 ]
 
 const managementItems: MenuItem[] = [
   {
-    label: 'Audit Planları',
+    labelKey: 'auditPlans',
     href: '/dashboard/plans',
     roles: allRoles,
     icon: ClipboardCheck,
   },
- {
-  label: 'Audit Müqayisəsi',
-  href: '/dashboard/compare',
-  roles: ['admin', 'rehber', 'audit_muavini', 'musahideci'],
-  icon: BarChart3,
-},
-{
-  label: 'Audit Şablonları',
-  href: '/dashboard/admin/templates',
-  roles: ['admin', 'rehber', 'audit_muavini', 'musahideci'],
-  icon: ListChecks,
-},
   {
-    label: 'İdarəetmə',
+    labelKey: 'auditCompare',
+    href: '/dashboard/compare',
+    roles: ['admin', 'rehber', 'audit_muavini', 'musahideci'],
+    icon: BarChart3,
+  },
+  {
+    labelKey: 'auditTemplates',
+    href: '/dashboard/admin/templates',
+    roles: ['admin', 'rehber', 'audit_muavini', 'musahideci'],
+    icon: ListChecks,
+  },
+  {
+    labelKey: 'admin',
     href: '/dashboard/admin',
     roles: ['admin'],
     icon: LayoutDashboard,
     badge: 'Admin',
+    exact: true,
   },
   {
-    label: 'Şirkətlər',
+    labelKey: 'companies',
     href: '/dashboard/companies',
     roles: ['admin'],
     icon: Building2,
   },
   {
-  label: 'Departamentlər',
-  href: '/dashboard/departments',
-  roles: ['admin'],
-  icon: Layers3,
-},
+    labelKey: 'departments',
+    href: '/dashboard/departments',
+    roles: ['admin'],
+    icon: Layers3,
+  },
 ]
 
 const activityItems: MenuItem[] = [
   {
-    label: 'Çatışmazlıqlar',
+    labelKey: 'findings',
     href: '/dashboard/findings',
     roles: allRoles,
     icon: ShieldAlert,
@@ -102,13 +106,19 @@ function canSee(item: MenuItem, role: string) {
   return item.roles.includes(role)
 }
 
-function roleLabel(role: string) {
-  if (role === 'admin') return 'Administrator'
-  if (role === 'rehber') return 'Rəhbər'
-  if (role === 'musahideci') return 'Müşahidəçi'
-  if (role === 'audit_muavini') return 'Audit müavini'
-  if (role === 'auditor') return 'Auditor'
-  return role || '-'
+function roleLabel(role: string, tRoles: any) {
+  if (!role) return '-'
+
+  try {
+    return tRoles(role)
+  } catch {
+    return role
+  }
+}
+
+function isActivePath(pathname: string, item: MenuItem) {
+  if (item.exact) return pathname === item.href
+  return pathname === item.href || pathname.startsWith(`${item.href}/`)
 }
 
 function SectionTitle({
@@ -135,29 +145,20 @@ function SidebarLink({
   item,
   pathname,
   collapsed,
+  tSidebar,
 }: {
   item: MenuItem
   pathname: string
   collapsed: boolean
+  tSidebar: any
 }) {
   const Icon = item.icon
-
-const isDashboardRoot = item.href === '/dashboard'
-
-let active = false
-
-if (isDashboardRoot) {
-  active = pathname === '/dashboard'
-} else if (item.href === '/dashboard/admin') {
-  active = pathname === '/dashboard/admin'
-} else {
-  active = pathname === item.href || pathname.startsWith(`${item.href}/`)
-}
+  const active = isActivePath(pathname, item)
 
   return (
     <Link
       href={item.href}
-      title={collapsed ? item.label : undefined}
+      title={collapsed ? tSidebar(item.labelKey) : undefined}
       className={`group relative flex w-full items-center rounded-2xl text-sm font-bold transition-all duration-300 ${
         collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-3'
       } ${
@@ -187,15 +188,13 @@ if (isDashboardRoot) {
             : 'w-auto translate-x-0 opacity-100'
         }`}
       >
-        {item.label}
+        {tSidebar(item.labelKey)}
       </span>
 
       {!collapsed && item.badge && (
         <span
           className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
-            active
-              ? 'bg-slate-100 text-slate-600'
-              : 'bg-blue-500/10 text-blue-300'
+            active ? 'bg-slate-100 text-slate-600' : 'bg-blue-500/10 text-blue-300'
           }`}
         >
           {item.badge}
@@ -204,15 +203,17 @@ if (isDashboardRoot) {
 
       {collapsed && (
         <span className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 z-50 hidden -translate-y-1/2 whitespace-nowrap rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-bold text-white shadow-xl group-hover:block">
-          {item.label}
+          {tSidebar(item.labelKey)}
         </span>
       )}
     </Link>
   )
 }
 
-export default function Sidebar({ role, fullName }: SidebarProps) {
+export default function Sidebar({role, fullName}: SidebarProps) {
   const pathname = usePathname()
+  const tSidebar = useTranslations('sidebar')
+  const tRoles = useTranslations('roles')
   const [collapsed, setCollapsed] = useState(false)
   const [mounted, setMounted] = useState(false)
 
@@ -232,7 +233,8 @@ export default function Sidebar({ role, fullName }: SidebarProps) {
     canSee(item, role)
   )
   const visibleActivityItems = activityItems.filter((item) => canSee(item, role))
-const displayName = fullName?.trim() || 'Sistem istifadəçisi'
+  const displayName = fullName?.trim() || 'Sistem istifadəçisi'
+
   return (
     <aside
       className={`hidden h-screen shrink-0 overflow-visible bg-slate-950 text-white transition-all duration-500 ease-in-out lg:sticky lg:top-0 lg:flex lg:flex-col ${
@@ -276,29 +278,29 @@ const displayName = fullName?.trim() || 'Sistem istifadəçisi'
               }`}
             >
               <h1 className="truncate text-xl font-black tracking-tight text-white">
-                Audit Sistemi
+                {tSidebar('systemTitle')}
               </h1>
               <p className="mt-1 truncate text-xs font-semibold text-slate-400">
-                Risk və nəzarət paneli
+                {tSidebar('systemSubtitle')}
               </p>
             </div>
           </div>
 
           {!collapsed && (
-  <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/40 p-3">
-    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
-      İstifadəçi
-    </p>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+                {tSidebar('user')}
+              </p>
 
-    <p className="mt-1 truncate text-sm font-black text-slate-100">
-      {displayName}
-    </p>
+              <p className="mt-1 truncate text-sm font-black text-slate-100">
+                {displayName}
+              </p>
 
-    <p className="mt-1 text-xs font-semibold text-slate-400">
-      {roleLabel(role)}
-    </p>
-  </div>
-)}
+              <p className="mt-1 text-xs font-semibold text-slate-400">
+                {roleLabel(role, tRoles)}
+              </p>
+            </div>
+          )}
         </div>
 
         <nav className="relative z-10 flex flex-1 flex-col overflow-y-auto overflow-x-visible pr-1 [scrollbar-width:thin] [scrollbar-color:#334155_transparent]">
@@ -309,13 +311,16 @@ const displayName = fullName?.trim() || 'Sistem istifadəçisi'
                 item={item}
                 pathname={pathname}
                 collapsed={collapsed}
+                tSidebar={tSidebar}
               />
             ))}
           </div>
 
           {visibleManagementItems.length > 0 && (
             <>
-              <SectionTitle collapsed={collapsed}>İdarəetmə</SectionTitle>
+              <SectionTitle collapsed={collapsed}>
+                {tSidebar('management')}
+              </SectionTitle>
               <div className="space-y-2">
                 {visibleManagementItems.map((item) => (
                   <SidebarLink
@@ -323,6 +328,7 @@ const displayName = fullName?.trim() || 'Sistem istifadəçisi'
                     item={item}
                     pathname={pathname}
                     collapsed={collapsed}
+                    tSidebar={tSidebar}
                   />
                 ))}
               </div>
@@ -331,7 +337,7 @@ const displayName = fullName?.trim() || 'Sistem istifadəçisi'
 
           {visibleActivityItems.length > 0 && (
             <>
-              <SectionTitle collapsed={collapsed}>Fəaliyyət</SectionTitle>
+              <SectionTitle collapsed={collapsed}>{tSidebar('activity')}</SectionTitle>
               <div className="space-y-2">
                 {visibleActivityItems.map((item) => (
                   <SidebarLink
@@ -339,6 +345,7 @@ const displayName = fullName?.trim() || 'Sistem istifadəçisi'
                     item={item}
                     pathname={pathname}
                     collapsed={collapsed}
+                    tSidebar={tSidebar}
                   />
                 ))}
               </div>
@@ -351,34 +358,44 @@ const displayName = fullName?.trim() || 'Sistem istifadəçisi'
             collapsed ? 'p-3' : 'p-4'
           }`}
         >
-        <div
-  className={`mb-4 flex items-center transition-all duration-500 ${
-    collapsed ? 'justify-center' : 'gap-3'
-  }`}
->
-  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-slate-800 text-sm font-black text-slate-200">
-    {displayName.slice(0, 1).toUpperCase()}
-  </div>
+          <div
+            className={`mb-4 flex items-center transition-all duration-500 ${
+              collapsed ? 'justify-center' : 'gap-3'
+            }`}
+          >
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-slate-800 text-sm font-black text-slate-200">
+              {displayName.slice(0, 1).toUpperCase()}
+            </div>
 
-  {!collapsed && (
-    <div className="min-w-0">
-      <p className="truncate text-sm font-black text-white">
-        {displayName}
-      </p>
-      <p className="truncate text-xs font-semibold text-slate-400">
-        {roleLabel(role)}
-      </p>
-    </div>
-  )}
-</div>
+            {!collapsed && (
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-white">
+                  {displayName}
+                </p>
+                <p className="truncate text-xs font-semibold text-slate-400">
+                  {roleLabel(role, tRoles)}
+                </p>
+              </div>
+            )}
+          </div>
 
-         {!collapsed ? (
-  <LogoutButton />
-) : (
-  <div className="flex justify-center">
-    <LogoutButton compact />
-  </div>
-)}
+          <div
+            className={`mb-4 flex min-w-0 ${
+              collapsed ? 'justify-center' : 'w-full justify-stretch'
+            }`}
+          >
+            <div className={collapsed ? 'w-10' : 'w-full min-w-0'}>
+              <LanguageSwitcher compact={collapsed} />
+            </div>
+          </div>
+
+          {!collapsed ? (
+            <LogoutButton />
+          ) : (
+            <div className="flex justify-center">
+              <LogoutButton compact />
+            </div>
+          )}
         </div>
       </div>
     </aside>

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { checkAuditReady } from '@/app/dashboard/plans/actions'
+import {useState, useTransition} from 'react'
+import {useRouter} from 'next/navigation'
+import {useLocale, useTranslations} from 'next-intl'
+import {checkAuditReady} from '@/app/[locale]/dashboard/plans/actions'
 
 export default function CompleteAuditButton({
   planId,
@@ -11,6 +12,8 @@ export default function CompleteAuditButton({
   planId: string
   hasUnsavedChanges?: boolean
 }) {
+  const t = useTranslations('completeAudit')
+  const locale = useLocale()
   const router = useRouter()
 
   const [isPending, startTransition] = useTransition()
@@ -20,14 +23,12 @@ export default function CompleteAuditButton({
     setError(null)
 
     if (hasUnsavedChanges) {
-      setError(
-        'Dəyişikliklər yadda saxlanılmayıb. Əvvəlcə “Cavabları Yadda Saxla” düyməsinə basın.'
-      )
+      setError(t('unsavedError'))
       return
     }
 
     startTransition(async () => {
-      const result = await checkAuditReady(planId)
+      const result = await checkAuditReady(planId, locale)
 
       if (result.error) {
         setError(result.error)
@@ -47,7 +48,7 @@ export default function CompleteAuditButton({
         onClick={handleComplete}
         className="inline-flex w-full justify-center rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 sm:w-auto"
       >
-        {isPending ? 'Yoxlanılır...' : 'Audit detail səhifəsinə keç'}
+        {isPending ? t('checking') : t('goToDetail')}
       </button>
 
       {error && (

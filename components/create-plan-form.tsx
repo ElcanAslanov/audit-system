@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, useActionState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createAuditPlan } from '@/app/dashboard/plans/actions'
+import { createAuditPlan } from '@/app/[locale]/dashboard/plans/actions'
 import { Loader2, Plus, Search, UploadCloud } from 'lucide-react'
+import {useLocale, useTranslations} from 'next-intl'
 
 export default function CreatePlanForm({
   companies,
@@ -18,7 +19,9 @@ export default function CreatePlanForm({
   templates: any[]
   onSuccess?: () => void
 }) {
-  const router = useRouter()
+ const t = useTranslations('createPlanForm')
+const locale = useLocale()
+const router = useRouter()
   const formRef = useRef<HTMLFormElement | null>(null)
 
   const [state, action, pending] = useActionState(createAuditPlan, null)
@@ -130,38 +133,40 @@ export default function CreatePlanForm({
     })
   }
 
-  return (
-    <form ref={formRef} action={action} className="space-y-5">
-      {state?.error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
-          {state.error}
-        </div>
-      )}
+ return (
+  <form ref={formRef} action={action} className="space-y-5">
+    <input type="hidden" name="locale" value={locale} />
 
-      {state?.success && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
-          Audit planı uğurla yaradıldı.
-        </div>
-      )}
+    {state?.error && (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
+        {state.error}
+      </div>
+    )}
+
+    {state?.success && (
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
+        {t('success')}
+      </div>
+    )}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         <div className="space-y-4 lg:col-span-7">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="mb-1 block text-sm font-bold text-slate-700">
-                Planın başlığı
+                {t('titleLabel')}
               </label>
               <input
                 name="title"
                 required
-                placeholder="Məs: 2026 İllik İT Auditi"
+                placeholder={t('titlePlaceholder')}
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
             <div>
               <label className="mb-1 block text-sm font-bold text-slate-700">
-                Başlama tarixi
+                {t('startDate')}
               </label>
 
               <input
@@ -176,12 +181,12 @@ export default function CreatePlanForm({
                 value={startDateDisplay}
                 onChange={(e) => setStartDateDisplay(formatDateInput(e.target.value))}
                 maxLength={10}
-                placeholder="GG/AA/İİİİ"
+                placeholder={t('datePlaceholder')}
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
               />
 
               <p className="mt-1 text-xs text-slate-500">
-                Məsələn: 01/03/2026
+                {t('startDateExample')}
               </p>
             </div>
 
@@ -189,7 +194,7 @@ export default function CreatePlanForm({
 
             <div>
               <label className="mb-1 block text-sm font-bold text-slate-700">
-                Son tarix
+                {t('dueDate')}
               </label>
 
               <input
@@ -203,19 +208,19 @@ export default function CreatePlanForm({
                 inputMode="numeric"
                 value={dueDateDisplay}
                 onChange={(e) => setDueDateDisplay(formatDateInput(e.target.value))}
-                placeholder="GG/AA/İİİİ"
+                placeholder={t('datePlaceholder')}
                 maxLength={10}
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
               />
 
               <p className="mt-1 text-xs text-slate-500">
-                Məsələn: 31/12/2026
+                {t('dueDateExample')}
               </p>
             </div>
 
             <div>
               <label className="mb-1 block text-sm font-bold text-slate-700">
-                Şirkət
+                {t('company')}
               </label>
               <select
                 name="company_id"
@@ -227,7 +232,7 @@ export default function CreatePlanForm({
                 }}
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
               >
-                <option value="">Şirkət seçin...</option>
+                <option value="">{t('selectCompany')}</option>
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -238,7 +243,10 @@ export default function CreatePlanForm({
 
             <div>
               <label className="mb-1 block text-sm font-bold text-slate-700">
-                Departament <span className="font-semibold text-slate-400">(istəyə bağlı)</span>
+                {t('department')}{' '}
+                <span className="font-semibold text-slate-400">
+                  ({t('optional')})
+                </span>
               </label>
 
               <select
@@ -249,7 +257,7 @@ export default function CreatePlanForm({
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <option value="">
-                  {selectedCompanyId ? 'Departament seçin' : 'Əvvəl şirkət seçin...'}
+                  {selectedCompanyId ? t('selectDepartment') : t('selectCompanyFirst')}
                 </option>
 
                 {filteredDepartments.map((department: any) => (
@@ -261,14 +269,14 @@ export default function CreatePlanForm({
 
               {selectedCompanyId && filteredDepartments.length === 0 && (
                 <p className="mt-1 text-xs text-red-500">
-                  Bu şirkət üçün departament tapılmadı.
+                  {t('noDepartments')}
                 </p>
               )}
             </div>
 
             <div>
               <label className="mb-1 block text-sm font-bold text-slate-700">
-                Şablon axtar
+                {t('templateSearch')}
               </label>
               <div className="relative">
                 <Search
@@ -278,7 +286,7 @@ export default function CreatePlanForm({
                 <input
                   type="text"
                   value={templateSearch}
-                  placeholder="Şablon adı ilə axtar..."
+                  placeholder={t('templateSearchPlaceholder')}
                   onChange={(e) => setTemplateSearch(e.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-9 pr-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                 />
@@ -287,41 +295,41 @@ export default function CreatePlanForm({
 
             <div className="sm:col-span-2">
               <label className="mb-1 block text-sm font-bold text-slate-700">
-                Audit şablonları
+                {t('auditTemplates')}
               </label>
 
               <div className="max-h-52 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-2">
                 {filteredTemplates.length === 0 && (
                   <p className="p-2 text-sm text-slate-500">
-                    Şablon tapılmadı.
+                    {t('noTemplates')}
                   </p>
                 )}
 
-                {filteredTemplates.map((t) => {
-                  const templateId = String(t.id)
+                {filteredTemplates.map((template) => {
+                  const templateId = String(template.id)
                   const isTemplateSelected = selectedTemplateIds.includes(templateId)
 
-                  const sections = [...(t.template_sections || [])].sort(
+                  const sections = [...(template.template_sections || [])].sort(
                     (a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0)
                   )
 
                   return (
                     <div
-                      key={t.id}
+                      key={template.id}
                       className="rounded-xl p-2 text-sm transition hover:bg-white"
                     >
                       <label className="flex cursor-pointer items-center gap-3">
                         <input
                           type="checkbox"
                           name="template_ids"
-                          value={t.id}
+                          value={template.id}
                           checked={isTemplateSelected}
-                          onChange={(e) => toggleTemplate(t, e.target.checked)}
+                          onChange={(e) => toggleTemplate(template, e.target.checked)}
                           className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                         />
 
                         <span className="font-semibold text-slate-700">
-                          {t.title}
+                          {template.title}
                         </span>
                       </label>
 
@@ -329,17 +337,20 @@ export default function CreatePlanForm({
                         <div className="ml-7 mt-2 space-y-2 rounded-xl border border-slate-200 bg-white p-2">
                           <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
                             <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                              Bölmələr
+                              {t('sections')}
                             </p>
 
                             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500">
-                              {selectedSectionIds[templateId]?.length || 0}/{sections.length} seçili
+                              {t('selectedCount', {
+                                selected: selectedSectionIds[templateId]?.length || 0,
+                                total: sections.length,
+                              })}
                             </span>
                           </div>
 
                           {sections.length === 0 ? (
                             <p className="rounded-lg bg-slate-50 p-2 text-xs text-slate-400">
-                              Bu şablonda bölmə yoxdur.
+                              {t('noSections')}
                             </p>
                           ) : (
                             sections.map((section: any) => {
@@ -364,7 +375,7 @@ export default function CreatePlanForm({
                                   />
 
                                   <span className="font-medium text-slate-600">
-                                    {section.title || 'Adsız bölmə'}
+                                    {section.title || t('untitledSection')}
                                   </span>
                                 </label>
                               )
@@ -378,18 +389,18 @@ export default function CreatePlanForm({
               </div>
 
               <p className="mt-1 text-xs leading-5 text-slate-500">
-                Bir və ya bir neçə şablon seçə bilərsiniz.
+                {t('templateHelp')}
               </p>
             </div>
 
             <div className="sm:col-span-2">
               <label className="mb-1 block text-sm font-bold text-slate-700">
-                Qeydlər
+                {t('notes')}
               </label>
               <textarea
                 name="notes"
                 rows={3}
-                placeholder="Audit haqqında əlavə məlumat..."
+                placeholder={t('notesPlaceholder')}
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
               />
             </div>
@@ -399,7 +410,7 @@ export default function CreatePlanForm({
         <div className="space-y-4 lg:col-span-5">
           <div>
             <label className="mb-1 block text-sm font-bold text-slate-700">
-              Auditorları təyin et
+              {t('assignAuditors')}
             </label>
 
             <div className="relative">
@@ -409,7 +420,7 @@ export default function CreatePlanForm({
               />
               <input
                 type="text"
-                placeholder="Auditor axtar..."
+                placeholder={t('auditorSearchPlaceholder')}
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-9 pr-3 text-sm outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -439,7 +450,7 @@ export default function CreatePlanForm({
             ) : (
               <div className="flex h-full items-center justify-center text-center">
                 <p className="text-sm italic text-slate-400">
-                  İstifadəçi tapılmadı
+                  {t('noUsers')}
                 </p>
               </div>
             )}
@@ -448,7 +459,7 @@ export default function CreatePlanForm({
           <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
             <label className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-700">
               <UploadCloud size={18} />
-              Fayl əlavə et
+              {t('addFile')}
             </label>
 
             <input
@@ -458,7 +469,7 @@ export default function CreatePlanForm({
             />
 
             <p className="mt-2 text-xs leading-5 text-slate-500">
-              PDF, Word, Excel və ya digər audit faylı əlavə edə bilərsiniz.
+              {t('fileHelp')}
             </p>
           </div>
         </div>
@@ -474,7 +485,7 @@ export default function CreatePlanForm({
           ) : (
             <Plus size={18} />
           )}
-          {pending ? 'Yaradılır...' : 'Planı yarat'}
+          {pending ? t('creating') : t('create')}
         </button>
       </div>
     </form>

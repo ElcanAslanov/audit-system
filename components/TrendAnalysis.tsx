@@ -1,4 +1,7 @@
-import { BarChart3, TrendingDown, TrendingUp } from 'lucide-react'
+'use client'
+
+import {BarChart3, TrendingDown, TrendingUp} from 'lucide-react'
+import {useTranslations} from 'next-intl'
 
 type TrendItem = {
   name: string
@@ -9,13 +12,13 @@ function clampScore(value: number) {
   return Math.max(0, Math.min(100, value))
 }
 
-function scoreTone(score: number) {
+function scoreTone(score: number, t: ReturnType<typeof useTranslations>) {
   if (score >= 80) {
     return {
       text: 'text-emerald-700',
       bg: 'bg-emerald-500',
       soft: 'bg-emerald-50',
-      label: 'Yaxşı',
+      label: t('good'),
     }
   }
 
@@ -24,7 +27,7 @@ function scoreTone(score: number) {
       text: 'text-yellow-700',
       bg: 'bg-yellow-500',
       soft: 'bg-yellow-50',
-      label: 'Orta',
+      label: t('medium'),
     }
   }
 
@@ -32,7 +35,7 @@ function scoreTone(score: number) {
     text: 'text-red-700',
     bg: 'bg-red-500',
     soft: 'bg-red-50',
-    label: 'Riskli',
+    label: t('risky'),
   }
 }
 
@@ -45,10 +48,13 @@ function trendDirection(trends: TrendItem[]) {
   return last >= prev ? 'up' : 'down'
 }
 
-export default function TrendAnalysis({ trends }: { trends: TrendItem[] }) {
+export default function TrendAnalysis({trends}: {trends: TrendItem[]}) {
+  const t = useTranslations('trendAnalysis')
   const direction = trendDirection(trends)
   const latestScore =
-    trends.length > 0 ? clampScore(Number(trends[trends.length - 1].score || 0)) : 0
+    trends.length > 0
+      ? clampScore(Number(trends[trends.length - 1].score || 0))
+      : 0
 
   return (
     <div className="p-5 sm:p-6">
@@ -56,21 +62,21 @@ export default function TrendAnalysis({ trends }: { trends: TrendItem[] }) {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-blue-700">
             <BarChart3 size={14} />
-            Trend
+            {t('badge')}
           </div>
 
           <h2 className="mt-3 text-xl font-black text-slate-950">
-            Aylıq Performans Trendi
+            {t('title')}
           </h2>
 
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Audit score göstəricilərinin aylar üzrə dəyişimi
+            {t('subtitle')}
           </p>
         </div>
 
         <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4 sm:min-w-40">
           <p className="text-xs font-bold uppercase text-slate-500">
-            Son göstərici
+            {t('latest')}
           </p>
 
           <div className="mt-2 flex items-end justify-between gap-3">
@@ -107,18 +113,18 @@ export default function TrendAnalysis({ trends }: { trends: TrendItem[] }) {
             </div>
 
             <h3 className="mt-4 font-black text-slate-900">
-              Trend məlumatı yoxdur
+              {t('emptyTitle')}
             </h3>
 
             <p className="mt-1 text-sm leading-6 text-slate-500">
-              Trend üçün hələ kifayət qədər tamamlanmış audit məlumatı yoxdur.
+              {t('emptyDescription')}
             </p>
           </div>
         )}
 
         {trends.map((item, idx) => {
           const score = clampScore(Number(item.score || 0))
-          const tone = scoreTone(score)
+          const tone = scoreTone(score, t)
 
           return (
             <div
@@ -147,7 +153,7 @@ export default function TrendAnalysis({ trends }: { trends: TrendItem[] }) {
               <div className="h-3 w-full overflow-hidden rounded-full bg-white shadow-inner">
                 <div
                   className={`h-full rounded-full ${tone.bg} transition-all duration-700 group-hover:brightness-95`}
-                  style={{ width: `${score}%` }}
+                  style={{width: `${score}%`}}
                 />
               </div>
             </div>
