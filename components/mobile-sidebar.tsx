@@ -228,10 +228,11 @@ export default function MobileSidebar({role, fullName}: MobileSidebarProps) {
 
                 return (
                   <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className={`group relative flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-bold transition-all duration-200 ${
+  key={item.href}
+  href={item.href}
+  prefetch={false}
+  onClick={() => setOpen(false)}
+  className={`group relative flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-bold transition-all duration-200 ${
                       active
                         ? 'bg-white text-slate-950 shadow-lg shadow-blue-950/20'
                         : 'text-slate-300 hover:bg-white/10 hover:text-white'

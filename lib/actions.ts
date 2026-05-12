@@ -1,19 +1,39 @@
-// lib/actions.ts
 'use server'
 
-import { createClient } from '../lib/supabase/server'; // Bunu aşağıda izah edəcəyəm
+import { createClient } from '@/lib/supabase/server'
+import { cache } from 'react'
 
-export async function getUserProfile() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) return null;
+export const getUserProfile = cache(async () => {
+  const supabase = await createClient()
 
-  const { data: profile } = await supabase
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user?.id) {
+    return null
+  }
+
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('*')
+    .select('id, role, company_id, full_name, email')
     .eq('id', user.id)
-    .single();
+    .limit(1)
+    .maybeSingle()
 
-  return profile;
-}
+  if (profileError || !profile) {
+    return null
+  }
+
+  return {
+    id: profile.id,
+    userId: user.id,
+    role: profile.role || '',
+    company_id: profile.company_id,
+    full_name: profile.full_name || '',
+    email: profile.email || user.email || '',
+    fullName: profile.full_name || '',
+    name: profile.full_name || '',
+  }
+})

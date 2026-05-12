@@ -1,10 +1,10 @@
 'use client'
 
-import {Link, usePathname} from '@/i18n/routing'
-import {useTranslations} from 'next-intl'
+import { Link, usePathname } from '@/i18n/routing'
+import { useTranslations } from 'next-intl'
 import LanguageSwitcher from './language-switcher'
 import LogoutButton from './logout-button'
-import {useEffect, useState} from 'react'
+import { useEffect, useState } from 'react'
 import {
   BarChart3,
   Building2,
@@ -158,44 +158,40 @@ function SidebarLink({
   return (
     <Link
       href={item.href}
+      prefetch={false}
       title={collapsed ? tSidebar(item.labelKey) : undefined}
-      className={`group relative flex w-full items-center rounded-2xl text-sm font-bold transition-all duration-300 ${
-        collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-3'
-      } ${
-        active
+      className={`group relative flex w-full items-center rounded-2xl text-sm font-bold transition-all duration-300 ${collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-3'
+        } ${active
           ? 'bg-white text-slate-950 shadow-lg shadow-blue-950/20'
           : 'text-slate-300 hover:bg-white/10 hover:text-white'
-      }`}
+        }`}
     >
       {active && (
         <span className="absolute -left-5 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-blue-400" />
       )}
 
       <span
-        className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-all duration-300 ${
-          active
+        className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-all duration-300 ${active
             ? 'bg-blue-600 text-white'
             : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-white'
-        }`}
+          }`}
       >
         <Icon size={18} />
       </span>
 
       <span
-        className={`min-w-0 flex-1 truncate transition-all duration-300 ${
-          collapsed
+        className={`min-w-0 flex-1 truncate transition-all duration-300 ${collapsed
             ? 'w-0 translate-x-2 overflow-hidden opacity-0'
             : 'w-auto translate-x-0 opacity-100'
-        }`}
+          }`}
       >
         {tSidebar(item.labelKey)}
       </span>
 
       {!collapsed && item.badge && (
         <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
-            active ? 'bg-slate-100 text-slate-600' : 'bg-blue-500/10 text-blue-300'
-          }`}
+          className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${active ? 'bg-slate-100 text-slate-600' : 'bg-blue-500/10 text-blue-300'
+            }`}
         >
           {item.badge}
         </span>
@@ -210,7 +206,7 @@ function SidebarLink({
   )
 }
 
-export default function Sidebar({role, fullName}: SidebarProps) {
+export default function Sidebar({ role, fullName }: SidebarProps) {
   const pathname = usePathname()
   const tSidebar = useTranslations('sidebar')
   const tRoles = useTranslations('roles')
@@ -237,9 +233,8 @@ export default function Sidebar({role, fullName}: SidebarProps) {
 
   return (
     <aside
-      className={`hidden h-screen shrink-0 overflow-visible bg-slate-950 text-white transition-all duration-500 ease-in-out lg:sticky lg:top-0 lg:flex lg:flex-col ${
-        collapsed ? 'w-24' : 'w-72'
-      }`}
+      className={`hidden h-screen shrink-0 overflow-visible bg-slate-950 text-white transition-all duration-500 ease-in-out lg:sticky lg:top-0 lg:flex lg:flex-col ${collapsed ? 'w-24' : 'w-72'
+        }`}
     >
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-20 top-10 h-48 w-48 rounded-full bg-blue-600/20 blur-3xl" />
@@ -257,25 +252,22 @@ export default function Sidebar({role, fullName}: SidebarProps) {
         </button>
 
         <div
-          className={`mb-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] shadow-2xl shadow-black/20 backdrop-blur transition-all duration-500 ${
-            collapsed ? 'p-3' : 'p-4'
-          }`}
+          className={`mb-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] shadow-2xl shadow-black/20 backdrop-blur transition-all duration-500 ${collapsed ? 'p-3' : 'p-4'
+            }`}
         >
           <div
-            className={`flex items-center transition-all duration-500 ${
-              collapsed ? 'justify-center' : 'gap-3'
-            }`}
+            className={`flex items-center transition-all duration-500 ${collapsed ? 'justify-center' : 'gap-3'
+              }`}
           >
             <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 text-white shadow-lg shadow-blue-950/40">
               <FileSearch size={24} />
             </div>
 
             <div
-              className={`min-w-0 transition-all duration-500 ${
-                collapsed
+              className={`min-w-0 transition-all duration-500 ${collapsed
                   ? 'w-0 translate-x-2 overflow-hidden opacity-0'
                   : 'w-auto translate-x-0 opacity-100'
-              }`}
+                }`}
             >
               <h1 className="truncate text-xl font-black tracking-tight text-white">
                 {tSidebar('systemTitle')}
@@ -354,14 +346,12 @@ export default function Sidebar({role, fullName}: SidebarProps) {
         </nav>
 
         <div
-          className={`relative z-10 mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur transition-all duration-500 ${
-            collapsed ? 'p-3' : 'p-4'
-          }`}
+          className={`relative z-10 mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur transition-all duration-500 ${collapsed ? 'p-3' : 'p-4'
+            }`}
         >
           <div
-            className={`mb-4 flex items-center transition-all duration-500 ${
-              collapsed ? 'justify-center' : 'gap-3'
-            }`}
+            className={`mb-4 flex items-center transition-all duration-500 ${collapsed ? 'justify-center' : 'gap-3'
+              }`}
           >
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-slate-800 text-sm font-black text-slate-200">
               {displayName.slice(0, 1).toUpperCase()}
@@ -380,9 +370,8 @@ export default function Sidebar({role, fullName}: SidebarProps) {
           </div>
 
           <div
-            className={`mb-4 flex min-w-0 ${
-              collapsed ? 'justify-center' : 'w-full justify-stretch'
-            }`}
+            className={`mb-4 flex min-w-0 ${collapsed ? 'justify-center' : 'w-full justify-stretch'
+              }`}
           >
             <div className={collapsed ? 'w-10' : 'w-full min-w-0'}>
               <LanguageSwitcher compact={collapsed} />

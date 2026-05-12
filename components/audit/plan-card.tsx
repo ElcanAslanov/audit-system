@@ -1,15 +1,39 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { Link } from '@/i18n/routing'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { EyeOff, FileText, Lock, PencilLine, PencilOff, X } from 'lucide-react'
-import PlanLockButton from '@/components/audit/plan-lock-button'
-import PlanDeleteButton from '@/components/audit/plan-delete-button'
-import PlanAccessButton from '@/components/audit/plan-access-button'
-import PlanEditButton from '@/components/audit/plan-edit-button'
+import {
+  EyeOff,
+  FileText,
+  Lock,
+  MoreHorizontal,
+  PencilLine,
+  PencilOff,
+  X,
+} from 'lucide-react'
 
+const PlanActionsMenu = dynamic(
+  () => import('@/components/audit/plan-actions-menu'),
+  {
+    ssr: false,
+    loading: () => <PlanActionsMenuSkeleton />,
+  }
+)
 
+type PlanCardProps = {
+  plan: any
+  allUsers?: any[]
+  auditors?: any[]
+  companies?: any[]
+  departments?: any[]
+  templates?: any[]
+  canCreatePlan: boolean
+  currentUserId: string
+  currentUserRole?: string
+  isReadOnlyObserver?: boolean
+}
 
 function statusClass(value?: string | null) {
   if (value === 'tamamlandi') {
@@ -35,7 +59,6 @@ function formatDate(value?: string | null) {
   if (!value) return '-'
 
   const raw = String(value)
-
   const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
 
   if (match) {
@@ -67,21 +90,28 @@ export default function PlanCard({
   currentUserId,
   currentUserRole,
   isReadOnlyObserver = false,
-}: {
-  plan: any
-  allUsers?: any[]
-  auditors?: any[]
-  companies?: any[]
-  departments?: any[]
-  templates?: any[]
-  canCreatePlan: boolean
-  currentUserId: string
-  currentUserRole?: string
-  isReadOnlyObserver?: boolean
-}) {
+}: PlanCardProps) {
   const t = useTranslations('plans')
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
+
+  const role = String(currentUserRole || '').toLowerCase()
+  const isAdmin = role === 'admin'
+  const isObserver = isReadOnlyObserver || role === 'musahideci'
+  const isCreator = String(plan.created_by || '') === String(currentUserId || '')
+
+  const isEditLocked = Boolean(plan.locked_edit)
+  const isViewLocked = Boolean(plan.locked_view)
+
+  const hasAnswers = (plan.audit_answers?.length || 0) > 0
+  const answerCount = plan.audit_answers?.length || 0
+
+  const canManageLock = !isObserver && (isAdmin || isCreator)
+  const canOpenDetail = isObserver || !isViewLocked || canManageLock
+  const canOpenFill =
+    !isObserver && !isEditLocked && (!isViewLocked || canManageLock)
+
+  const fillButtonLabel = hasAnswers ? t('edit') : t('fill')
 
   const statusLabel = (value?: string | null) => {
     if (value === 'tamamlandi') return t('completed')
@@ -93,30 +123,10 @@ export default function PlanCard({
   const assignedNames =
     plan.plan_assignments?.length > 0
       ? plan.plan_assignments
-        .map((a: any) => a.profiles?.full_name)
-        .filter(Boolean)
-        .join(', ')
+          .map((assignment: any) => assignment.profiles?.full_name)
+          .filter(Boolean)
+          .join(', ')
       : t('notAssigned')
-
-  const hasAnswers = (plan.audit_answers?.length || 0) > 0
-  const fillButtonLabel = hasAnswers ? t('edit') : t('fill')
-  const answerCount = plan.audit_answers?.length || 0
-
-  const role = String(currentUserRole || '').toLowerCase()
-  const isAdmin = role === 'admin'
-  const isObserver = isReadOnlyObserver || role === 'musahideci'
-  const isCreator = plan.created_by === currentUserId
-
-  const canManageLock = !isObserver && (isAdmin || isCreator)
-  const canManageAccess = !isObserver && (isAdmin || isCreator)
-  const canManagePlan = !isObserver && (isAdmin || isCreator)
-  const canDeletePlan = !isObserver && canCreatePlan
-
-  const isEditLocked = Boolean(plan.locked_edit)
-  const isViewLocked = Boolean(plan.locked_view)
-
-  const canOpenDetail = isObserver || !isViewLocked || canManageLock
-  const canOpenFill = !isObserver && !isEditLocked && (!isViewLocked || canManageLock)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -156,7 +166,7 @@ export default function PlanCard({
       {menuOpen && (
         <div
           ref={menuRef}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
           className="absolute right-4 top-4 z-20 w-64 rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl"
         >
           <div className="mb-2 flex items-start justify-between gap-3 border-b border-slate-100 pb-2">
@@ -217,6 +227,22 @@ export default function PlanCard({
                   {t('editLocked')}
                 </button>
               ))}
+
+            <div className="pt-1">
+              <PlanActionsMenu
+                plan={plan}
+                allUsers={allUsers}
+                auditors={auditors}
+                companies={companies}
+                departments={departments}
+                templates={templates}
+                currentUserId={currentUserId}
+                currentUserRole={currentUserRole}
+                canCreatePlan={canCreatePlan}
+                isObserver={isObserver}
+                onClose={() => setMenuOpen(false)}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -242,40 +268,17 @@ export default function PlanCard({
               {plan.score ?? 0}%
             </span>
 
-            {canManageAccess && (
-              <div onClick={(e) => e.stopPropagation()}>
-                <PlanAccessButton
-                  plan={plan}
-                  allUsers={allUsers}
-                  currentUserId={currentUserId}
-                  currentUserRole={currentUserRole}
-                />
-              </div>
-            )}
-
-            {canManagePlan && (
-              <div onClick={(e) => e.stopPropagation()}>
-                <PlanEditButton
-                  plan={plan}
-                  companies={companies}
-                  departments={departments}
-                  auditors={auditors}
-                  templates={templates}
-                  compact
-                />
-              </div>
-            )}
-
-            {canManageLock && (
-              <div onClick={(e) => e.stopPropagation()}>
-                <PlanLockButton
-                  planId={plan.id}
-                  lockedEdit={plan.locked_edit}
-                  lockedView={plan.locked_view}
-                  compact
-                />
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                setMenuOpen(true)
+              }}
+              className="inline-grid h-8 w-8 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+              aria-label={t('actions')}
+            >
+              <MoreHorizontal size={16} />
+            </button>
           </div>
         </div>
 
@@ -311,7 +314,8 @@ export default function PlanCard({
           </span>
 
           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
-            {t('deadline')}: {plan.due_date ? formatDate(plan.due_date) : t('noDeadline')}
+            {t('deadline')}:{' '}
+            {plan.due_date ? formatDate(plan.due_date) : t('noDeadline')}
           </span>
         </div>
 
@@ -324,8 +328,12 @@ export default function PlanCard({
           </p>
         </div>
 
-        <div className="mt-auto pt-4" onClick={(e) => e.stopPropagation()}>
-          <div className={`grid gap-2 ${isObserver ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+        <div className="mt-auto pt-4" onClick={(event) => event.stopPropagation()}>
+          <div
+            className={`grid gap-2 ${
+              isObserver ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'
+            }`}
+          >
             {canOpenDetail ? (
               <Link
                 href={`/dashboard/plans/${plan.id}`}
@@ -373,12 +381,19 @@ export default function PlanCard({
                 {t('pdf')}
               </Link>
             )}
-
-            {canDeletePlan && <PlanDeleteButton planId={plan.id} />}
-
           </div>
         </div>
       </div>
     </article>
+  )
+}
+
+function PlanActionsMenuSkeleton() {
+  return (
+    <div className="space-y-2">
+      <div className="h-8 animate-pulse rounded-xl bg-slate-100" />
+      <div className="h-8 animate-pulse rounded-xl bg-slate-100" />
+      <div className="h-8 animate-pulse rounded-xl bg-slate-100" />
+    </div>
   )
 }

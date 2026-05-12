@@ -1,21 +1,28 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
-import CreatePlanForm from '@/components/create-plan-form'
 import { PlusCircle, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+
+const CreatePlanForm = dynamic(() => import('@/components/create-plan-form'), {
+  ssr: false,
+  loading: () => <CreatePlanFormSkeleton />,
+})
+
+type Props = {
+  companies: any[]
+  departments: any[]
+  auditors: any[]
+  templates: any[]
+}
 
 export default function CreatePlanModal({
   companies,
   departments,
   auditors,
   templates,
-}: {
-  companies: any[]
-  departments: any[]
-  auditors: any[]
-  templates: any[]
-}) {
+}: Props) {
   const t = useTranslations('plans')
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -23,7 +30,7 @@ export default function CreatePlanModal({
   const openModal = () => {
     setMounted(true)
 
-    requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
       setOpen(true)
     })
   }
@@ -45,12 +52,14 @@ export default function CreatePlanModal({
       }
     }
 
+    const previousOverflow = document.body.style.overflow
+
     document.addEventListener('keydown', handleKeyDown)
     document.body.style.overflow = 'hidden'
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = ''
+      document.body.style.overflow = previousOverflow
     }
   }, [mounted])
 
@@ -71,15 +80,19 @@ export default function CreatePlanModal({
             type="button"
             aria-label={t('closeModal')}
             onClick={closeModal}
-            className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'
-              }`}
+            className={`absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 ${
+              open ? 'opacity-100' : 'opacity-0'
+            }`}
           />
 
           <div
-            className={`relative z-10 flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-all duration-300 ease-out ${open
+            role="dialog"
+            aria-modal="true"
+            className={`relative z-10 flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-all duration-300 ease-out ${
+              open
                 ? 'translate-y-0 scale-100 opacity-100'
                 : 'translate-y-4 scale-95 opacity-0'
-              }`}
+            }`}
           >
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-white p-5 sm:p-6">
               <div>
@@ -121,5 +134,23 @@ export default function CreatePlanModal({
         </div>
       )}
     </>
+  )
+}
+
+function CreatePlanFormSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="h-5 w-44 animate-pulse rounded-full bg-slate-100" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="h-11 animate-pulse rounded-2xl bg-slate-100" />
+        <div className="h-11 animate-pulse rounded-2xl bg-slate-100" />
+        <div className="h-11 animate-pulse rounded-2xl bg-slate-100" />
+        <div className="h-11 animate-pulse rounded-2xl bg-slate-100" />
+      </div>
+      <div className="h-28 animate-pulse rounded-2xl bg-slate-100" />
+      <div className="flex justify-end">
+        <div className="h-10 w-32 animate-pulse rounded-2xl bg-slate-100" />
+      </div>
+    </div>
   )
 }

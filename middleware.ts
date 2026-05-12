@@ -1,52 +1,68 @@
-import {createServerClient} from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import createIntlMiddleware from 'next-intl/middleware'
-import {NextResponse, type NextRequest} from 'next/server'
-import {routing} from './i18n/routing'
+import { NextResponse, type NextRequest } from 'next/server'
+import { routing } from './i18n/routing'
 
 const intlMiddleware = createIntlMiddleware(routing)
 
-function getLocaleFromPath(pathname: string) {
+function stripLocale(pathname: string) {
   const segment = pathname.split('/')[1]
 
   if (routing.locales.includes(segment as any)) {
-    return segment
-  }
-
-  return routing.defaultLocale
-}
-
-function stripLocale(pathname: string) {
-  const locale = getLocaleFromPath(pathname)
-
-  if (pathname === `/${locale}`) {
-    return '/'
-  }
-
-  if (pathname.startsWith(`/${locale}/`)) {
-    return pathname.replace(`/${locale}`, '') || '/'
+    const withoutLocale = pathname.replace(`/${segment}`, '')
+    return withoutLocale || '/'
   }
 
   return pathname
 }
 
-function localizedPath(pathname: string, locale: string) {
-  if (pathname === '/') return `/${locale}`
-  return `/${locale}${pathname}`
+function isLocalePrefixedPath(pathname: string) {
+  return (
+    pathname.startsWith('/az/') ||
+    pathname.startsWith('/en/') ||
+    pathname.startsWith('/ru/') ||
+    pathname === '/az' ||
+    pathname === '/en' ||
+    pathname === '/ru'
+  )
 }
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
-
-  const intlResponse = intlMiddleware(request)
-
-  const locale = getLocaleFromPath(pathname)
   const pathWithoutLocale = stripLocale(pathname)
 
-  let response = intlResponse || NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
+  if (isLocalePrefixedPath(pathname)) {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = pathWithoutLocale
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  let response =
+    intlMiddleware(request) ||
+    NextResponse.next({
+      request: {
+        headers: request.headers,
+      },
+    })
+
+  const isPublicAuthPage =
+    pathWithoutLocale === '/login' ||
+    pathWithoutLocale.startsWith('/login/')
+
+  const isDashboardPage =
+    pathWithoutLocale === '/dashboard' ||
+    pathWithoutLocale.startsWith('/dashboard/')
+
+  // Login səhifəsi public-dir. Burada Supabase auth yoxlaması etmə.
+  // Bu, "Auth session missing!" loglarını və lazımsız document latency-ni azaldır.
+  if (isPublicAuthPage) {
+    return response
+  }
+
+  // Dashboard deyilsə, auth yoxlaması lazım deyil.
+  if (!isDashboardPage) {
+    return response
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -62,7 +78,7 @@ export async function middleware(request: NextRequest) {
         return request.cookies.getAll()
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({name, value}) => {
+        cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value)
         })
 
@@ -72,7 +88,7 @@ export async function middleware(request: NextRequest) {
           },
         })
 
-        cookiesToSet.forEach(({name, value, options}) => {
+        cookiesToSet.forEach(({ name, value, options }) => {
           response.cookies.set(name, value, options)
         })
       },
@@ -81,36 +97,27 @@ export async function middleware(request: NextRequest) {
 
   try {
     const {
-      data: {user},
+      data: { user },
       error,
     } = await supabase.auth.getUser()
 
-    if (error) {
+    if (error && error.message !== 'Auth session missing!') {
       console.error('Supabase getUser error in middleware:', error.message)
     }
 
-    if (!user && pathWithoutLocale.startsWith('/dashboard')) {
+    if (!user) {
       const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = localizedPath('/login', locale)
+      redirectUrl.pathname = '/login'
       redirectUrl.searchParams.set('redirectedFrom', pathname)
-      return NextResponse.redirect(redirectUrl)
-    }
-
-    if (user && pathWithoutLocale === '/login') {
-      const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = localizedPath('/dashboard', locale)
-      redirectUrl.search = ''
       return NextResponse.redirect(redirectUrl)
     }
   } catch (error) {
     console.error('Middleware failed:', error)
 
-    if (pathWithoutLocale.startsWith('/dashboard')) {
-      const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = localizedPath('/login', locale)
-      redirectUrl.search = ''
-      return NextResponse.redirect(redirectUrl)
-    }
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/login'
+    redirectUrl.search = ''
+    return NextResponse.redirect(redirectUrl)
   }
 
   return response

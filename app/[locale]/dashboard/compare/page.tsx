@@ -1,45 +1,27 @@
-import {createClient} from '@/lib/supabase/server'
-import {redirect} from 'next/navigation'
-import {getTranslations} from 'next-intl/server'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import CompareAuditForm from '@/components/audit/compare-audit-form'
+import { getUserProfile } from '@/lib/actions'
 
 export default async function ComparePage() {
-  const t = await getTranslations('comparePage')
+  const [t, profile] = await Promise.all([
+    getTranslations('comparePage'),
+    getUserProfile(),
+  ])
+
+  if (!profile) redirect('/login')
+
   const supabase = await createClient()
 
-  const {
-    data: {user},
-  } = await supabase.auth.getUser()
+  const userId = profile.userId || profile.id
+  const role = profile.role || ''
+  const isAdmin = role === 'admin'
 
-  if (!user) redirect('/login')
-
-  const {data: profile, error: profileError} = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  if (profileError) {
-    return (
-      <div className="p-4 text-red-600 sm:p-6 lg:p-8">
-        {t('profileLoadError', {message: profileError.message})}
-      </div>
-    )
-  }
-
-  if (!profile) {
-    return (
-      <div className="p-4 text-red-600 sm:p-6 lg:p-8">
-        {t('profileNotFound')}
-      </div>
-    )
-  }
-
-  const isAdmin = profile.role === 'admin'
-
-  const {data: plans, error} = await supabase
+  let plansQuery = supabase
     .from('audit_plans')
-    .select(`
+    .select(
+      `
       id,
       title,
       department,
@@ -50,39 +32,41 @@ export default async function ComparePage() {
       created_by,
       locked_view,
       companies(id, name)
-    `)
-    .order('created_at', {ascending: false})
+    `
+    )
+    .order('created_at', { ascending: false })
 
-  if (error) {
+  if (!isAdmin) {
+    plansQuery = plansQuery.or(`locked_view.eq.false,created_by.eq.${userId}`)
+  }
+
+  const { data: plansData, error: plansError } = await plansQuery
+
+  if (plansError) {
     return (
       <div className="p-4 text-red-600 sm:p-6 lg:p-8">
-        {t('auditsLoadError', {message: error.message})}
+        {t('auditsLoadError', { message: plansError.message })}
       </div>
     )
   }
 
-  const normalizedPlans = (plans || [])
-    .filter((plan: any) => {
-      if (!plan.locked_view) return true
-      if (isAdmin) return true
-      return plan.created_by === user.id
-    })
-    .map((plan: any) => ({
-      ...plan,
-      companies: Array.isArray(plan.companies)
-        ? plan.companies[0] || null
-        : plan.companies || null,
-    }))
+  const normalizedPlans = (plansData || []).map((plan: any) => ({
+    ...plan,
+    companies: Array.isArray(plan.companies)
+      ? plan.companies[0] || null
+      : plan.companies || null,
+  }))
 
-  const visiblePlanIds = normalizedPlans.map((plan: any) => plan.id)
+  const visiblePlanIds = normalizedPlans.map((plan: any) => plan.id).filter(Boolean)
 
   let plansWithComposition = normalizedPlans
 
   if (visiblePlanIds.length > 0) {
-    const {data: answersForComposition, error: compositionError} =
+    const { data: answersForComposition, error: compositionError } =
       await supabase
         .from('audit_answers')
-        .select(`
+        .select(
+          `
           plan_id,
           question_id,
           template_questions(
@@ -91,13 +75,14 @@ export default async function ComparePage() {
               id
             )
           )
-        `)
+        `
+        )
         .in('plan_id', visiblePlanIds)
 
     if (compositionError) {
       return (
         <div className="p-4 text-red-600 sm:p-6 lg:p-8">
-          {t('compositionLoadError', {message: compositionError.message})}
+          {t('compositionLoadError', { message: compositionError.message })}
         </div>
       )
     }
@@ -111,7 +96,7 @@ export default async function ComparePage() {
     >()
 
     for (const plan of normalizedPlans as any[]) {
-      compositionMap.set(plan.id, {
+      compositionMap.set(String(plan.id), {
         questionIds: new Set<string>(),
         sectionIds: new Set<string>(),
       })
@@ -141,7 +126,7 @@ export default async function ComparePage() {
     }
 
     plansWithComposition = normalizedPlans.map((plan: any) => {
-      const composition = compositionMap.get(plan.id)
+      const composition = compositionMap.get(String(plan.id))
 
       return {
         ...plan,

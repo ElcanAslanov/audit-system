@@ -1,16 +1,32 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
+import { ClipboardCheck, MoreHorizontal } from 'lucide-react'
 import PlanCard from '@/components/audit/plan-card'
-import PlanAccessButton from '@/components/audit/plan-access-button'
-import PlanLockButton from '@/components/audit/plan-lock-button'
-import PlanDeleteButton from '@/components/audit/plan-delete-button'
-import PlanEditButton from '@/components/audit/plan-edit-button'
-import { ClipboardCheck } from 'lucide-react'
 
+const PlanActionsMenu = dynamic(
+  () => import('@/components/audit/plan-actions-menu'),
+  {
+    ssr: false,
+    loading: () => <ActionMenuSkeleton />,
+  }
+)
 
+type Props = {
+  plans: any[]
+  allUsers: any[]
+  auditors: any[]
+  companies: any[]
+  departments: any[]
+  templates: any[]
+  canCreatePlan: boolean
+  currentUserId: string
+  currentUserRole?: string | null
+  isReadOnlyObserver?: boolean
+}
 
 function lockClass(plan: any) {
   if (plan.locked_view) return 'bg-red-50 text-red-700'
@@ -32,19 +48,6 @@ function formatDate(value?: string | null) {
   return raw
 }
 
-type Props = {
-  plans: any[]
-  allUsers: any[]
-  auditors: any[]
-  companies: any[]
-  departments: any[]
-  templates: any[]
-  canCreatePlan: boolean
-  currentUserId: string
-  currentUserRole?: string | null
-  isReadOnlyObserver?: boolean
-}
-
 export default function PlansViewSwitcher({
   plans,
   allUsers,
@@ -56,9 +59,69 @@ export default function PlansViewSwitcher({
   currentUserId,
   currentUserRole,
   isReadOnlyObserver = false,
-
 }: Props) {
   const t = useTranslations('plans')
+  const [view, setView] = useState<'cards' | 'table'>('table')
+  const [openActionsPlanId, setOpenActionsPlanId] = useState<string | null>(null)
+  const actionsRef = useRef<HTMLDivElement | null>(null)
+
+  const safeCurrentUserRole = currentUserRole || undefined
+  const isObserver =
+    isReadOnlyObserver ||
+    String(safeCurrentUserRole || '').toLowerCase() === 'musahideci'
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const savedView = window.localStorage.getItem('plans-view-mode')
+
+        if (savedView === 'cards' || savedView === 'table') {
+          setView(savedView)
+        }
+      } catch {
+        setView('table')
+      }
+    }, 300)
+
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    if (!openActionsPlanId) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!actionsRef.current) return
+
+      if (!actionsRef.current.contains(event.target as Node)) {
+        setOpenActionsPlanId(null)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenActionsPlanId(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [openActionsPlanId])
+
+  const changeView = (nextView: 'cards' | 'table') => {
+    setView(nextView)
+    setOpenActionsPlanId(null)
+
+    try {
+      window.localStorage.setItem('plans-view-mode', nextView)
+    } catch {
+      // localStorage disabled ola bilər, UI yenə işləsin.
+    }
+  }
 
   const statusLabel = (value?: string | null) => {
     if (value === 'tamamlandi') return t('completed')
@@ -73,28 +136,13 @@ export default function PlansViewSwitcher({
     return t('unlocked')
   }
 
-  const [view, setView] = useState<'cards' | 'table'>('cards')
-
-  useEffect(() => {
-    const savedView = window.localStorage.getItem('plans-view-mode')
-
-    if (savedView === 'cards' || savedView === 'table') {
-      setView(savedView)
-    }
-  }, [])
-
-  const changeView = (nextView: 'cards' | 'table') => {
-    setView(nextView)
-    window.localStorage.setItem('plans-view-mode', nextView)
-  }
-  const safeCurrentUserRole = currentUserRole || undefined
-  const isObserver =
-    isReadOnlyObserver || String(safeCurrentUserRole || '').toLowerCase() === 'musahideci'
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-lg font-black text-slate-950">{t('currentPlans')}</h2>
+          <h2 className="text-lg font-black text-slate-950">
+            {t('currentPlans')}
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
             {t('plansShown', { count: plans.length })}
           </p>
@@ -104,10 +152,11 @@ export default function PlansViewSwitcher({
           <button
             type="button"
             onClick={() => changeView('cards')}
-            className={`rounded-xl px-4 py-2 text-center transition ${view === 'cards'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'text-slate-600 hover:bg-white'
-              }`}
+            className={`rounded-xl px-4 py-2 text-center transition ${
+              view === 'cards'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-white'
+            }`}
           >
             {t('cardView')}
           </button>
@@ -115,10 +164,11 @@ export default function PlansViewSwitcher({
           <button
             type="button"
             onClick={() => changeView('table')}
-            className={`rounded-xl px-4 py-2 text-center transition ${view === 'table'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'text-slate-600 hover:bg-white'
-              }`}
+            className={`rounded-xl px-4 py-2 text-center transition ${
+              view === 'table'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-white'
+            }`}
           >
             {t('tableView')}
           </button>
@@ -131,9 +181,7 @@ export default function PlansViewSwitcher({
             <ClipboardCheck size={22} />
           </div>
 
-          <h3 className="mt-4 font-black text-slate-900">
-            {t('noPlans')}
-          </h3>
+          <h3 className="mt-4 font-black text-slate-900">{t('noPlans')}</h3>
 
           <p className="mt-1 text-sm text-slate-500">
             {t('noPlansDescription')}
@@ -156,7 +204,6 @@ export default function PlansViewSwitcher({
               currentUserId={currentUserId}
               currentUserRole={safeCurrentUserRole}
               isReadOnlyObserver={isObserver}
-
             />
           ))}
         </div>
@@ -192,7 +239,7 @@ export default function PlansViewSwitcher({
                   <th className="px-4 py-3 text-left font-black text-slate-600">
                     {t('deadline')}
                   </th>
-                  <th className="min-w-[360px] px-4 py-3 text-right font-black text-slate-600">
+                  <th className="min-w-[170px] px-4 py-3 text-right font-black text-slate-600">
                     {t('actions')}
                   </th>
                 </tr>
@@ -200,14 +247,8 @@ export default function PlansViewSwitcher({
 
               <tbody className="divide-y divide-slate-100 bg-white">
                 {plans.map((plan: any) => {
-                  const isAdmin = safeCurrentUserRole === 'admin'
-                  const isCreator = plan.created_by === currentUserId
-
-                  const canManageLock = !isObserver && (isAdmin || isCreator)
-                  const canManageAccess = !isObserver && (isAdmin || isCreator)
-                  const canManagePlan = !isObserver && (isAdmin || isCreator)
-                  const canFillPlan = !isObserver && !plan.locked_edit
-                  const canDeletePlan = !isObserver && canCreatePlan
+                  const isActionsOpen =
+                    openActionsPlanId === String(plan.id || '')
 
                   return (
                     <tr key={plan.id} className="transition hover:bg-slate-50">
@@ -221,7 +262,9 @@ export default function PlansViewSwitcher({
                         </Link>
 
                         <p className="mt-1 text-xs text-slate-500">
-                          {t('answersCount', { count: plan.audit_answers?.length || 0 })}
+                          {t('answersCount', {
+                            count: plan.audit_answers?.length || 0,
+                          })}
                         </p>
                       </td>
 
@@ -258,87 +301,53 @@ export default function PlansViewSwitcher({
                       </td>
 
                       <td className="px-4 py-3 align-top text-slate-700">
-                        {plan.due_date ? formatDate(plan.due_date) : t('noDeadline')}
+                        {plan.due_date
+                          ? formatDate(plan.due_date)
+                          : t('noDeadline')}
                       </td>
 
                       <td className="px-4 py-3 align-top">
-                        <div className="flex flex-wrap justify-end gap-2">
-                          {canManageAccess && (
+                        <div className="relative flex justify-end">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.preventDefault()
+                              event.stopPropagation()
+
+                              setOpenActionsPlanId((current) =>
+                                current === String(plan.id || '')
+                                  ? null
+                                  : String(plan.id || '')
+                              )
+                            }}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                          >
+                            <MoreHorizontal size={16} />
+                            {t('actions')}
+                          </button>
+
+                          {isActionsOpen && (
                             <div
+                              ref={actionsRef}
                               onClick={(event) => {
                                 event.preventDefault()
                                 event.stopPropagation()
                               }}
+                              className="absolute right-0 top-10 z-20 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"
                             >
-                              <PlanAccessButton
+                              <PlanActionsMenu
                                 plan={plan}
                                 allUsers={allUsers}
-                                currentUserId={currentUserId}
-                                currentUserRole={safeCurrentUserRole}
-                              />
-                            </div>
-                          )}
-
-                          {canManagePlan && (
-                            <div
-                              onClick={(event) => {
-                                event.preventDefault()
-                                event.stopPropagation()
-                              }}
-                            >
-                              <PlanEditButton
-                                plan={plan}
+                                auditors={auditors}
                                 companies={companies}
                                 departments={departments}
-                                auditors={auditors}
                                 templates={templates}
-                                compact
+                                currentUserId={currentUserId}
+                                currentUserRole={safeCurrentUserRole}
+                                canCreatePlan={canCreatePlan}
+                                isObserver={isObserver}
+                                onClose={() => setOpenActionsPlanId(null)}
                               />
-                            </div>
-                          )}
-
-                          <Link
-                            href={`/dashboard/plans/${plan.id}`}
-                            onClick={(event) => event.stopPropagation()}
-                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                          >
-                            {t('view')}
-                          </Link>
-
-                          {canFillPlan && (
-                            <Link
-                              href={`/dashboard/plans/${plan.id}/fill`}
-                              onClick={(event) => event.stopPropagation()}
-                              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700"
-                            >
-                              {t('fill')}
-                            </Link>
-                          )}
-
-                          {canManageLock && (
-                            <div
-                              onClick={(event) => {
-                                event.preventDefault()
-                                event.stopPropagation()
-                              }}
-                            >
-                              <PlanLockButton
-                                planId={plan.id}
-                                lockedEdit={plan.locked_edit}
-                                lockedView={plan.locked_view}
-                                compact
-                              />
-                            </div>
-                          )}
-
-                          {canDeletePlan && (
-                            <div
-                              onClick={(event) => {
-                                event.preventDefault()
-                                event.stopPropagation()
-                              }}
-                            >
-                              <PlanDeleteButton planId={plan.id} />
                             </div>
                           )}
                         </div>
@@ -352,5 +361,15 @@ export default function PlansViewSwitcher({
         </div>
       )}
     </section>
+  )
+}
+
+function ActionMenuSkeleton() {
+  return (
+    <div className="space-y-2">
+      <div className="h-8 animate-pulse rounded-xl bg-slate-100" />
+      <div className="h-8 animate-pulse rounded-xl bg-slate-100" />
+      <div className="h-8 animate-pulse rounded-xl bg-slate-100" />
+    </div>
   )
 }
