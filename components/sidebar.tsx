@@ -1,16 +1,18 @@
 'use client'
 
-import { Link, usePathname } from '@/i18n/routing'
-import { useTranslations } from 'next-intl'
+import {Link, usePathname} from '@/i18n/routing'
+import {useTranslations} from 'next-intl'
 import LanguageSwitcher from './language-switcher'
 import LogoutButton from './logout-button'
-import { useEffect, useState } from 'react'
+import {useEffect, useState} from 'react'
 import {
   BarChart3,
+  Bell,
   Building2,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
+  FileQuestion,
   FileSearch,
   Home,
   LayoutDashboard,
@@ -34,6 +36,7 @@ const allRoles = [
 
 type MenuItem = {
   labelKey: string
+  fallbackLabel: string
   href: string
   roles?: string[]
   icon: React.ElementType
@@ -44,6 +47,7 @@ type MenuItem = {
 const mainItems: MenuItem[] = [
   {
     labelKey: 'dashboard',
+    fallbackLabel: 'Dashboard',
     href: '/dashboard',
     roles: allRoles,
     icon: Home,
@@ -54,24 +58,42 @@ const mainItems: MenuItem[] = [
 const managementItems: MenuItem[] = [
   {
     labelKey: 'auditPlans',
+    fallbackLabel: 'Audit planları',
     href: '/dashboard/plans',
     roles: allRoles,
     icon: ClipboardCheck,
   },
   {
+    labelKey: 'auditQuestions',
+    fallbackLabel: 'Audit sualları',
+    href: '/dashboard/audit-questions',
+    roles: allRoles,
+    icon: FileQuestion,
+  },
+  {
+    labelKey: 'notifications',
+    fallbackLabel: 'Bildirişlər',
+    href: '/dashboard/notifications',
+    roles: allRoles,
+    icon: Bell,
+  },
+  {
     labelKey: 'auditCompare',
+    fallbackLabel: 'Audit müqayisə',
     href: '/dashboard/compare',
     roles: ['admin', 'rehber', 'audit_muavini', 'musahideci'],
     icon: BarChart3,
   },
   {
     labelKey: 'auditTemplates',
+    fallbackLabel: 'Audit şablonları',
     href: '/dashboard/admin/templates',
     roles: ['admin', 'rehber', 'audit_muavini', 'musahideci'],
     icon: ListChecks,
   },
   {
     labelKey: 'admin',
+    fallbackLabel: 'Admin',
     href: '/dashboard/admin',
     roles: ['admin'],
     icon: LayoutDashboard,
@@ -80,12 +102,14 @@ const managementItems: MenuItem[] = [
   },
   {
     labelKey: 'companies',
+    fallbackLabel: 'Şirkətlər',
     href: '/dashboard/companies',
     roles: ['admin'],
     icon: Building2,
   },
   {
     labelKey: 'departments',
+    fallbackLabel: 'Şöbələr',
     href: '/dashboard/departments',
     roles: ['admin'],
     icon: Layers3,
@@ -95,6 +119,7 @@ const managementItems: MenuItem[] = [
 const activityItems: MenuItem[] = [
   {
     labelKey: 'findings',
+    fallbackLabel: 'Çatışmazlıqlar',
     href: '/dashboard/findings',
     roles: allRoles,
     icon: ShieldAlert,
@@ -104,6 +129,14 @@ const activityItems: MenuItem[] = [
 function canSee(item: MenuItem, role: string) {
   if (!item.roles || item.roles.length === 0) return true
   return item.roles.includes(role)
+}
+
+function safeTranslate(t: any, key: string, fallback: string) {
+  try {
+    return t(key)
+  } catch {
+    return fallback
+  }
 }
 
 function roleLabel(role: string, tRoles: any) {
@@ -119,6 +152,11 @@ function roleLabel(role: string, tRoles: any) {
 function isActivePath(pathname: string, item: MenuItem) {
   if (item.exact) return pathname === item.href
   return pathname === item.href || pathname.startsWith(`${item.href}/`)
+}
+
+function formatUnreadCount(count: number) {
+  if (count > 99) return '99+'
+  return String(count)
 }
 
 function SectionTitle({
@@ -146,72 +184,94 @@ function SidebarLink({
   pathname,
   collapsed,
   tSidebar,
+  unreadCount,
 }: {
   item: MenuItem
   pathname: string
   collapsed: boolean
   tSidebar: any
+  unreadCount: number
 }) {
   const Icon = item.icon
   const active = isActivePath(pathname, item)
+  const label = safeTranslate(tSidebar, item.labelKey, item.fallbackLabel)
+  const showNotificationBadge =
+    item.href === '/dashboard/notifications' && unreadCount > 0
 
   return (
     <Link
       href={item.href}
       prefetch={false}
-      title={collapsed ? tSidebar(item.labelKey) : undefined}
-      className={`group relative flex w-full items-center rounded-2xl text-sm font-bold transition-all duration-300 ${collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-3'
-        } ${active
+      title={collapsed ? label : undefined}
+      className={`group relative flex w-full items-center rounded-2xl text-sm font-bold transition-all duration-300 ${
+        collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-3'
+      } ${
+        active
           ? 'bg-white text-slate-950 shadow-lg shadow-blue-950/20'
           : 'text-slate-300 hover:bg-white/10 hover:text-white'
-        }`}
+      }`}
     >
       {active && (
         <span className="absolute -left-5 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-blue-400" />
       )}
 
+      {collapsed && showNotificationBadge && (
+        <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-slate-950" />
+      )}
+
       <span
-        className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-all duration-300 ${active
+        className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-all duration-300 ${
+          active
             ? 'bg-blue-600 text-white'
             : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-white'
-          }`}
+        }`}
       >
         <Icon size={18} />
       </span>
 
       <span
-        className={`min-w-0 flex-1 truncate transition-all duration-300 ${collapsed
+        className={`min-w-0 flex-1 truncate transition-all duration-300 ${
+          collapsed
             ? 'w-0 translate-x-2 overflow-hidden opacity-0'
             : 'w-auto translate-x-0 opacity-100'
-          }`}
+        }`}
       >
-        {tSidebar(item.labelKey)}
+        {label}
       </span>
 
       {!collapsed && item.badge && (
         <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${active ? 'bg-slate-100 text-slate-600' : 'bg-blue-500/10 text-blue-300'
-            }`}
+          className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
+            active ? 'bg-slate-100 text-slate-600' : 'bg-blue-500/10 text-blue-300'
+          }`}
         >
           {item.badge}
         </span>
       )}
 
+      {!collapsed && showNotificationBadge && (
+        <span className="ml-auto rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-black text-white">
+          {formatUnreadCount(unreadCount)}
+        </span>
+      )}
+
       {collapsed && (
         <span className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 z-50 hidden -translate-y-1/2 whitespace-nowrap rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-bold text-white shadow-xl group-hover:block">
-          {tSidebar(item.labelKey)}
+          {label}
+          {showNotificationBadge ? ` (${formatUnreadCount(unreadCount)})` : ''}
         </span>
       )}
     </Link>
   )
 }
 
-export default function Sidebar({ role, fullName }: SidebarProps) {
+export default function Sidebar({role, fullName}: SidebarProps) {
   const pathname = usePathname()
   const tSidebar = useTranslations('sidebar')
   const tRoles = useTranslations('roles')
   const [collapsed, setCollapsed] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     const saved = window.localStorage.getItem('audit-sidebar-collapsed')
@@ -224,6 +284,30 @@ export default function Sidebar({ role, fullName }: SidebarProps) {
     window.localStorage.setItem('audit-sidebar-collapsed', String(collapsed))
   }, [collapsed, mounted])
 
+  useEffect(() => {
+  let alive = true
+
+  const loadUnreadCount = () => {
+    fetch('/api/notifications/unread-count')
+      .then((res) => res.json())
+      .then((data) => {
+        if (alive) setUnreadCount(Number(data?.count || 0))
+      })
+      .catch(() => {
+        if (alive) setUnreadCount(0)
+      })
+  }
+
+  loadUnreadCount()
+
+  window.addEventListener('notifications:changed', loadUnreadCount)
+
+  return () => {
+    alive = false
+    window.removeEventListener('notifications:changed', loadUnreadCount)
+  }
+}, [pathname])
+
   const visibleMainItems = mainItems.filter((item) => canSee(item, role))
   const visibleManagementItems = managementItems.filter((item) =>
     canSee(item, role)
@@ -233,8 +317,9 @@ export default function Sidebar({ role, fullName }: SidebarProps) {
 
   return (
     <aside
-      className={`hidden h-screen shrink-0 overflow-visible bg-slate-950 text-white transition-all duration-500 ease-in-out lg:sticky lg:top-0 lg:flex lg:flex-col ${collapsed ? 'w-24' : 'w-72'
-        }`}
+      className={`hidden h-screen shrink-0 overflow-visible bg-slate-950 text-white transition-all duration-500 ease-in-out lg:sticky lg:top-0 lg:flex lg:flex-col ${
+        collapsed ? 'w-24' : 'w-72'
+      }`}
     >
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-20 top-10 h-48 w-48 rounded-full bg-blue-600/20 blur-3xl" />
@@ -252,22 +337,25 @@ export default function Sidebar({ role, fullName }: SidebarProps) {
         </button>
 
         <div
-          className={`mb-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] shadow-2xl shadow-black/20 backdrop-blur transition-all duration-500 ${collapsed ? 'p-3' : 'p-4'
-            }`}
+          className={`mb-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] shadow-2xl shadow-black/20 backdrop-blur transition-all duration-500 ${
+            collapsed ? 'p-3' : 'p-4'
+          }`}
         >
           <div
-            className={`flex items-center transition-all duration-500 ${collapsed ? 'justify-center' : 'gap-3'
-              }`}
+            className={`flex items-center transition-all duration-500 ${
+              collapsed ? 'justify-center' : 'gap-3'
+            }`}
           >
             <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 text-white shadow-lg shadow-blue-950/40">
               <FileSearch size={24} />
             </div>
 
             <div
-              className={`min-w-0 transition-all duration-500 ${collapsed
+              className={`min-w-0 transition-all duration-500 ${
+                collapsed
                   ? 'w-0 translate-x-2 overflow-hidden opacity-0'
                   : 'w-auto translate-x-0 opacity-100'
-                }`}
+              }`}
             >
               <h1 className="truncate text-xl font-black tracking-tight text-white">
                 {tSidebar('systemTitle')}
@@ -304,6 +392,7 @@ export default function Sidebar({ role, fullName }: SidebarProps) {
                 pathname={pathname}
                 collapsed={collapsed}
                 tSidebar={tSidebar}
+                unreadCount={unreadCount}
               />
             ))}
           </div>
@@ -321,6 +410,7 @@ export default function Sidebar({ role, fullName }: SidebarProps) {
                     pathname={pathname}
                     collapsed={collapsed}
                     tSidebar={tSidebar}
+                    unreadCount={unreadCount}
                   />
                 ))}
               </div>
@@ -329,7 +419,9 @@ export default function Sidebar({ role, fullName }: SidebarProps) {
 
           {visibleActivityItems.length > 0 && (
             <>
-              <SectionTitle collapsed={collapsed}>{tSidebar('activity')}</SectionTitle>
+              <SectionTitle collapsed={collapsed}>
+                {tSidebar('activity')}
+              </SectionTitle>
               <div className="space-y-2">
                 {visibleActivityItems.map((item) => (
                   <SidebarLink
@@ -338,6 +430,7 @@ export default function Sidebar({ role, fullName }: SidebarProps) {
                     pathname={pathname}
                     collapsed={collapsed}
                     tSidebar={tSidebar}
+                    unreadCount={unreadCount}
                   />
                 ))}
               </div>
@@ -346,12 +439,14 @@ export default function Sidebar({ role, fullName }: SidebarProps) {
         </nav>
 
         <div
-          className={`relative z-10 mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur transition-all duration-500 ${collapsed ? 'p-3' : 'p-4'
-            }`}
+          className={`relative z-10 mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur transition-all duration-500 ${
+            collapsed ? 'p-3' : 'p-4'
+          }`}
         >
           <div
-            className={`mb-4 flex items-center transition-all duration-500 ${collapsed ? 'justify-center' : 'gap-3'
-              }`}
+            className={`mb-4 flex items-center transition-all duration-500 ${
+              collapsed ? 'justify-center' : 'gap-3'
+            }`}
           >
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-slate-800 text-sm font-black text-slate-200">
               {displayName.slice(0, 1).toUpperCase()}
@@ -370,8 +465,9 @@ export default function Sidebar({ role, fullName }: SidebarProps) {
           </div>
 
           <div
-            className={`mb-4 flex min-w-0 ${collapsed ? 'justify-center' : 'w-full justify-stretch'
-              }`}
+            className={`mb-4 flex min-w-0 ${
+              collapsed ? 'justify-center' : 'w-full justify-stretch'
+            }`}
           >
             <div className={collapsed ? 'w-10' : 'w-full min-w-0'}>
               <LanguageSwitcher compact={collapsed} />

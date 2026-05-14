@@ -33,7 +33,9 @@
     "management": "Управление",
     "systemTitle": "Система аудита",
     "systemSubtitle": "Панель рисков и контроля",
-    "user": "Пользователь"
+    "user": "Пользователь",
+    "auditQuestions": "Вопросы по аудиту",
+    "notifications": "Уведомления"
   },
   "roles": {
     "admin": "Администратор",

@@ -3,9 +3,12 @@ import {redirect} from 'next/navigation'
 import {Link} from '@/i18n/routing'
 import {getTranslations} from 'next-intl/server'
 import PrintReportButton from '@/components/audit/print-report-button'
+import AuditQuestionModal from '@/components/audit/audit-question-modal'
+import ScrollToAnswer from '@/components/audit/scroll-to-answer'
 
 type PageProps = {
   params: Promise<{id: string}>
+  searchParams?: Promise<{answer?: string}>
 }
 
 function normalizeOne(value: any) {
@@ -25,27 +28,68 @@ function riskBadgeClass(value?: string | null) {
   return 'border-emerald-200 bg-emerald-50 text-emerald-700'
 }
 
+function commentTypeLabel(value?: string | null) {
+  if (value === 'question') return 'Sual'
+  if (value === 'comment') return 'Rəy'
+  return '-'
+}
+
+function commentStatusLabel(value?: string | null) {
+  if (value === 'open') return 'Açıq'
+  if (value === 'answered') return 'Cavablandırılıb'
+  if (value === 'closed') return 'Bağlanıb'
+  return value || '-'
+}
+
+function commentStatusClass(value?: string | null) {
+  if (value === 'open') return 'border-yellow-200 bg-yellow-50 text-yellow-700'
+  if (value === 'answered') return 'border-blue-200 bg-blue-50 text-blue-700'
+  if (value === 'closed') return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+  return 'border-slate-200 bg-slate-50 text-slate-600'
+}
+
+function priorityLabel(value?: string | null) {
+  if (value === 'low') return 'Aşağı'
+  if (value === 'normal') return 'Normal'
+  if (value === 'high') return 'Yüksək'
+  if (value === 'urgent') return 'Təcili'
+  return '-'
+}
+
 function formatDate(value?: string | null) {
   if (!value) return '-'
 
   const raw = String(value)
-  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  const dateTimeMatch = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/
+  )
 
-  if (match) {
-    const [, year, month, day] = match
+  if (dateTimeMatch) {
+    const [, year, month, day, hour, minute] = dateTimeMatch
+    return `${day}.${month}.${year} ${hour}:${minute}`
+  }
+
+  const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
+
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch
     return `${day}.${month}.${year}`
   }
 
   const date = new Date(value)
 
   if (Number.isNaN(date.getTime())) {
-    return value
+    return raw
   }
 
-  return date.toLocaleDateString('az-AZ')
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+
+  return `${day}.${month}.${year}`
 }
 
-export default async function AuditReportPage({params}: PageProps) {
+export default async function AuditReportPage({params, searchParams}: PageProps) {
   const t = await getTranslations('auditReport')
 
   const answerLabel = (value?: string | null) => {
@@ -66,6 +110,9 @@ export default async function AuditReportPage({params}: PageProps) {
   }
 
   const {id} = await params
+  const resolvedSearchParams = searchParams ? await searchParams : {}
+  const highlightedAnswerId = String(resolvedSearchParams?.answer || '').trim()
+
   const supabase = await createClient()
 
   const {
@@ -253,6 +300,83 @@ export default async function AuditReportPage({params}: PageProps) {
     .eq('plan_id', id)
     .order('deadline', {ascending: true, nullsFirst: false})
 
+  const {data: assignedAuditors} = await supabase
+    .from('plan_assignments')
+    .select(`
+      user_id,
+      profiles(full_name)
+    `)
+    .eq('plan_id', id)
+
+  const auditorOptions = (assignedAuditors || [])
+    .map((item: any) => {
+      const assignedProfile = normalizeOne(item.profiles)
+
+      return {
+        id: item.user_id,
+        full_name: assignedProfile?.full_name || null,
+      }
+    })
+    .filter((item: any) => item.id)
+
+  const {data: auditComments} = await supabase
+    .from('audit_comments')
+    .select(`
+      id,
+      plan_id,
+      answer_id,
+      question_id,
+      sender_id,
+      recipient_id,
+      type,
+      status,
+      priority,
+      message,
+      parent_id,
+      created_at
+    `)
+    .eq('plan_id', id)
+    .is('parent_id', null)
+    .order('created_at', {ascending: false})
+
+  const commentUserIds = Array.from(
+    new Set(
+      (auditComments || [])
+        .flatMap((comment: any) => [comment.sender_id, comment.recipient_id])
+        .filter(Boolean)
+    )
+  )
+
+  const profilesById = new Map<string, any>()
+
+  if (commentUserIds.length > 0) {
+    const {data: commentProfiles} = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', commentUserIds)
+
+    ;(commentProfiles || []).forEach((item: any) => {
+      profilesById.set(item.id, item)
+    })
+  }
+
+  const commentsByAnswerId = new Map<string, any[]>()
+
+  ;(auditComments || []).forEach((comment: any) => {
+    if (!comment.answer_id) return
+
+    const senderProfile = profilesById.get(comment.sender_id)
+
+    const normalizedComment = {
+      ...comment,
+      sender_name: senderProfile?.full_name || '-',
+    }
+
+    const existing = commentsByAnswerId.get(comment.answer_id) || []
+    existing.push(normalizedComment)
+    commentsByAnswerId.set(comment.answer_id, existing)
+  })
+
   const normalizedCompany = normalizeOne(plan.companies)
 
   const normalizedAnswers = (answers || [])
@@ -293,6 +417,10 @@ export default async function AuditReportPage({params}: PageProps) {
       return Number(qa?.sort_order || 0) - Number(qb?.sort_order || 0)
     })
 
+  const highlightedAnswerExists = highlightedAnswerId
+    ? normalizedAnswers.some((answer: any) => answer.id === highlightedAnswerId)
+    : false
+
   const highFindings =
     findings?.filter((finding: any) => finding.severity === 'high').length || 0
 
@@ -321,6 +449,10 @@ export default async function AuditReportPage({params}: PageProps) {
 
   return (
     <div className="min-h-screen bg-slate-100 p-3 sm:p-6 lg:p-8 print:min-h-0 print:bg-white print:p-0">
+      {highlightedAnswerExists && (
+  <ScrollToAnswer answerId={highlightedAnswerId} />
+)}
+
       <div className="mx-auto mb-4 flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <Link
           href={`/dashboard/plans/${id}`}
@@ -377,6 +509,31 @@ export default async function AuditReportPage({params}: PageProps) {
           </section>
 
           <div className="space-y-8 p-5 sm:p-8 lg:p-10 print:p-8">
+            {highlightedAnswerId && (
+              <section
+                className={`print:hidden rounded-2xl border p-4 ${
+                  highlightedAnswerExists
+                    ? 'border-yellow-200 bg-yellow-50 text-yellow-800'
+                    : 'border-red-200 bg-red-50 text-red-700'
+                }`}
+              >
+                {highlightedAnswerExists ? (
+                  <>
+                    <p className="text-sm font-black">
+                      Bildirişdən açılan audit cavabı seçilib.
+                    </p>
+                    <p className="mt-1 text-xs font-semibold">
+                      Səhifə həmin sual/cavab blokuna yönləndirilir.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm font-black">
+                    Bildirişdə göstərilən cavab bu hesabatda tapılmadı.
+                  </p>
+                )}
+              </section>
+            )}
+
             <section className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-5 print:grid-cols-5">
               <div>
                 <p className="text-xs font-medium uppercase text-slate-500">
@@ -536,11 +693,18 @@ export default async function AuditReportPage({params}: PageProps) {
                     const question = answer.template_questions
                     const section = question?.template_sections
                     const template = section?.audit_templates
+                    const answerComments = commentsByAnswerId.get(answer.id) || []
+                    const isHighlighted = answer.id === highlightedAnswerId
 
                     return (
                       <div
                         key={answer.id}
-                        className="print-row grid grid-cols-1 gap-3 p-4 sm:grid-cols-12 print:grid-cols-12"
+                        id={`answer-${answer.id}`}
+                        className={`print-row scroll-mt-24 grid grid-cols-1 gap-3 p-4 transition sm:grid-cols-12 print:grid-cols-12 ${
+                          isHighlighted
+                            ? 'border-l-4 border-yellow-400 bg-yellow-50 ring-2 ring-yellow-200'
+                            : ''
+                        }`}
                       >
                         <div className="sm:col-span-5 print:col-span-5">
                           <p className="text-xs font-bold text-slate-400">
@@ -573,6 +737,65 @@ export default async function AuditReportPage({params}: PageProps) {
                           <p className="whitespace-pre-wrap text-sm leading-5 text-slate-600">
                             {answer.comment || '-'}
                           </p>
+
+                          <AuditQuestionModal
+                            planId={id}
+                            answerId={answer.id}
+                            questionId={answer.question_id}
+                            auditors={auditorOptions}
+                          />
+
+                          {answerComments.length > 0 && (
+                            <div className="mt-3 space-y-2 print:hidden">
+                              <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                                Müzakirələr: {answerComments.length}
+                              </p>
+
+                              {answerComments.slice(0, 5).map((comment: any) => (
+                                <div
+                                  key={comment.id}
+                                  className={`rounded-xl border p-3 ${
+                                    isHighlighted
+                                      ? 'border-yellow-200 bg-white'
+                                      : 'border-slate-200 bg-slate-50'
+                                  }`}
+                                >
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-black text-slate-700">
+                                      {commentTypeLabel(comment.type)}
+                                    </span>
+
+                                    <span
+                                      className={`rounded-full border px-2 py-0.5 text-[11px] font-black ${commentStatusClass(
+                                        comment.status
+                                      )}`}
+                                    >
+                                      {commentStatusLabel(comment.status)}
+                                    </span>
+
+                                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-black text-slate-600">
+                                      {priorityLabel(comment.priority)}
+                                    </span>
+                                  </div>
+
+                                  <p className="mt-2 text-xs font-bold text-slate-500">
+                                    {comment.sender_name} •{' '}
+                                    {formatDate(comment.created_at)}
+                                  </p>
+
+                                  <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-700">
+                                    {comment.message}
+                                  </p>
+                                </div>
+                              ))}
+
+                              {answerComments.length > 5 && (
+                                <p className="text-xs font-bold text-blue-600">
+                                  +{answerComments.length - 5} əlavə müzakirə
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )

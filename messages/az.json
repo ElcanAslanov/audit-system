@@ -33,7 +33,9 @@
     "management": "İdarəetmə",
     "systemTitle": "Audit Sistemi",
     "systemSubtitle": "Risk və nəzarət paneli",
-    "user": "İstifadəçi"
+    "user": "İstifadəçi",
+    "auditQuestions": "Audit sualları",
+    "notifications": "Bildirişlər"
   },
   "roles": {
     "admin": "Administrator",

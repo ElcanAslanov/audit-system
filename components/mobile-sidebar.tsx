@@ -1,14 +1,16 @@
 'use client'
 
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 import {Link, usePathname} from '@/i18n/routing'
 import {useTranslations} from 'next-intl'
 import LanguageSwitcher from './language-switcher'
 import LogoutButton from './logout-button'
 import {
   BarChart3,
+  Bell,
   Building2,
   ClipboardCheck,
+  FileQuestion,
   FileSearch,
   Home,
   LayoutDashboard,
@@ -26,6 +28,7 @@ type MobileSidebarProps = {
 
 type MenuItem = {
   labelKey: string
+  fallbackLabel: string
   href: string
   roles?: string[]
   icon: React.ElementType
@@ -44,6 +47,7 @@ const allRoles = [
 const menuItems: MenuItem[] = [
   {
     labelKey: 'dashboard',
+    fallbackLabel: 'Dashboard',
     href: '/dashboard',
     roles: allRoles,
     icon: Home,
@@ -51,24 +55,42 @@ const menuItems: MenuItem[] = [
   },
   {
     labelKey: 'auditPlans',
+    fallbackLabel: 'Audit planları',
     href: '/dashboard/plans',
     roles: allRoles,
     icon: ClipboardCheck,
   },
   {
+    labelKey: 'auditQuestions',
+    fallbackLabel: 'Audit sualları',
+    href: '/dashboard/audit-questions',
+    roles: allRoles,
+    icon: FileQuestion,
+  },
+  {
+    labelKey: 'notifications',
+    fallbackLabel: 'Bildirişlər',
+    href: '/dashboard/notifications',
+    roles: allRoles,
+    icon: Bell,
+  },
+  {
     labelKey: 'auditCompare',
+    fallbackLabel: 'Audit müqayisə',
     href: '/dashboard/compare',
     roles: ['admin', 'rehber', 'muavin', 'audit_muavini', 'musahideci'],
     icon: BarChart3,
   },
   {
     labelKey: 'auditTemplates',
+    fallbackLabel: 'Audit şablonları',
     href: '/dashboard/admin/templates',
     roles: ['admin', 'rehber', 'audit_muavini', 'musahideci'],
     icon: ListChecks,
   },
   {
     labelKey: 'admin',
+    fallbackLabel: 'Admin',
     href: '/dashboard/admin',
     roles: ['admin'],
     icon: LayoutDashboard,
@@ -77,18 +99,21 @@ const menuItems: MenuItem[] = [
   },
   {
     labelKey: 'companies',
+    fallbackLabel: 'Şirkətlər',
     href: '/dashboard/companies',
     roles: ['admin'],
     icon: Building2,
   },
   {
     labelKey: 'departments',
+    fallbackLabel: 'Şöbələr',
     href: '/dashboard/departments',
     roles: ['admin'],
     icon: Layers3,
   },
   {
     labelKey: 'findings',
+    fallbackLabel: 'Çatışmazlıqlar',
     href: '/dashboard/findings',
     roles: allRoles,
     icon: ShieldAlert,
@@ -98,6 +123,14 @@ const menuItems: MenuItem[] = [
 function canSee(item: MenuItem, role: string) {
   if (!item.roles || item.roles.length === 0) return true
   return item.roles.includes(role)
+}
+
+function safeTranslate(t: any, key: string, fallback: string) {
+  try {
+    return t(key)
+  } catch {
+    return fallback
+  }
 }
 
 function roleLabel(role: string, tRoles: any) {
@@ -115,11 +148,41 @@ function isActivePath(pathname: string, item: MenuItem) {
   return pathname === item.href || pathname.startsWith(`${item.href}/`)
 }
 
+function formatUnreadCount(count: number) {
+  if (count > 99) return '99+'
+  return String(count)
+}
+
 export default function MobileSidebar({role, fullName}: MobileSidebarProps) {
   const pathname = usePathname()
   const tSidebar = useTranslations('sidebar')
   const tRoles = useTranslations('roles')
   const [open, setOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+  let alive = true
+
+  const loadUnreadCount = () => {
+    fetch('/api/notifications/unread-count')
+      .then((res) => res.json())
+      .then((data) => {
+        if (alive) setUnreadCount(Number(data?.count || 0))
+      })
+      .catch(() => {
+        if (alive) setUnreadCount(0)
+      })
+  }
+
+  loadUnreadCount()
+
+  window.addEventListener('notifications:changed', loadUnreadCount)
+
+  return () => {
+    alive = false
+    window.removeEventListener('notifications:changed', loadUnreadCount)
+  }
+}, [pathname])
 
   const visibleItems = menuItems.filter((item) => canSee(item, role))
   const displayName = fullName?.trim() || 'Sistem istifadəçisi'
@@ -147,9 +210,14 @@ export default function MobileSidebar({role, fullName}: MobileSidebarProps) {
             type="button"
             onClick={() => setOpen(true)}
             aria-label="Menyunu aç"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-slate-950 text-white shadow-sm transition hover:scale-105 hover:bg-slate-800 active:scale-95"
+            className="relative grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-slate-950 text-white shadow-sm transition hover:scale-105 hover:bg-slate-800 active:scale-95"
           >
             <Menu size={21} />
+            {unreadCount > 0 && (
+              <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-black leading-none text-white ring-2 ring-white">
+                {formatUnreadCount(unreadCount)}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -225,21 +293,28 @@ export default function MobileSidebar({role, fullName}: MobileSidebarProps) {
               {visibleItems.map((item) => {
                 const Icon = item.icon
                 const active = isActivePath(pathname, item)
+                const label = safeTranslate(
+                  tSidebar,
+                  item.labelKey,
+                  item.fallbackLabel
+                )
+                const showNotificationBadge =
+                  item.href === '/dashboard/notifications' && unreadCount > 0
 
                 return (
                   <Link
-  key={item.href}
-  href={item.href}
-  prefetch={false}
-  onClick={() => setOpen(false)}
-  className={`group relative flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-bold transition-all duration-200 ${
+                    key={item.href}
+                    href={item.href}
+                    prefetch={false}
+                    onClick={() => setOpen(false)}
+                    className={`group relative flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-bold transition-all duration-200 ${
                       active
                         ? 'bg-white text-slate-950 shadow-lg shadow-blue-950/20'
                         : 'text-slate-300 hover:bg-white/10 hover:text-white'
                     }`}
                   >
                     {active && (
-                      <span className="absolute -left-4 sm:-left-5 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-blue-400" />
+                      <span className="absolute -left-4 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-blue-400 sm:-left-5" />
                     )}
 
                     <span
@@ -253,7 +328,7 @@ export default function MobileSidebar({role, fullName}: MobileSidebarProps) {
                     </span>
 
                     <span className="min-w-0 flex-1 truncate">
-                      {tSidebar(item.labelKey)}
+                      {label}
                     </span>
 
                     {item.badge && (
@@ -265,6 +340,12 @@ export default function MobileSidebar({role, fullName}: MobileSidebarProps) {
                         }`}
                       >
                         {item.badge}
+                      </span>
+                    )}
+
+                    {showNotificationBadge && (
+                      <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-black text-white">
+                        {formatUnreadCount(unreadCount)}
                       </span>
                     )}
                   </Link>
