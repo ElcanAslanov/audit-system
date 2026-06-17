@@ -75,7 +75,10 @@ export default async function PlansListSection({
   if (!canViewAllPlans) {
     const [assignedRes, viewerRes] = await Promise.all([
       supabase.from('plan_assignments').select('plan_id').eq('user_id', userId),
-      supabase.from('audit_plan_viewers').select('plan_id').eq('user_id', userId),
+      supabase
+        .from('audit_plan_viewers')
+        .select('plan_id')
+        .eq('user_id', userId),
     ])
 
     assignedPlanIds = (assignedRes.data || [])
@@ -148,7 +151,10 @@ export default async function PlansListSection({
   const [answerRowsResult, viewerRowsResult] =
     planIds.length > 0
       ? await Promise.all([
-          supabase.from('audit_answers').select('plan_id').in('plan_id', planIds),
+          supabase
+            .from('audit_answers')
+            .select('plan_id')
+            .in('plan_id', planIds),
           supabase
             .from('audit_plan_viewers')
             .select(
@@ -196,6 +202,7 @@ export default async function PlansListSection({
     const aTime = a.due_date
       ? new Date(a.due_date).getTime()
       : Number.MAX_SAFE_INTEGER
+
     const bTime = b.due_date
       ? new Date(b.due_date).getTime()
       : Number.MAX_SAFE_INTEGER
@@ -274,6 +281,7 @@ export default async function PlansListSection({
             <h2 className="text-lg font-black text-slate-950">
               {t('deadlineOrder')}
             </h2>
+
             <p className="mt-1 text-sm text-slate-500">
               {t('deadlineOrderDescription')}
             </p>
@@ -284,198 +292,196 @@ export default async function PlansListSection({
           </span>
         </div>
 
-        <div>
-          <div className="grid grid-cols-1 gap-3 lg:hidden">
-            {plansByDeadline.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
-                {t('noPlansDescription')}
-              </div>
-            )}
+        <div className="grid grid-cols-1 gap-3 lg:hidden">
+          {plansByDeadline.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
+              {t('noPlansDescription')}
+            </div>
+          )}
 
-            {plansByDeadline.map((plan: any, index: number) => (
-              <article
-                key={plan.id}
-                className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:bg-blue-50/20"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                      #{index + 1}
-                    </p>
+          {plansByDeadline.map((plan: any, index: number) => (
+            <article
+              key={plan.id}
+              className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:bg-blue-50/20"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                    #{index + 1}
+                  </p>
 
-                    <Link
-                      href={`/dashboard/plans/${plan.id}`}
-                      className="mt-1 block line-clamp-2 text-base font-black leading-snug text-slate-950 hover:text-blue-600"
-                    >
-                      {plan.title}
-                    </Link>
-
-                    <p className="mt-2 line-clamp-1 text-sm font-semibold text-slate-500">
-                      {plan.companies?.name || '-'}
-                    </p>
-                  </div>
-
-                  <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
-                    {statusLabel(plan.status)}
-                  </span>
-                </div>
-
-                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">
-                      {t('department')}
-                    </p>
-                    <p className="mt-1 truncate text-sm font-bold text-slate-800">
-                      {plan.department || '-'}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">
-                      {t('startDate')}
-                    </p>
-                    <p className="mt-1 text-sm font-bold text-slate-800">
-                      {formatDate(plan.start_date)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-yellow-100 bg-yellow-50 p-3">
-                    <p className="text-[11px] font-black uppercase tracking-wide text-yellow-700/70">
-                      {t('deadline')}
-                    </p>
-                    <p className="mt-1 text-sm font-black text-yellow-800">
-                      {plan.due_date
-                        ? formatDate(plan.due_date)
-                        : t('noDeadline')}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">
-                      {common('status')}
-                    </p>
-                    <p className="mt-1 text-sm font-bold text-slate-800">
-                      {statusLabel(plan.status)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4">
                   <Link
                     href={`/dashboard/plans/${plan.id}`}
-                    className="inline-flex w-full justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                    className="mt-1 block line-clamp-2 text-base font-black leading-snug text-slate-950 hover:text-blue-600"
+                  >
+                    {plan.title}
+                  </Link>
+
+                  <p className="mt-2 line-clamp-1 text-sm font-semibold text-slate-500">
+                    {plan.companies?.name || '-'}
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
+                    {statusLabel(plan.status)}
+                  </span>
+
+                  <Link
+                    href={`/dashboard/plans/${plan.id}`}
+                    className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 shadow-sm transition hover:bg-slate-50"
                   >
                     {t('view')}
                   </Link>
                 </div>
-              </article>
-            ))}
-          </div>
+              </div>
 
-          <div className="hidden overflow-hidden rounded-2xl border border-slate-200 lg:block">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50">
+              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">
+                    {t('department')}
+                  </p>
+                  <p className="mt-1 truncate text-sm font-bold text-slate-800">
+                    {plan.department || '-'}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">
+                    {t('startDate')}
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-slate-800">
+                    {formatDate(plan.start_date)}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-yellow-100 bg-yellow-50 p-3">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-yellow-700/70">
+                    {t('deadline')}
+                  </p>
+                  <p className="mt-1 text-sm font-black text-yellow-800">
+                    {plan.due_date
+                      ? formatDate(plan.due_date)
+                      : t('noDeadline')}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">
+                    {common('status')}
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-slate-800">
+                    {statusLabel(plan.status)}
+                  </p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="hidden rounded-2xl border border-slate-200 lg:block">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-3 text-left font-black text-slate-600">
+                    #
+                  </th>
+                  <th className="px-4 py-3 text-left font-black text-slate-600">
+                    {t('plan')}
+                  </th>
+                  <th className="px-4 py-3 text-left font-black text-slate-600">
+                    {common('company')}
+                  </th>
+                  <th className="px-4 py-3 text-left font-black text-slate-600">
+                    {t('department')}
+                  </th>
+                  <th className="px-4 py-3 text-left font-black text-slate-600">
+                    {t('startDate')}
+                  </th>
+                  <th className="px-4 py-3 text-left font-black text-slate-600">
+                    {t('deadline')}
+                  </th>
+                  <th className="px-4 py-3 text-left font-black text-slate-600">
+                    {common('status')}
+                  </th>
+                  <th className="px-4 py-3 text-right font-black text-slate-600">
+                    {t('view')}
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {plansByDeadline.length === 0 && (
                   <tr>
-                    <th className="px-4 py-3 text-left font-black text-slate-600">
-                      #
-                    </th>
-                    <th className="px-4 py-3 text-left font-black text-slate-600">
-                      {t('plan')}
-                    </th>
-                    <th className="px-4 py-3 text-left font-black text-slate-600">
-                      {common('company')}
-                    </th>
-                    <th className="px-4 py-3 text-left font-black text-slate-600">
-                      {t('department')}
-                    </th>
-                    <th className="px-4 py-3 text-left font-black text-slate-600">
-                      {t('startDate')}
-                    </th>
-                    <th className="px-4 py-3 text-left font-black text-slate-600">
-                      {t('deadline')}
-                    </th>
-                    <th className="px-4 py-3 text-left font-black text-slate-600">
-                      {common('status')}
-                    </th>
-                    <th className="px-4 py-3 text-right font-black text-slate-600">
-                      {t('view')}
-                    </th>
+                    <td
+                      colSpan={8}
+                      className="px-4 py-8 text-center text-sm text-slate-500"
+                    >
+                      {t('noPlansDescription')}
+                    </td>
                   </tr>
-                </thead>
+                )}
 
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {plansByDeadline.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        className="px-4 py-8 text-center text-sm text-slate-500"
+                {plansByDeadline.map((plan: any, index: number) => (
+                  <tr key={plan.id} className="transition hover:bg-slate-50">
+                    <td className="px-4 py-3 font-bold text-slate-500">
+                      {index + 1}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/dashboard/plans/${plan.id}`}
+                        className="font-black text-slate-900 hover:text-blue-600"
                       >
-                        {t('noPlansDescription')}
-                      </td>
-                    </tr>
-                  )}
+                        {plan.title}
+                      </Link>
+                    </td>
 
-                  {plansByDeadline.map((plan: any, index: number) => (
-                    <tr key={plan.id} className="transition hover:bg-slate-50">
-                      <td className="px-4 py-3 font-bold text-slate-500">
-                        {index + 1}
-                      </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {plan.companies?.name || '-'}
+                    </td>
 
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/dashboard/plans/${plan.id}`}
-                          className="font-black text-slate-900 hover:text-blue-600"
-                        >
-                          {plan.title}
-                        </Link>
-                      </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {plan.department || '-'}
+                    </td>
 
-                      <td className="px-4 py-3 text-slate-700">
-                        {plan.companies?.name || '-'}
-                      </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {formatDate(plan.start_date)}
+                    </td>
 
-                      <td className="px-4 py-3 text-slate-700">
-                        {plan.department || '-'}
-                      </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-black ${
+                          plan.due_date
+                            ? 'bg-yellow-50 text-yellow-700'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {plan.due_date
+                          ? formatDate(plan.due_date)
+                          : t('noDeadline')}
+                      </span>
+                    </td>
 
-                      <td className="px-4 py-3 text-slate-700">
-                        {formatDate(plan.start_date)}
-                      </td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
+                        {statusLabel(plan.status)}
+                      </span>
+                    </td>
 
-                      <td className="px-4 py-3">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-black ${
-                            plan.due_date
-                              ? 'bg-yellow-50 text-yellow-700'
-                              : 'bg-slate-100 text-slate-500'
-                          }`}
-                        >
-                          {plan.due_date
-                            ? formatDate(plan.due_date)
-                            : t('noDeadline')}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
-                          {statusLabel(plan.status)}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-3 text-right">
-                        <Link
-                          href={`/dashboard/plans/${plan.id}`}
-                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                        >
-                          {t('view')}
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={`/dashboard/plans/${plan.id}`}
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50"
+                      >
+                        {t('view')}
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </section>

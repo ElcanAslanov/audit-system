@@ -1,14 +1,14 @@
-import {createClient} from '@/lib/supabase/server'
-import {redirect} from 'next/navigation'
-import {Link} from '@/i18n/routing'
-import {getTranslations} from 'next-intl/server'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { Link } from '@/i18n/routing'
+import { getTranslations } from 'next-intl/server'
 import PrintReportButton from '@/components/audit/print-report-button'
 import AuditQuestionModal from '@/components/audit/audit-question-modal'
 import ScrollToAnswer from '@/components/audit/scroll-to-answer'
 
 type PageProps = {
-  params: Promise<{id: string}>
-  searchParams?: Promise<{answer?: string}>
+  params: Promise<{ id: string }>
+  searchParams?: Promise<{ answer?: string }>
 }
 
 function normalizeOne(value: any) {
@@ -60,13 +60,25 @@ function formatDate(value?: string | null) {
   if (!value) return '-'
 
   const raw = String(value)
-  const dateTimeMatch = raw.match(
-    /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/
-  )
+  const date = new Date(raw)
 
-  if (dateTimeMatch) {
-    const [, year, month, day, hour, minute] = dateTimeMatch
-    return `${day}.${month}.${year} ${hour}:${minute}`
+  if (!Number.isNaN(date.getTime())) {
+    const parts = new Intl.DateTimeFormat('az-AZ', {
+      timeZone: 'Asia/Baku',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(date)
+
+    const get = (type: string) =>
+      parts.find((part) => part.type === type)?.value || ''
+
+    return `${get('day')}.${get('month')}.${get('year')} ${get('hour')}:${get(
+      'minute'
+    )}`
   }
 
   const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
@@ -76,20 +88,10 @@ function formatDate(value?: string | null) {
     return `${day}.${month}.${year}`
   }
 
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return raw
-  }
-
-  const day = String(date.getDate()).padStart(2, '0')
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const year = date.getFullYear()
-
-  return `${day}.${month}.${year}`
+  return raw
 }
 
-export default async function AuditReportPage({params, searchParams}: PageProps) {
+export default async function AuditReportPage({ params, searchParams }: PageProps) {
   const t = await getTranslations('auditReport')
 
   const answerLabel = (value?: string | null) => {
@@ -109,19 +111,19 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
     return value || '-'
   }
 
-  const {id} = await params
+  const { id } = await params
   const resolvedSearchParams = searchParams ? await searchParams : {}
   const highlightedAnswerId = String(resolvedSearchParams?.answer || '').trim()
 
   const supabase = await createClient()
 
   const {
-    data: {user},
+    data: { user },
   } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
 
-  const {data: plan, error: planError} = await supabase
+  const { data: plan, error: planError } = await supabase
     .from('audit_plans')
     .select(`
       *,
@@ -134,7 +136,7 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
   if (planError) {
     return (
       <div className="p-4 text-red-600 sm:p-6 lg:p-8">
-        {t('loadError', {message: planError.message})}
+        {t('loadError', { message: planError.message })}
       </div>
     )
   }
@@ -147,7 +149,7 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
     )
   }
 
-  const {data: profile} = await supabase
+  const { data: profile } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
@@ -183,7 +185,7 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
 
   const legacyTemplate = normalizeOne(plan.audit_templates)
 
-  const {data: planTemplates} = await supabase
+  const { data: planTemplates } = await supabase
     .from('audit_plan_templates')
     .select(`
       template_id,
@@ -202,7 +204,7 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
           .join(', ')
       : legacyTemplate?.title || '-'
 
-  const {data: planTemplateSections} = await supabase
+  const { data: planTemplateSections } = await supabase
     .from('audit_plan_template_sections')
     .select(`
       section_id,
@@ -230,7 +232,7 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
           .join(', ')
       : '-'
 
-  const {data: answers} = await supabase
+  const { data: answers } = await supabase
     .from('audit_answers')
     .select(`
       id,
@@ -286,7 +288,7 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
     )
   }
 
-  const {data: findings} = await supabase
+  const { data: findings } = await supabase
     .from('findings')
     .select(`
       id,
@@ -298,9 +300,9 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
       profiles(full_name)
     `)
     .eq('plan_id', id)
-    .order('deadline', {ascending: true, nullsFirst: false})
+    .order('deadline', { ascending: true, nullsFirst: false })
 
-  const {data: assignedAuditors} = await supabase
+  const { data: assignedAuditors } = await supabase
     .from('plan_assignments')
     .select(`
       user_id,
@@ -319,7 +321,7 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
     })
     .filter((item: any) => item.id)
 
-  const {data: auditComments} = await supabase
+  const { data: allAuditComments } = await supabase
     .from('audit_comments')
     .select(`
       id,
@@ -336,12 +338,13 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
       created_at
     `)
     .eq('plan_id', id)
-    .is('parent_id', null)
-    .order('created_at', {ascending: false})
+    .order('created_at', { ascending: true })
+
+  const auditComments = allAuditComments || []
 
   const commentUserIds = Array.from(
     new Set(
-      (auditComments || [])
+      auditComments
         .flatMap((comment: any) => [comment.sender_id, comment.recipient_id])
         .filter(Boolean)
     )
@@ -350,7 +353,7 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
   const profilesById = new Map<string, any>()
 
   if (commentUserIds.length > 0) {
-    const {data: commentProfiles} = await supabase
+    const { data: commentProfiles } = await supabase
       .from('profiles')
       .select('id, full_name')
       .in('id', commentUserIds)
@@ -360,22 +363,42 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
     })
   }
 
+  const repliesByParentId = new Map<string, any[]>()
+
+  auditComments
+    .filter((comment: any) => comment.parent_id)
+    .forEach((reply: any) => {
+      const senderProfile = profilesById.get(reply.sender_id)
+
+      const normalizedReply = {
+        ...reply,
+        sender_name: senderProfile?.full_name || '-',
+      }
+
+      const existing = repliesByParentId.get(reply.parent_id) || []
+      existing.push(normalizedReply)
+      repliesByParentId.set(reply.parent_id, existing)
+    })
+
   const commentsByAnswerId = new Map<string, any[]>()
 
-  ;(auditComments || []).forEach((comment: any) => {
-    if (!comment.answer_id) return
+  auditComments
+    .filter((comment: any) => !comment.parent_id)
+    .forEach((comment: any) => {
+      if (!comment.answer_id) return
 
-    const senderProfile = profilesById.get(comment.sender_id)
+      const senderProfile = profilesById.get(comment.sender_id)
 
-    const normalizedComment = {
-      ...comment,
-      sender_name: senderProfile?.full_name || '-',
-    }
+      const normalizedComment = {
+        ...comment,
+        sender_name: senderProfile?.full_name || '-',
+        replies: repliesByParentId.get(comment.id) || [],
+      }
 
-    const existing = commentsByAnswerId.get(comment.answer_id) || []
-    existing.push(normalizedComment)
-    commentsByAnswerId.set(comment.answer_id, existing)
-  })
+      const existing = commentsByAnswerId.get(comment.answer_id) || []
+      existing.push(normalizedComment)
+      commentsByAnswerId.set(comment.answer_id, existing)
+    })
 
   const normalizedCompany = normalizeOne(plan.companies)
 
@@ -450,8 +473,8 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
   return (
     <div className="min-h-screen bg-slate-100 p-3 sm:p-6 lg:p-8 print:min-h-0 print:bg-white print:p-0">
       {highlightedAnswerExists && (
-  <ScrollToAnswer answerId={highlightedAnswerId} />
-)}
+        <ScrollToAnswer answerId={highlightedAnswerId} />
+      )}
 
       <div className="mx-auto mb-4 flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <Link
@@ -695,110 +718,157 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
                     const template = section?.audit_templates
                     const answerComments = commentsByAnswerId.get(answer.id) || []
                     const isHighlighted = answer.id === highlightedAnswerId
+                    const discussionCount = answerComments.reduce(
+                      (total: number, comment: any) =>
+                        total + 1 + (comment.replies?.length || 0),
+                      0
+                    )
 
                     return (
-                      <div
-                        key={answer.id}
-                        id={`answer-${answer.id}`}
-                        className={`print-row scroll-mt-24 grid grid-cols-1 gap-3 p-4 transition sm:grid-cols-12 print:grid-cols-12 ${
-                          isHighlighted
-                            ? 'border-l-4 border-yellow-400 bg-yellow-50 ring-2 ring-yellow-200'
-                            : ''
-                        }`}
-                      >
-                        <div className="sm:col-span-5 print:col-span-5">
-                          <p className="text-xs font-bold text-slate-400">
-                            #{index + 1}
-                            {template?.title ? ` • ${template.title}` : ''}
-                            {section?.title ? ` • ${section.title}` : ''}
-                          </p>
-                          <p className="mt-1 font-semibold text-slate-900">
-                            {question?.question_text || t('questionFallback')}
-                          </p>
-                        </div>
+  <div
+    key={answer.id}
+    id={`answer-${answer.id}`}
+    className={`print-row scroll-mt-24 p-4 transition ${
+      isHighlighted
+        ? 'border-l-4 border-yellow-400 bg-yellow-50 ring-2 ring-yellow-200'
+        : ''
+    }`}
+  >
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-12 print:grid-cols-12">
+      <div className="sm:col-span-5 print:col-span-5">
+        <p className="text-xs font-bold text-slate-400">
+          #{index + 1}
+          {template?.title ? ` • ${template.title}` : ''}
+          {section?.title ? ` • ${section.title}` : ''}
+        </p>
 
-                        <div className="sm:col-span-2 print:col-span-2">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${answerBadgeClass(
-                              answer.response
-                            )}`}
-                          >
-                            {answerLabel(answer.response)}
-                          </span>
-                        </div>
+        <p className="mt-1 font-semibold text-slate-900">
+          {question?.question_text || t('questionFallback')}
+        </p>
+      </div>
 
-                        <div className="sm:col-span-2 print:col-span-2">
-                          <p className="font-bold text-blue-700">
-                            {answer.score ?? 0} / {question?.max_score ?? '-'}
-                          </p>
-                        </div>
+      <div className="sm:col-span-2 print:col-span-2">
+        <span
+          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${answerBadgeClass(
+            answer.response
+          )}`}
+        >
+          {answerLabel(answer.response)}
+        </span>
+      </div>
 
-                        <div className="sm:col-span-3 print:col-span-3">
-                          <p className="whitespace-pre-wrap text-sm leading-5 text-slate-600">
-                            {answer.comment || '-'}
-                          </p>
+      <div className="sm:col-span-2 print:col-span-2">
+        <p className="font-bold text-blue-700">
+          {answer.score ?? 0} / {question?.max_score ?? '-'}
+        </p>
+      </div>
 
-                          <AuditQuestionModal
-                            planId={id}
-                            answerId={answer.id}
-                            questionId={answer.question_id}
-                            auditors={auditorOptions}
-                          />
+      <div className="sm:col-span-3 print:col-span-3">
+        <p className="whitespace-pre-wrap text-sm leading-5 text-slate-600">
+          {answer.comment || '-'}
+        </p>
 
-                          {answerComments.length > 0 && (
-                            <div className="mt-3 space-y-2 print:hidden">
-                              <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                                Müzakirələr: {answerComments.length}
-                              </p>
+        <AuditQuestionModal
+          planId={id}
+          answerId={answer.id}
+          questionId={answer.question_id}
+          auditors={auditorOptions}
+        />
+      </div>
+    </div>
 
-                              {answerComments.slice(0, 5).map((comment: any) => (
-                                <div
-                                  key={comment.id}
-                                  className={`rounded-xl border p-3 ${
-                                    isHighlighted
-                                      ? 'border-yellow-200 bg-white'
-                                      : 'border-slate-200 bg-slate-50'
-                                  }`}
-                                >
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-black text-slate-700">
-                                      {commentTypeLabel(comment.type)}
-                                    </span>
+    {answerComments.length > 0 && (
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-4 print:hidden">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+              Müzakirələr
+            </p>
+            <p className="mt-1 text-sm font-black text-slate-900">
+              {discussionCount} mesaj
+            </p>
+          </div>
 
-                                    <span
-                                      className={`rounded-full border px-2 py-0.5 text-[11px] font-black ${commentStatusClass(
-                                        comment.status
-                                      )}`}
-                                    >
-                                      {commentStatusLabel(comment.status)}
-                                    </span>
+          {isHighlighted && (
+            <span className="inline-flex w-fit rounded-full border border-yellow-200 bg-yellow-100 px-3 py-1 text-xs font-black text-yellow-800">
+              Bildirişdən açılıb
+            </span>
+          )}
+        </div>
 
-                                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-black text-slate-600">
-                                      {priorityLabel(comment.priority)}
-                                    </span>
-                                  </div>
+        <div className="space-y-3">
+          {answerComments.slice(0, 5).map((comment: any) => (
+            <div
+              key={comment.id}
+              className={`rounded-2xl border bg-white p-3 shadow-sm sm:p-4 ${
+                isHighlighted ? 'border-yellow-200' : 'border-slate-200'
+              }`}
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-black text-slate-700">
+                      {commentTypeLabel(comment.type)}
+                    </span>
 
-                                  <p className="mt-2 text-xs font-bold text-slate-500">
-                                    {comment.sender_name} •{' '}
-                                    {formatDate(comment.created_at)}
-                                  </p>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[11px] font-black ${commentStatusClass(
+                        comment.status
+                      )}`}
+                    >
+                      {commentStatusLabel(comment.status)}
+                    </span>
 
-                                  <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-700">
-                                    {comment.message}
-                                  </p>
-                                </div>
-                              ))}
+                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-black text-slate-600">
+                      {priorityLabel(comment.priority)}
+                    </span>
+                  </div>
 
-                              {answerComments.length > 5 && (
-                                <p className="text-xs font-bold text-blue-600">
-                                  +{answerComments.length - 5} əlavə müzakirə
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )
+                  <p className="mt-2 break-words text-xs font-bold text-slate-500">
+                    {comment.sender_name} • {formatDate(comment.created_at)}
+                  </p>
+                </div>
+              </div>
+
+              <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
+                {comment.message}
+              </p>
+
+              {comment.replies?.length > 0 && (
+                <div className="mt-4 space-y-2 border-l-2 border-slate-200 pl-3 sm:pl-4">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">
+                    Cavablar
+                  </p>
+
+                  {comment.replies.map((reply: any) => (
+                    <div
+                      key={reply.id}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-4"
+                    >
+                      <p className="break-words text-xs font-bold text-slate-500">
+                        {reply.sender_name} • {formatDate(reply.created_at)}
+                      </p>
+
+                      <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
+                        {reply.message}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {answerComments.length > 5 && (
+            <p className="text-xs font-bold text-blue-600">
+              +{answerComments.length - 5} əlavə əsas müzakirə
+            </p>
+          )}
+        </div>
+      </div>
+    )}
+  </div>
+)
                   })}
                 </div>
               </div>
@@ -832,7 +902,7 @@ export default async function AuditReportPage({params, searchParams}: PageProps)
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between print:flex-row">
                         <div>
                           <p className="text-xs font-bold uppercase text-slate-400">
-                            {t('findingNumber', {number: index + 1})}
+                            {t('findingNumber', { number: index + 1 })}
                           </p>
                           <h3 className="mt-1 text-lg font-extrabold text-slate-900">
                             {finding.title}

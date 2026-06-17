@@ -2,8 +2,28 @@ import {createClient} from '@/lib/supabase/server'
 import {redirect} from 'next/navigation'
 import NotificationsClient from '@/components/notifications/notifications-client'
 
-export default async function NotificationsPage() {
+type PageProps = {
+  searchParams?: Promise<{
+    page?: string
+  }>
+}
+
+function toPositiveNumber(value: string | undefined, fallback: number) {
+  const parsed = Number(value)
+
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
+
+  return parsed
+}
+
+export default async function NotificationsPage({searchParams}: PageProps) {
   const supabase = await createClient()
+
+  const resolvedSearchParams = searchParams ? await searchParams : {}
+  const currentPage = toPositiveNumber(resolvedSearchParams.page, 1)
+  const pageSize = 10
+  const from = (currentPage - 1) * pageSize
+  const to = from + pageSize - 1
 
   const {
     data: {user},
@@ -11,9 +31,10 @@ export default async function NotificationsPage() {
 
   if (!user) redirect('/login')
 
-  const {data: notifications, error} = await supabase
+  const {data: notifications, error, count} = await supabase
     .from('notifications')
-    .select(`
+    .select(
+      `
       id,
       type,
       title,
@@ -23,10 +44,12 @@ export default async function NotificationsPage() {
       related_plan_id,
       is_read,
       created_at
-    `)
+    `,
+      {count: 'exact'}
+    )
     .eq('user_id', user.id)
     .order('created_at', {ascending: false})
-    .limit(100)
+    .range(from, to)
 
   if (error) {
     return (
@@ -160,5 +183,17 @@ export default async function NotificationsPage() {
     }
   })
 
-  return <NotificationsClient initialRows={preparedRows} />
+  const total = count || 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+
+  return (
+    <NotificationsClient
+      initialRows={preparedRows}
+      currentPage={safeCurrentPage}
+      totalPages={totalPages}
+      total={total}
+      pageSize={pageSize}
+    />
+  )
 }

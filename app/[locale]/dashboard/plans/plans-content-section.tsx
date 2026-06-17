@@ -11,6 +11,13 @@ type Props = {
   page: number
 }
 
+type Profile = {
+  id: string
+  full_name: string | null
+  role: string | null
+  company_id: string | null
+}
+
 export default async function PlansContentSection({
   userId,
   role,
@@ -32,10 +39,12 @@ export default async function PlansContentSection({
       .from('companies')
       .select('id, name')
       .order('name', { ascending: true }),
+
     supabase
       .from('departments')
       .select('id, name, company_id')
       .order('name', { ascending: true }),
+
     supabase
       .from('audit_templates')
       .select(`
@@ -48,13 +57,17 @@ export default async function PlansContentSection({
         )
       `)
       .order('title', { ascending: true }),
-    supabase.from('profiles').select('id, full_name, role, company_id'),
+
+    supabase
+      .from('profiles')
+      .select('id, full_name, role, company_id')
+      .order('full_name', { ascending: true }),
   ])
 
   const companies = companiesResult.data || []
   const departments = departmentsResult.data || []
   const templates = templatesResult.data || []
-  const allProfiles = allProfilesResult.data || []
+  const allProfiles = (allProfilesResult.data || []) as Profile[]
 
   const assignableUsers = getAssignableUsers({
     role,
@@ -64,6 +77,7 @@ export default async function PlansContentSection({
 
   const canCreatePlan =
     role === 'admin' || role === 'rehber' || role === 'audit_muavini'
+
   const isReadOnlyObserver = role === 'musahideci'
 
   return (
@@ -92,18 +106,18 @@ function getAssignableUsers({
 }: {
   role: string
   currentCompanyId?: string | null
-  allProfiles: any[]
+  allProfiles: Profile[]
 }) {
   if (role === 'audit_muavini') {
     return allProfiles.filter(
-      (profile: any) =>
+      (profile) =>
         profile.role === 'auditor' &&
         String(profile.company_id || '') === String(currentCompanyId || '')
     )
   }
 
   if (role === 'admin' || role === 'rehber') {
-    return allProfiles.filter((profile: any) => profile.role !== 'admin')
+    return allProfiles.filter((profile) => profile.role !== 'admin')
   }
 
   return []
