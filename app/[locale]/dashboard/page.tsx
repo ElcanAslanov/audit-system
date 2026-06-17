@@ -8,7 +8,37 @@ import {
   getMonthlyTrend,
   getRecentAudits,
 } from '@/app/actions/audit-actions'
-import {getTranslations} from 'next-intl/server'
+import { getTranslations } from 'next-intl/server'
+
+function getAuditStatus(audit: any) {
+  return String(audit?.status || '').toLowerCase()
+}
+
+function getAuditScore(audit: any) {
+  return Number(audit?.score ?? audit?.result_score ?? 0)
+}
+
+function isCompletedAudit(audit: any) {
+  const status = getAuditStatus(audit)
+  return status === 'tamamlandi' || status === 'completed'
+}
+
+function isRiskyAudit(audit: any) {
+  const status = getAuditStatus(audit)
+  const score = getAuditScore(audit)
+
+  return (
+    status === 'needs_attention' ||
+    status === 'riskli' ||
+    status === 'risky' ||
+    score < 50
+  )
+}
+
+function isPlannedAudit(audit: any) {
+  const status = getAuditStatus(audit)
+  return status === 'planlanan' || status === 'planned'
+}
 
 export default async function DashboardPage() {
   const t = await getTranslations('dashboardHome')
@@ -19,6 +49,14 @@ export default async function DashboardPage() {
     getRecentAudits(),
     getAuditChartData(),
   ])
+
+  const audits = Array.isArray(recentAudits) ? recentAudits : []
+
+  const auditGroups = {
+    completed: audits.filter(isCompletedAudit),
+    risky: audits.filter(isRiskyAudit),
+    planned: audits.filter(isPlannedAudit),
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -33,7 +71,7 @@ export default async function DashboardPage() {
             </p>
           </div>
 
-          <DashboardStats stats={stats} />
+          <DashboardStats stats={stats} auditGroups={auditGroups} />
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
