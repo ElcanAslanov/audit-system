@@ -1,7 +1,13 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
 import { ClipboardCheck, MoreHorizontal } from 'lucide-react'
@@ -27,6 +33,15 @@ type Props = {
   currentUserRole?: string | null
   isReadOnlyObserver?: boolean
 }
+
+type MenuPosition = {
+  top: number
+  left: number
+}
+
+const MENU_WIDTH = 320
+const GAP = 8
+const PADDING = 12
 
 function lockClass(plan: any) {
   if (plan.locked_view) return 'bg-red-50 text-red-700'
@@ -61,14 +76,25 @@ export default function PlansViewSwitcher({
   isReadOnlyObserver = false,
 }: Props) {
   const t = useTranslations('plans')
+
   const [view, setView] = useState<'cards' | 'table'>('table')
-  const [openActionsPlanId, setOpenActionsPlanId] = useState<string | null>(null)
+  const [openActionsPlanId, setOpenActionsPlanId] = useState<string | null>(
+    null
+  )
+  const [mounted, setMounted] = useState(false)
+  const [menuPos, setMenuPos] = useState<MenuPosition>({ top: 0, left: 0 })
+
   const actionsRef = useRef<HTMLDivElement | null>(null)
+  const activeButtonRef = useRef<HTMLButtonElement | null>(null)
 
   const safeCurrentUserRole = currentUserRole || undefined
   const isObserver =
     isReadOnlyObserver ||
     String(safeCurrentUserRole || '').toLowerCase() === 'musahideci'
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -86,15 +112,43 @@ export default function PlansViewSwitcher({
     return () => window.clearTimeout(timer)
   }, [])
 
+  const updateMenuPosition = useCallback(() => {
+    const button = activeButtonRef.current
+    if (!button) return
+
+    const rect = button.getBoundingClientRect()
+    const menuHeight = actionsRef.current?.offsetHeight || 360
+
+    let left = rect.right - MENU_WIDTH
+    let top = rect.bottom + GAP
+
+    if (left < PADDING) left = PADDING
+
+    if (left + MENU_WIDTH > window.innerWidth - PADDING) {
+      left = window.innerWidth - MENU_WIDTH - PADDING
+    }
+
+    if (top + menuHeight > window.innerHeight - PADDING) {
+      top = rect.top - menuHeight - GAP
+    }
+
+    if (top < PADDING) top = PADDING
+
+    setMenuPos({ top, left })
+  }, [])
+
   useEffect(() => {
     if (!openActionsPlanId) return
 
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!actionsRef.current) return
+    updateMenuPosition()
 
-      if (!actionsRef.current.contains(event.target as Node)) {
-        setOpenActionsPlanId(null)
-      }
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+
+      if (actionsRef.current?.contains(target)) return
+      if (activeButtonRef.current?.contains(target)) return
+
+      setOpenActionsPlanId(null)
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -103,14 +157,22 @@ export default function PlansViewSwitcher({
       }
     }
 
+    const handleMove = () => {
+      updateMenuPosition()
+    }
+
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('scroll', handleMove, true)
+    window.addEventListener('resize', handleMove)
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('scroll', handleMove, true)
+      window.removeEventListener('resize', handleMove)
     }
-  }, [openActionsPlanId])
+  }, [openActionsPlanId, updateMenuPosition])
 
   const changeView = (nextView: 'cards' | 'table') => {
     setView(nextView)
@@ -119,7 +181,7 @@ export default function PlansViewSwitcher({
     try {
       window.localStorage.setItem('plans-view-mode', nextView)
     } catch {
-      // localStorage disabled ola bilər, UI yenə işləsin.
+      // localStorage disabled ola bilər.
     }
   }
 
@@ -135,6 +197,10 @@ export default function PlansViewSwitcher({
     if (plan.locked_edit) return t('editLocked')
     return t('unlocked')
   }
+
+  const openedPlan = plans.find(
+    (plan: any) => String(plan.id || '') === String(openActionsPlanId || '')
+  )
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
@@ -255,7 +321,6 @@ export default function PlansViewSwitcher({
                       <td className="px-4 py-3 align-top">
                         <Link
                           href={`/dashboard/plans/${plan.id}`}
-                          onClick={(event) => event.stopPropagation()}
                           className="font-black text-slate-900 hover:text-blue-600"
                         >
                           {plan.title}
@@ -306,51 +371,33 @@ export default function PlansViewSwitcher({
                           : t('noDeadline')}
                       </td>
 
-                      <td className="px-4 py-3 align-top">
-                        <div className="relative flex justify-end">
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.preventDefault()
-                              event.stopPropagation()
+                      <td className="px-4 py-3 align-top text-right">
+                        <button
+                          ref={isActionsOpen ? activeButtonRef : null}
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault()
+                            event.stopPropagation()
 
-                              setOpenActionsPlanId((current) =>
-                                current === String(plan.id || '')
-                                  ? null
-                                  : String(plan.id || '')
-                              )
-                            }}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                          >
-                            <MoreHorizontal size={16} />
-                            {t('actions')}
-                          </button>
+                            const next =
+                              openActionsPlanId === String(plan.id || '')
+                                ? null
+                                : String(plan.id || '')
 
-                          {isActionsOpen && (
-                            <div
-                              ref={actionsRef}
-                              onClick={(event) => {
-                                event.preventDefault()
-                                event.stopPropagation()
-                              }}
-                              className="absolute right-0 top-10 z-20 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"
-                            >
-                              <PlanActionsMenu
-                                plan={plan}
-                                allUsers={allUsers}
-                                auditors={auditors}
-                                companies={companies}
-                                departments={departments}
-                                templates={templates}
-                                currentUserId={currentUserId}
-                                currentUserRole={safeCurrentUserRole}
-                                canCreatePlan={canCreatePlan}
-                                isObserver={isObserver}
-                                onClose={() => setOpenActionsPlanId(null)}
-                              />
-                            </div>
-                          )}
-                        </div>
+                            setOpenActionsPlanId(next)
+
+                            if (next) {
+                              activeButtonRef.current =
+                                event.currentTarget as HTMLButtonElement
+
+                              requestAnimationFrame(updateMenuPosition)
+                            }
+                          }}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          <MoreHorizontal size={16} />
+                          {t('actions')}
+                        </button>
                       </td>
                     </tr>
                   )
@@ -360,6 +407,36 @@ export default function PlansViewSwitcher({
           </div>
         </div>
       )}
+
+      {mounted &&
+        openActionsPlanId &&
+        openedPlan &&
+        createPortal(
+          <div
+            ref={actionsRef}
+            style={{
+              top: `${menuPos.top}px`,
+              left: `${menuPos.left}px`,
+              width: `${MENU_WIDTH}px`,
+            }}
+            className="fixed z-[99999]"
+          >
+            <PlanActionsMenu
+              plan={openedPlan}
+              allUsers={allUsers}
+              auditors={auditors}
+              companies={companies}
+              departments={departments}
+              templates={templates}
+              currentUserId={currentUserId}
+              currentUserRole={safeCurrentUserRole}
+              canCreatePlan={canCreatePlan}
+              isObserver={isObserver}
+              onClose={() => setOpenActionsPlanId(null)}
+            />
+          </div>,
+          document.body
+        )}
     </section>
   )
 }
